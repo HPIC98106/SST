@@ -64,9 +64,15 @@ QBO_REDIRECT_URI = "https://hpic-sst.kyhuber-ft.workers.dev/oauth/callback"
 # /admin/accounts. Sandbox values at time of writing: 35 = "Checking",
 # 36 = "Savings". An unset ID renders "not configured" rather than failing.
 
-# Origin of the GitHub Pages frontend, for CORS. Narrow this from a wildcard
-# before the dashboard is shared with the board.
-ALLOWED_ORIGIN = "https://kyhuber.github.io"
+# Origin of the GitHub Pages frontend, for CORS. Exactly one origin, scheme
+# included and no trailing slash.
+#
+# Changed 2026-09-06 when the repository moved to the HPIC98106 organization.
+# The Pages origin moves with the owner, and until this matched, the dashboard
+# loaded but every API call was blocked by the browser — the page renders, so
+# nothing looks broken server-side. If the dashboard ever shows no data at all
+# after a hosting change, check this first.
+ALLOWED_ORIGIN = "https://hpic98106.github.io"
 
 # --- Little Green Light (Phase 2) ---
 #
