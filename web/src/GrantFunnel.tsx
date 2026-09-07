@@ -55,6 +55,30 @@ function StageCard({ stage }: { stage: FunnelStage }) {
         <p className="count">{recordCountLabel(stage.recordCount)}</p>
       ) : null}
       {stage.note ? <p className="note">{stage.note}</p> : null}
+
+      {/*
+        Where the number came from, emitted by the Worker alongside the code
+        that computed it. The board's recurring question is not "what is the
+        number" but "which system says so, and does the other one agree" — and
+        answering that under the figure is the point of the lifecycle view.
+      */}
+      <dl className="source">
+        <div>
+          <dt>Source</dt>
+          <dd>{stage.provenance.system}</dd>
+        </div>
+        <div>
+          <dt>Counting</dt>
+          <dd>{stage.provenance.records}</dd>
+        </div>
+        {stage.provenance.authority ? (
+          <div>
+            <dt>Should come from</dt>
+            <dd className="source-authority">{stage.provenance.authority}</dd>
+          </div>
+        ) : null}
+      </dl>
+      {stage.provenance.gap ? <p className="note source-gap">{stage.provenance.gap}</p> : null}
     </section>
   );
 }

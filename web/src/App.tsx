@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { NotAuthorizedError, fetchFunds, fetchGrants } from "./api";
 import { FundsSnapshotView } from "./FundsSnapshot";
 import { GrantFunnelView } from "./GrantFunnel";
+import { LifecycleView } from "./Lifecycle";
 import { PassphraseGate } from "./PassphraseGate";
 import type { FundsSnapshot, GrantSnapshot } from "./types";
 
@@ -24,6 +25,10 @@ export function App() {
   );
   const [funds, setFunds] = useState<Panel<FundsSnapshot>>({ data: null });
   const [grants, setGrants] = useState<Panel<GrantSnapshot>>({ data: null });
+  // Which view is showing. Deliberately local state rather than a router: two
+  // views do not justify a routing dependency, and the passphrase lives in
+  // memory, so a URL that could be opened directly would not work anyway.
+  const [view, setView] = useState<"figures" | "lifecycle">("figures");
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [gateError, setGateError] = useState<string | undefined>();
@@ -90,18 +95,46 @@ export function App() {
       <header>
         <h1 className="page-title">Highland Park Improvement Club</h1>
         <p className="muted">Board financial snapshot</p>
+        <nav className="views">
+          <button
+            type="button"
+            className={view === "figures" ? "view-tab is-active" : "view-tab"}
+            onClick={() => setView("figures")}
+          >
+            Figures
+          </button>
+          {/*
+            The lifecycle sits beside the numbers rather than in a document,
+            because a figure without its position in the process is not
+            actionable — and a process description kept elsewhere drifts from
+            the code silently.
+          */}
+          <button
+            type="button"
+            className={view === "lifecycle" ? "view-tab is-active" : "view-tab"}
+            onClick={() => setView("lifecycle")}
+          >
+            Where the numbers come from
+          </button>
+        </nav>
       </header>
 
-      {funds.data ? (
-        <FundsSnapshotView snapshot={funds.data} />
+      {view === "lifecycle" ? (
+        <LifecycleView snapshot={grants.data} />
       ) : (
-        <PanelError title="Cash on hand" detail={funds.error} />
-      )}
+        <>
+          {funds.data ? (
+            <FundsSnapshotView snapshot={funds.data} />
+          ) : (
+            <PanelError title="Cash on hand" detail={funds.error} />
+          )}
 
-      {grants.data ? (
-        <GrantFunnelView snapshot={grants.data} />
-      ) : (
-        <PanelError title="Grant funnel" detail={grants.error} />
+          {grants.data ? (
+            <GrantFunnelView snapshot={grants.data} />
+          ) : (
+            <PanelError title="Grant funnel" detail={grants.error} />
+          )}
+        </>
       )}
 
       <footer>
