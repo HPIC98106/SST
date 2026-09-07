@@ -22,6 +22,21 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
     <section className="panel">
       <h1>Cash on hand</h1>
 
+      {/*
+        A sandbox company returns real balances for a business that does not
+        exist. Without this the figures render exactly like production ones —
+        every other caveat on this dashboard is visible on the page, and this
+        was the only one that was not.
+      */}
+      {snapshot.environment === "sandbox" && snapshot.connection !== "fixture" ? (
+        <p className="banner banner-error">
+          <strong>Test company, not HPIC's books.</strong> These are real balances read
+          live from QuickBooks — but from Intuit's <strong>sandbox</strong> company, so
+          every figure below is invented. Switching to HPIC's real accounts needs
+          QuickBooks production keys, which need Intuit's approval.
+        </p>
+      ) : null}
+
       {snapshot.connection === "fixture" ? (
         <p className="banner banner-warn">
           Showing <strong>fixture data</strong>, not real QuickBooks figures. Set{" "}

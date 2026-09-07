@@ -545,3 +545,9 @@ code {
     gap: 0.15rem;
   }
 }
+
+/* A positive statement, not a warning: this panel's data is real. */
+.banner-live {
+  background: #e6f2ea;
+  color: #2c5c3f;
+}
