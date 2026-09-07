@@ -14,6 +14,39 @@ project with no deadline.
 
 ---
 
+## Where things stand — 2026-09-06
+
+Read this first in a new session; the detail is below.
+
+**The prototype is built, deployed, and reading live data.** Dashboard at
+**https://hpic98106.github.io/SST/** (case-sensitive path), Worker at
+`hpic-sst.kyhuber-ft.workers.dev`. Funds come from a QuickBooks *sandbox*
+company; grants are live Little Green Light.
+
+| | |
+| --- | --- |
+| Pledged | $1,471,000 · 6 records · authoritative |
+| Received | $545,000 · 5 records · **provisional** |
+| Outstanding | $926,000 · **provisional** |
+| Data quality | 9 records flagged, 2 blocking findings |
+
+Received and Outstanding are computed from LGL payment records and marked
+provisional because **QuickBooks is authoritative for cash** and that
+reconciliation is not built. That contrast is deliberate — it is the argument
+for the bookkeeping change, so do not "fix" it by promoting them to `ok`.
+
+**The strategy, which shapes everything below:** ship the product, let it
+expose the data gaps, then use that evidence to introduce the rules. This is
+only safe because the invariants refuse to launder a gap into a clean number.
+
+**Next, in order:** define `reimbursable` in LGL (§5 — clears $1,471,000 of
+blocking findings and unblocks Phase 3), send Alex the message, fix the records
+the panel names (§8).
+
+**One loose end:** `ACCESS_PASSPHRASE` was rotated on 2026-09-06 and the Worker
+has the new value. `worker/.dev.vars` may still hold the old one — that only
+affects local dev, and §7 has a command that syncs it and verifies.
+
 ## Start here — the prototype build
 
 Ordered so each step produces something demonstrable. The governing idea, which
@@ -63,11 +96,13 @@ a caveat" — it is that rule doing its job.
 Roughly in order of leverage. The first two are the whole point of having
 shipped the thing.
 
-- [ ] **N1. Look at the dashboard and decide whether it reads right.** The one
-      thing no test covers: whether the blocking/advisory split is legible to
-      someone who is not Kyle, and whether "provisional" reads as *useful but
-      unconfirmed* rather than *broken*. This is the version Alex, Galen and
-      Rachel will see, so it is worth one careful read before showing it.
+- [ ] **N1. Look at the dashboard and decide whether it reads right.**
+      Unblocked as of 2026-09-06 — the passphrase is rotated and the Worker has
+      it. The one thing no test covers: whether the blocking/advisory split is
+      legible to someone who is not Kyle, and whether "provisional" reads as
+      *useful but unconfirmed* rather than *broken*. This is the version Alex,
+      Galen and Rachel will see, so it is worth one careful read before showing
+      it.
 
 - [ ] **N2. Send Alex the message.** Drafted and reviewed; still unsent. It
       asks whether Received should come from LGL or QuickBooks and flags the
@@ -78,7 +113,8 @@ shipped the thing.
       is.** Purely additive, no existing data changes, and it clears the
       largest blocking finding on the panel: **6 awards, $1,471,000**, every
       one reading "unknown". It is also the gate on Phase 3. Same trip: define
-      `contract_signed`. This is item 5 below.
+      `contract_signed`.
+      → `docs/runbook-migration.md` §5
 
 - [ ] **N4. Make the three safe LGL fixes.** Link the 3 unlinked payments to
       their awards, and backfill the campaign on the 2 Commerce payments. Both
@@ -88,6 +124,7 @@ shipped the thing.
 
       Each fix should visibly remove a row from the panel on the next read,
       which is worth watching once as proof the loop closes.
+      → `docs/runbook-migration.md` §8
 
 - [ ] **N5 / P3. Add the QuickBooks grant dimension for Received and Spent.**
       *(Kyle creates the classes; Claude builds the read.)* Fully specified in
@@ -95,6 +132,21 @@ shipped the thing.
       Blocked on the bookkeeping existing, not on code. Until then Received
       stays provisional from LGL, and **that contrast is the argument for
       making the change**, so there is no rush to hide it.
+
+- [ ] **N6. Put `ACCESS_PASSPHRASE` somewhere the board can reach.**
+      This is the one credential every board member needs, and it currently
+      exists only in one person's head. Cloudflare secrets are write-only, so
+      there is no recovery path: if Kyle is unavailable, the board loses access
+      to their own dashboard and nobody can get it back. That is the same
+      durability problem that motivated moving the repo to the organization,
+      and it is invisible until it is urgent.
+
+      A shared password manager, or the organization's Google Workspace. While
+      doing it, decide whether one shared passphrase is the right model
+      long-term — it is fine for read-only figures, but rotating means telling
+      everyone, and there is no way to revoke one person.
+
+      Rotation procedure is `docs/runbook-migration.md` §7.
 
 - [ ] **P4. Phase 3 stays blocked, deliberately.** "Spendable excludes
       unreceived reimbursable awards" needs authoritative Received *and* the
@@ -427,6 +479,11 @@ funnel sees pledges only and Goals cannot reach it whatever the scope config.
 
 ## Recently done
 
+- **Repointed everything at the HPIC98106 organization** (2026-09-06). The
+  transfer had silently broken the dashboard: `ALLOWED_ORIGIN` still named the
+  old Pages origin, so the page rendered and every API call was blocked by the
+  browser. Also rotated `ACCESS_PASSPHRASE` and modernised the Pages workflow
+  off Node 20.
 - **Shipped the prototype: the funnel renders all three stages and the
   data-quality panel names what is broken** (`6107d7e`, 2026-08-19). This is
   the point the launch-then-govern strategy was waiting on — there is now
