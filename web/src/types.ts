@@ -25,6 +25,7 @@ export interface FundsSnapshot {
   cached: boolean;
   source: string;
   connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
+  environment: "sandbox" | "production";
 }
 
 // --- Phase 2: the Little Green Light grant funnel ---

@@ -101,6 +101,14 @@ export interface FundsSnapshot {
   cached: boolean;
   source: string;
   connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
+  /**
+   * Which QuickBooks company these figures came from.
+   *
+   * A sandbox company returns real balances from a fake business, and without
+   * this the panel renders them exactly like production figures. Every other
+   * caveat on this dashboard is visible on the page; this one was not.
+   */
+  environment: "sandbox" | "production";
 }
 
 // --- Phase 2: the Little Green Light grant funnel ---

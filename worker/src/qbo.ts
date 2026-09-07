@@ -62,8 +62,13 @@ interface AccountConfig {
 
 export const SOURCE_LABEL = "QuickBooks Online — book balance";
 
+/** Anything but an explicit "production" is a sandbox — never guess upward. */
+export function qboEnvironment(env: Env): "sandbox" | "production" {
+  return env.QBO_ENV === "production" ? "production" : "sandbox";
+}
+
 function baseUrl(env: Env): string {
-  return BASE_URLS[env.QBO_ENV === "production" ? "production" : "sandbox"];
+  return BASE_URLS[qboEnvironment(env)];
 }
 
 /** Read a single account by ID. */
@@ -308,7 +313,7 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
   const configs = accountConfigs(env);
 
   if (env.QBO_MODE === "fixture") {
-    return fixtureSnapshot(configs);
+    return fixtureSnapshot(configs, env);
   }
 
   const token = await store.getAccessToken();
@@ -333,6 +338,7 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
       // full of blanks under a healthy-looking status is the kind of quiet
       // dishonesty this dashboard exists to avoid.
       connection: token.reason === "needs_reauth" ? "needs_reauth" : "not_connected",
+      environment: qboEnvironment(env),
     };
   }
 
@@ -378,11 +384,12 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
     cached: false,
     source: SOURCE_LABEL,
     connection: "ok",
+    environment: qboEnvironment(env),
   };
 }
 
 /** Fixture mode: exercises the whole UI before any credentials exist. */
-function fixtureSnapshot(configs: AccountConfig[]): FundsSnapshot {
+function fixtureSnapshot(configs: AccountConfig[], env: Env): FundsSnapshot {
   const accounts = configs.map((c) => toSnapshot(c, fixtureAccount(c.key)));
   const { total, note } = totalOf(accounts);
   return {
@@ -393,5 +400,6 @@ function fixtureSnapshot(configs: AccountConfig[]): FundsSnapshot {
     cached: false,
     source: `${SOURCE_LABEL} (fixture data)`,
     connection: "fixture",
+    environment: qboEnvironment(env),
   };
 }

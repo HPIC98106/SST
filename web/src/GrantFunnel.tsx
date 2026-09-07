@@ -198,6 +198,19 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
         </p>
       ) : null}
 
+      {/*
+        Stated positively, and only when true. Everywhere else this dashboard
+        flags what is wrong; a reader comparing the two panels should be able
+        to see at a glance that the grant figures are real while the cash ones
+        are not.
+      */}
+      {snapshot.connection === "ok" ? (
+        <p className="banner banner-live">
+          <strong>Live data</strong> from Little Green Light — HPIC's real grant records,
+          read at the time shown below.
+        </p>
+      ) : null}
+
       {snapshot.connection === "not_configured" ? (
         <p className="banner banner-error">
           No Little Green Light API key is configured, so there are no grant figures to
