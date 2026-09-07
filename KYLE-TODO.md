@@ -148,6 +148,30 @@ shipped the thing.
 
       Rotation procedure is `docs/runbook-migration.md` §7.
 
+- [ ] **P5. Flag reimbursable spending that was never invoiced.** *(Claude,
+      once P3 exists.)* The board's own stated goal, and the clearest example
+      of what a single source of truth is *for*: neither system can answer it
+      alone.
+
+      LGL knows which awards are cost-reimbursement. QuickBooks knows what was
+      spent and whether it has been billed. Cross them and the question falls
+      out:
+
+      > Expenses attributed to a grant that **LGL marks reimbursable**, sitting
+      > in QuickBooks as **`Billable`** — eligible, spent, and never invoiced.
+
+      That is money HPIC is owed and has not asked for. Today nobody would
+      notice, because the two halves live in different systems and nothing
+      compares them.
+
+      It belongs in the data-quality panel rather than as a funnel figure: it
+      is an exception list with names and amounts, and it is actionable — the
+      fix is to send an invoice.
+
+      Depends on all three of: the QuickBooks dimension (item 0), `reimbursable`
+      populated in LGL (§5), and production QuickBooks keys (items 6–7).
+      Nothing to build until then.
+
 - [ ] **P4. Phase 3 stays blocked, deliberately.** "Spendable excludes
       unreceived reimbursable awards" needs authoritative Received *and* the
       `reimbursable` flag, which is unknown on all 10 awards. This is the one
@@ -215,10 +239,17 @@ shipped the thing.
 
 ## Phase 2 — the data structure, as recommended
 
-- [ ] **0. Stand up one QuickBooks Class per grant award.**
-      This replaces the old "decide what ties a class to an award" item. The
-      recommendation below is Claude's; it is written as a spec rather than as
-      options because Kyle asked for an opinion to build against.
+- [ ] **0. Stand up one QuickBooks Customer (or Project) per grant award.**
+      Written as a spec rather than as options because Kyle asked for an
+      opinion to build against.
+
+      > **Revised 2026-09-06, from Class to Customer/Project.** The earlier
+      > version recommended Class and said to revisit Projects "if and when
+      > reimbursement invoicing moves into QuickBooks". The board asking for
+      > visibility into whether expenses get reimbursed *is* that trigger, and
+      > it arrived earlier than assumed. Recorded as a revision rather than
+      > edited away, because the reasoning for Class is still sound on its own
+      > terms and someone will otherwise re-derive it.
 
       **Why QuickBooks for both Received and Spent, not just Spent.** Spent has
       no alternative — LGL has no concept of an expense, and invoicing a
@@ -229,45 +260,69 @@ shipped the thing.
       reconciling them forever. One dimension, one rule for whoever enters a
       transaction.
 
-      **Why Class rather than Customer or Project.** Class is the one field
-      that behaves identically on a deposit and on an expense, so the rule is
-      symmetric and takes one sentence to teach: *every grant deposit and every
-      grant-funded expense carries the grant's class.* Customer/Project is more
-      powerful — QuickBooks Projects gives a per-grant P&L, and billable
-      expenses model cost-reimbursement natively — but it asks a volunteer
-      bookkeeper to put a "customer" on an expense, which reliably does not
-      happen. **Revisit Projects if and when reimbursement invoicing moves into
-      QuickBooks;** class-per-grant does not preclude adding it later.
+      **Why Customer/Project rather than Class.** Class was the simpler rule —
+      one field behaving identically on a deposit and an expense. But
+      **billable expenses attach to a Customer, not a Class**, and billable
+      expenses are the mechanism that answers the board's actual question. With
+      Class, the "spent but not yet invoiced" state has to be reconstructed by
+      hand; with Customer, QuickBooks maintains it. Projects sit on top of
+      customers and add a per-grant P&L.
 
-      **How a class ties to an LGL award: an explicit map in Worker config,
-      keyed by LGL gift id.** Not a naming convention. A convention is a string
-      match, so renaming or mistyping a class in QuickBooks silently detaches
-      the grant and a number quietly drops — the exact failure this tool
-      exists to prevent. An explicit map fails loudly instead: a mapped grant
-      whose class has vanished renders unavailable, and a class with no mapping
+      **The cost is real and should not be waved away:** it asks a volunteer
+      bookkeeper to put a "customer" on an expense, which is unintuitive and
+      is exactly why Class was recommended first. That is a training problem,
+      not a data-model problem, and it is worth paying once.
+
+      **Decide this before any transaction is coded.** Switching dimensions
+      later is not a code change — it is re-coding every transaction by hand.
+      **Check the QuickBooks plan first:** Class tracking and Projects both
+      need Plus or Advanced, and neither exists on Essentials.
+
+      **Do not add a custom "reimbursable" field to expenses.** Reimbursability
+      is a property of the *award*, so once an expense carries its grant the
+      answer is derivable from LGL. A second hand-maintained flag would
+      eventually disagree with the first, with nothing to say which is right.
+      What genuinely varies per expense is *eligibility* — agreements exclude
+      categories, cap amounts, require pre-approval — and QuickBooks already
+      models that as `BillableStatus`:
+
+      | State | Meaning |
+      | --- | --- |
+      | `NotBillable` | not eligible, or not a grant cost |
+      | `Billable` | **spent, eligible, not yet invoiced** — the money at risk |
+      | `HasBeenBilled` | invoiced to the funder |
+
+      That middle state is the one the board is worried about, and QuickBooks
+      maintains it as a consequence of invoicing rather than as a flag someone
+      has to remember to clear. A custom field could only record what *should*
+      happen; this records what *has*.
+
+      **How the dimension ties to an LGL award: an explicit map in Worker
+      config, keyed by LGL gift id.** Not a naming convention. A convention is
+      a string match, so renaming or mistyping in QuickBooks silently detaches
+      the grant and a number quietly drops — the exact failure this tool exists
+      to prevent. An explicit map fails loudly instead: a mapped grant whose
+      customer has vanished renders unavailable, and a customer with no mapping
       is reported as unattributed. With ~10 grants the map is trivial, and
-      needing a deploy to add one is a feature rather than a cost — it makes
-      adding a grant a deliberate act.
-
-      If the grant count ever outgrows that, move the key into the class name
-      (`Grant 903691 — Commerce BFA`) and parse it, keeping the loud-failure
-      property. Do not switch to matching on funder name.
+      needing a deploy to add one is a feature — it makes adding a grant a
+      deliberate act.
 
       **The completeness rule, which is not optional:**
 
-      - Per-grant Received and Spent render from that grant's class.
+      - Per-grant Received and Spent render from that grant's customer.
       - Deposits and expenses in the rebuild accounts carrying **no** grant
-        class are an *unattributed pool*, surfaced with a count and a total.
-        They are never absorbed into a grant and never silently dropped.
+        attribution are an *unattributed pool*, surfaced with a count and a
+        total. Never absorbed into a grant, never silently dropped.
       - The roll-up "total grant cash received" renders **only when the
         unattributed pool is empty**, exactly as total cash renders only when
         every account reads successfully. An unattributed deposit might belong
-        to any grant, so a roll-up computed over an incomplete attribution is a
-        number hiding a caveat.
+        to any grant, so a roll-up over incomplete attribution is a number
+        hiding a caveat.
 
-      **What Kyle needs to do before P3 can be built:** create the classes,
-      apply them going forward, and decide whether to backfill history. The
-      code cannot proceed without at least one grant coded end to end.
+      **What Kyle needs to do before P3 can be built:** confirm the QuickBooks
+      plan supports it, create the customers, apply them going forward, and
+      decide whether to backfill history. The code cannot proceed without at
+      least one grant coded end to end.
 
 ## The LGL rules to introduce — Claude's recommendation
 
@@ -534,11 +589,18 @@ Kept here so they are not re-litigated from memory.
   systems forever. Showing both — provisional beside unavailable — is itself
   the argument for the bookkeeping change. (2026-08-19, superseding the
   2026-08-19 note below, which was reasoning from a premise since disproved.)
-- **One QuickBooks Class per grant award, mapped to LGL gift ids in Worker
-  config.** Class because it is the one field that behaves the same on a
-  deposit and an expense; explicit map because a naming convention detaches
-  silently when someone renames a class, and silent is the one failure mode
-  this tool exists to prevent.
+- **One QuickBooks Customer (or Project) per grant award, mapped to LGL gift
+  ids in Worker config.** *Revised 2026-09-06 from Class.* Class was the
+  simpler rule, but billable expenses attach to a Customer, and billable
+  expenses are what answer "was this reimbursable spending ever invoiced" —
+  the question the board actually asked. Explicit map either way, because a
+  naming convention detaches silently when someone renames a record, and
+  silent is the one failure mode this tool exists to prevent.
+- **No custom "reimbursable" field on QuickBooks expenses.** Reimbursability
+  belongs to the award, so it is derivable once an expense carries its grant;
+  a second hand-maintained flag would eventually disagree with the first.
+  Per-expense *eligibility* is real and different, and QuickBooks already
+  models it as `BillableStatus`. (2026-09-06.)
 - **Received and Outstanding come from QuickBooks, not LGL.** LGL is
   authoritative for what was awarded; QuickBooks is authoritative for cash
   received and money spent. Asking LGL for an amount-due field was the wrong
