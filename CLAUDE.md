@@ -34,13 +34,22 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | | |
 | --- | --- |
 | Worker | https://hpic-sst.kyhuber-ft.workers.dev |
-| Dashboard | https://kyhuber.github.io/SST/ |
+| Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
 | QuickBooks | Sandbox company, `QBO_ENV = "sandbox"` |
 
 Frontend deploys via GitHub Actions on pushes to `web/**`. The Worker deploys
 only via `npx wrangler deploy` — deliberately manual, since it holds the
 credentials.
+
+**The page is public; the data is not.** GitHub Pages has no authentication of
+its own, and the repository is public. What protects the numbers is the
+passphrase gate: the browser holds it in `sessionStorage` and sends it as
+`X-HPIC-Auth`, and `worker/src/auth.ts` compares it in constant time. An unset
+`ACCESS_PASSPHRASE` denies everyone rather than allowing everyone. **Never move
+that check into the frontend** — a password compared in the bundle is no check
+at all, and the Worker is the only thing standing between the internet and
+HPIC's QuickBooks and LGL data.
 
 ## Invariants — do not quietly break these
 
@@ -307,14 +316,18 @@ future value cannot change what an existing test means.
 
 ## Hosting, and where it is going
 
-Decisions made 2026-08-14, recorded so they are not re-argued from memory:
+Decisions recorded so they are not re-argued from memory:
 
-- **The repository moves to an HPIC GitHub organization.** It hosts several
-  tools other members should be able to reach, and a volunteer-run org should
-  not depend on one person's account. Steps in `docs/runbook-migration.md`.
-- **The dashboard gets `sst.hpic1919.org`**, a CNAME onto GitHub Pages. The
-  domain stays on Squarespace; no nameserver change. Do this after the repo
-  transfer so the record is set once.
+- **The repository lives in the HPIC98106 organization** (moved 2026-09-06),
+  so the tools outlast any one person's account.
+- **No custom domain.** `sst.hpic1919.org` was planned and decided against on
+  2026-09-06: the only real gain was a URL surviving a move off GitHub Pages,
+  which is worth little for a board of ten who can be told. Reversible for one
+  CNAME, one Pages setting and one `ALLOWED_ORIGIN` change.
+- **`ALLOWED_ORIGIN` must track the Pages origin, and its failure is silent.**
+  After the transfer the page rendered perfectly while every API call was
+  blocked by the browser, with nothing failing server-side. If the dashboard
+  ever shows no data at all following a hosting change, check this first.
 - **Cloudflare stays on the personal account for now** and transfers when Kyle
   steps back. The Worker URL is the Intuit OAuth redirect URI, so leaving it
   alone keeps the QuickBooks connection untouched by any of the above.

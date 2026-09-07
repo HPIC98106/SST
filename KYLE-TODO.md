@@ -248,23 +248,40 @@ Worth investigating once: **LGL's `Installment` gift type (13) exists and is
 unused.** If it enforces the payment-to-award link that hand-entered type-1
 gifts do not, rule 1 becomes structural instead of a habit.
 
-## Next up — hosting and the org
+## Hosting — settled 2026-09-06
 
-- [ ] **1. Create the HPIC GitHub organization and transfer this repo.**
-      Gives the org a home for this and the other tools you have built, so they
-      outlast any one person's involvement.
-      → `docs/runbook-migration.md` §1
+- [x] **1. Create the HPIC GitHub organization and transfer this repo. — DONE.**
+      Now `HPIC98106/SST`. The dashboard is live at
+      **https://hpic98106.github.io/SST/** — note the path is case-sensitive,
+      `/sst/` returns 404.
 
-- [ ] **2. Point `sst.hpic1919.org` at the dashboard.**
-      Do this *after* the transfer, so the DNS record is only set once. Gives
-      the board a URL that can be said out loud, and one that survives any
-      future hosting change.
-      → `docs/runbook-migration.md` §2
+- [x] **2. Point `sst.hpic1919.org` at the dashboard. — DECIDED AGAINST,
+      2026-09-06.** The board reaches the tool at the github.io URL and the
+      domain stays on Squarespace untouched. The only real argument for a
+      custom domain was indirection — a URL that survives moving off GitHub
+      Pages — which is worth little for ten people who can simply be told.
 
-- [ ] **3. Update `ALLOWED_ORIGIN` and redeploy the Worker.**
-      The dashboard's origin changes with the custom domain, and CORS will
-      block it until the Worker is told. One line, one deploy.
-      → `docs/runbook-migration.md` §3
+      **Reversible at any time** for the cost of one CNAME, one Pages setting
+      and one `ALLOWED_ORIGIN` change, so deferring costs nothing. The one
+      thing it would have protected against: renaming the organization breaks
+      the github.io URL.
+
+- [x] **3. Update `ALLOWED_ORIGIN` and redeploy the Worker. — DONE 2026-09-06**
+      (`3f72c8b`, worker version `8ecb3025`). Now `https://hpic98106.github.io`.
+
+      **This was already broken and had not been noticed**, which is the part
+      worth remembering. The transfer moved the Pages origin, the page still
+      rendered perfectly, and every API call was blocked by the browser with
+      nothing failing server-side. If the dashboard ever shows no data at all
+      after any hosting change, check this before anything else.
+
+- [x] **Modernise the Pages workflow. — DONE 2026-09-06.** The Node 20
+      deprecation warning was about the actions, not the build. Current
+      releases turned out to be several majors ahead of what was pinned:
+      checkout v4→v7, setup-node v4→v7, upload-pages-artifact v3→v5,
+      deploy-pages v4→v5. `actions/upload-artifact@v4` appeared in the warning
+      only as a dependency of `upload-pages-artifact@v3`. The build also moved
+      off Node 20, which went end-of-life in April 2026.
 
 ## Phase 2 prerequisites
 
@@ -470,6 +487,13 @@ Kept here so they are not re-litigated from memory.
   received and money spent. Asking LGL for an amount-due field was the wrong
   question, so that item is closed rather than deferred. The work this creates
   is a QuickBooks class discipline, tracked as item 0. (Kyle, 2026-08-19)
+- **The dashboard lives at the org's github.io URL; no custom domain.** The
+  page is public and the *data* is not — GitHub Pages has no authentication of
+  its own on a free organization, and the repository is public anyway. The
+  passphrase gate on the page is real: it is checked by the Worker, not in the
+  browser, so the static shell is all an unauthenticated visitor can see.
+  Describe it to the board as "the page is public, the data is not" rather than
+  as a password-protected site. (Kyle, 2026-09-06.)
 - **Cloudflare stays on the personal account for now**, and transfers when Kyle
   steps back from the organization. GitHub moves to the org immediately because
   it hosts several tools other members should be able to reach.
