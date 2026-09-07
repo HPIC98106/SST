@@ -32,11 +32,13 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          # Node 20 went end-of-life in April 2026. This is the build runtime,
+          # separate from the runtime the actions themselves run on.
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -46,9 +48,14 @@ jobs:
       # returns nothing without the passphrase.
       - run: npm run build
         env:
+          # Not a secret: it is the public address of the Worker, and the Worker
+          # returns nothing without the passphrase. Unchanged by the move to the
+          # HPIC98106 organization — Cloudflare stays on the personal account
+          # for now, and this URL is the Intuit OAuth redirect target, so
+          # leaving it alone keeps the QuickBooks connection untouched.
           VITE_WORKER_URL: https://hpic-sst.kyhuber-ft.workers.dev
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist
 
@@ -60,4 +67,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
