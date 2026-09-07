@@ -15,7 +15,9 @@ Cloudflare account stays personal for now by decision.
 
 ## §1 — Create the GitHub organization and transfer the repo
 
-Do this before §2, so the DNS record in §2 only has to be set once.
+> **DONE 2026-09-06.** The repo is now `HPIC98106/SST` and the dashboard is
+> live at https://hpic98106.github.io/SST/ — the path is case-sensitive, and
+> `/sst/` returns 404. Kept for reference.
 
 1. Go to https://github.com/organizations/plan and choose **Free**.
 2. Name it something durable and organizational — `hpic1919` matches the
@@ -56,6 +58,13 @@ so the browser blocks the Worker call. That is expected and §3 fixes it.
 
 ## §2 — Point `sst.hpic1919.org` at the dashboard
 
+> **NOT DOING THIS — decided 2026-09-06.** The board uses the github.io URL
+> and the domain stays untouched on Squarespace. The only real gain was a URL
+> that survives moving off GitHub Pages, which is worth little for ten people
+> who can be told directly. Steps kept because the decision is cheap to
+> reverse: doing this later costs one CNAME, one Pages setting, and redoing
+> §3 with the new origin.
+
 No nameserver change. The domain stays on Squarespace; you are adding one
 record.
 
@@ -84,13 +93,22 @@ prompt, still no balances until §3.
 
 ## §3 — Update `ALLOWED_ORIGIN` and redeploy the Worker
 
-The Worker only answers browsers from an origin it recognises. Until this
-lands, the dashboard loads but every data call fails CORS.
+> **DONE 2026-09-06** (`3f72c8b`, worker version `8ecb3025`). Set to
+> `https://hpic98106.github.io`, not the custom domain in the original steps
+> below, since §2 was decided against. Re-run this whenever the Pages origin
+> moves.
 
-1. Edit `worker/wrangler.toml`:
+The Worker only answers browsers from an origin it recognises. Until this
+lands, the dashboard loads but every data call fails CORS — and that failure
+is silent from the server's side: the page renders perfectly and nothing is
+logged as an error. It is worth knowing that symptom, because it looks like a
+data problem rather than a hosting one.
+
+1. Edit `worker/wrangler.toml` — the origin is whatever is in the address bar,
+   scheme included and no trailing slash:
 
 ```toml
-ALLOWED_ORIGIN = "https://sst.hpic1919.org"
+ALLOWED_ORIGIN = "https://hpic98106.github.io"
 ```
 
 2. Deploy — from `worker/`, and note this is deliberately manual because the
