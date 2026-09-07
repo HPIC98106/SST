@@ -234,9 +234,8 @@ export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) 
     <section className="panel">
       <h1>How a grant moves through our systems</h1>
       <p className="note">
-        Every figure on the dashboard is one of the stages below. This is for reviewing
-        against what is actually typed into Little Green Light — where it is wrong, the
-        dashboard is wrong, and that is worth finding now rather than in front of the board.
+       Every figure on the dashboard is one of the stages below. This is for reviewing
+       against what is actually typed into Little Green Light to ensure the dashboard is accurate.
       </p>
 
       <h2 className="lc-heading">The grant side</h2>
