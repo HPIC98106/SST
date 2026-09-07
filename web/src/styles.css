@@ -367,3 +367,181 @@ code {
   color: var(--muted);
   font-style: italic;
 }
+
+/* --- View tabs, provenance, and the lifecycle page --- */
+
+.views {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+}
+
+.view-tab {
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  color: var(--muted);
+}
+
+.view-tab.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/*
+ * Where a figure came from, under the figure. Small and quiet: it must be
+ * available without competing with the number it qualifies.
+ */
+.source {
+  margin: 0.7rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+}
+
+.source div {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 0.5rem;
+}
+
+.source dt {
+  color: var(--muted);
+}
+
+.source dd {
+  margin: 0;
+}
+
+.source-authority {
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.source-gap {
+  font-size: 0.78rem;
+}
+
+.lc-heading {
+  margin: 1.6rem 0 0.2rem;
+  font-size: 1rem;
+}
+
+.lc-stage {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  margin-top: 0.8rem;
+}
+
+.lc-stage h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.98rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lc-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.78rem;
+  flex: none;
+}
+
+.lc-grid {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.lc-grid > div {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.lc-grid dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.lc-grid dd {
+  margin: 0;
+}
+
+.lc-action {
+  font-weight: 500;
+}
+
+.lc-cell {
+  display: grid;
+  gap: 0.15rem;
+}
+
+/*
+ * A stage that does not exist reads as absent, not as neutral. The expense
+ * track is almost entirely "Not there", and that is the page's main finding
+ * rather than an incidental detail.
+ */
+.lc-flag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: fit-content;
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+}
+
+.lc-present .lc-flag {
+  color: #2c5c3f;
+  background: #e6f2ea;
+}
+
+.lc-partial .lc-flag {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.lc-missing .lc-flag {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.lc-todo {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.lc-scope {
+  margin-top: 1.2rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .lc-grid > div,
+  .source div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}

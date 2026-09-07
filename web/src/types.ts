@@ -37,6 +37,18 @@ export interface FundsSnapshot {
  */
 export type FunnelStatus = "ok" | "provisional" | "unavailable";
 
+/**
+ * Where a figure comes from. Built by the Worker beside the code that computes
+ * the figure, never written here — a label claiming the wrong system would be
+ * worse than a wrong number, because nothing on the page would look off.
+ */
+export interface FigureProvenance {
+  system: string;
+  records: string;
+  authority?: string;
+  gap?: string;
+}
+
 export interface FunnelStage {
   key: "pledged" | "received" | "outstanding";
   label: string;
@@ -44,6 +56,7 @@ export interface FunnelStage {
   amount: number | null;
   recordCount: number | null;
   note?: string;
+  provenance: FigureProvenance;
 }
 
 export type ReimbursableStatus = "reimbursable" | "not_reimbursable" | "unknown";
@@ -77,6 +90,11 @@ export interface DataQualityException {
 export interface GrantSnapshot {
   stages: FunnelStage[];
   exceptions: DataQualityException[];
+  scope: {
+    campaignIds: number[];
+    awardCategoryIds: number[];
+    paymentCategoryIds: number[];
+  };
   awardsByReimbursable: ReimbursableBucket[];
   unscoped: boolean;
   retrievedAt: string | null;

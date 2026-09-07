@@ -197,6 +197,54 @@ describe("Received, computed provisionally from payment records", () => {
   });
 });
 
+describe("where each figure says it comes from", () => {
+  it("never claims a provisional figure comes from the system of record", async () => {
+    // The defect this guards against is worse than a wrong total: a label
+    // saying "QuickBooks" over a number read from LGL would look right on a
+    // page where nothing else looked wrong.
+    const snapshot = await getGrants(grantEnv());
+
+    for (const key of ["received", "outstanding"]) {
+      const { provenance } = stage(snapshot, key);
+      expect(provenance.system).toMatch(/Little Green Light/);
+      expect(provenance.authority).toBe("QuickBooks");
+      expect(provenance.gap).toBeTruthy();
+    }
+  });
+
+  it("marks Pledged as needing no other authority", async () => {
+    // LGL *is* the system of record for what was awarded, so an authority
+    // pointing elsewhere would imply a reconciliation that does not exist.
+    const snapshot = await getGrants(grantEnv());
+    const { provenance } = stage(snapshot, "pledged");
+
+    expect(provenance.system).toMatch(/Little Green Light/);
+    expect(provenance.authority).toBeUndefined();
+    expect(provenance.gap).toBeUndefined();
+  });
+
+  it("says nothing is being computed when a figure is unavailable", async () => {
+    // An unavailable figure still needs provenance, or the lifecycle view has
+    // a hole exactly where the reader most needs to know why.
+    const snapshot = await getGrants(grantEnv({ LGL_GRANT_PAYMENT_CATEGORY_IDS: undefined }));
+    const { status, provenance } = stage(snapshot, "received");
+
+    expect(status).toBe("unavailable");
+    expect(provenance.system).toMatch(/nothing/i);
+    expect(provenance.authority).toBe("QuickBooks");
+  });
+
+  it("echoes the scope actually in force", async () => {
+    // The lifecycle view quotes these IDs. Reading them back from the snapshot
+    // means it cannot describe a scope the Worker is not using.
+    const snapshot = await getGrants(grantEnv());
+
+    expect(snapshot.scope.campaignIds).toEqual([901]);
+    expect(snapshot.scope.awardCategoryIds).toEqual([6101]);
+    expect(snapshot.scope.paymentCategoryIds).toEqual([6102]);
+  });
+});
+
 describe("the data-quality panel", () => {
   it("names the payments that are linked to no award, and excludes them from Received", async () => {
     // The panel is the point of shipping against imperfect data: the gap has

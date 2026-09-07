@@ -117,6 +117,29 @@ export interface FundsSnapshot {
 export type FunnelStatus = "ok" | "provisional" | "unavailable";
 
 /**
+ * Where a figure comes from, and what stands between it and being trusted.
+ *
+ * Emitted by the code that computes the figure rather than written alongside
+ * it in the UI. A label describing provenance is exactly the kind of thing
+ * that goes quietly stale — and a confident, wrong claim about which system a
+ * number came from would be worse than a wrong number, because nobody would
+ * think to check it.
+ */
+export interface FigureProvenance {
+  /** The system this number is actually computed from, today. */
+  system: string;
+  /** What is being counted, in the reader's terms rather than the API's. */
+  records: string;
+  /**
+   * The system that *should* answer this, when it differs from `system`.
+   * Present on any provisional figure; absent when `system` is authoritative.
+   */
+  authority?: string;
+  /** What has to change before `system` and `authority` agree. */
+  gap?: string;
+}
+
+/**
  * The funnel starts at Pledged, not at an application. This tool covers money
  * awarded or promised, not money requested (confirmed with Alex, 2026-08-14).
  */
@@ -135,6 +158,8 @@ export interface FunnelStage {
   recordCount: number | null;
   /** Human-readable explanation, shown inline on the panel. */
   note?: string;
+  /** Where this figure came from. Always present, including when unavailable. */
+  provenance: FigureProvenance;
 }
 
 /**
@@ -199,6 +224,15 @@ export interface DataQualityException {
 
 export interface GrantSnapshot {
   stages: FunnelStage[];
+  /**
+   * The scope actually in force, echoed so the lifecycle view can quote real
+   * configuration rather than repeating IDs that would drift from it.
+   */
+  scope: {
+    campaignIds: number[];
+    awardCategoryIds: number[];
+    paymentCategoryIds: number[];
+  };
   /**
    * Records failing a data-quality rule. Empty is the goal state, not the
    * normal one.

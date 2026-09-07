@@ -83,6 +83,7 @@ import type {
   DataQualityException,
   DataQualityRecord,
   Env,
+  FigureProvenance,
   FunnelStage,
   GrantSnapshot,
   ReimbursableBucket,
@@ -450,6 +451,46 @@ async function readPayments(env: Env): Promise<ReadResult<LglGift> | null> {
   ]);
 }
 
+// --- Provenance ---
+
+/**
+ * Where each figure comes from.
+ *
+ * Deliberately built here, beside the reads, rather than written in the UI. A
+ * label claiming a number came from QuickBooks when it came from LGL would be
+ * a worse defect than a wrong total, because nothing on the page would look
+ * off. Keeping it next to the query means changing the source changes the
+ * label in the same edit.
+ */
+const PROVENANCE: Record<FunnelStage["key"], FigureProvenance> = {
+  pledged: {
+    system: "Little Green Light",
+    records: "award records — one per grant awarded, in the configured campaign",
+    // No `authority`: LGL *is* the system of record for what was awarded.
+  },
+  received: {
+    system: "Little Green Light",
+    records: "payment records, each linked to the award it pays",
+    authority: "QuickBooks",
+    gap:
+      "QuickBooks carries nothing identifying which grant a deposit belongs to, so this " +
+      "cannot be reconciled against the books yet. Payments not linked to an award are " +
+      "excluded, so the real figure may be higher.",
+  },
+  outstanding: {
+    system: "Little Green Light",
+    records: "Pledged minus Received — not read from anywhere directly",
+    authority: "QuickBooks",
+    gap: "Inherits every caveat on Received, and overstates if a payment is missing its link.",
+  },
+};
+
+/** Provenance for a figure that has no number at all. */
+function unavailableProvenance(key: FunnelStage["key"]): FigureProvenance {
+  const base = PROVENANCE[key];
+  return { ...base, system: "nothing — no figure is being computed" };
+}
+
 // --- Funnel assembly ---
 
 function unavailableStage(
@@ -457,7 +498,15 @@ function unavailableStage(
   label: string,
   note: string,
 ): FunnelStage {
-  return { key, label, status: "unavailable", amount: null, recordCount: null, note };
+  return {
+    key,
+    label,
+    status: "unavailable",
+    amount: null,
+    recordCount: null,
+    note,
+    provenance: unavailableProvenance(key),
+  };
 }
 
 /**
@@ -474,7 +523,7 @@ function provisionalStage(
   recordCount: number,
   note: string,
 ): FunnelStage {
-  return { key, label, status: "provisional", amount, recordCount, note };
+  return { key, label, status: "provisional", amount, recordCount, note, provenance: PROVENANCE[key] };
 }
 
 /**
@@ -765,9 +814,12 @@ async function findExceptions(
 /** Assemble the Phase 2 grant funnel snapshot. */
 export async function getGrants(env: Env): Promise<GrantSnapshot> {
   const fixture = isFixtureMode(env);
-  const unscoped =
-    parseIds(env.LGL_GRANT_CAMPAIGN_IDS).length === 0 &&
-    parseIds(env.LGL_GRANT_GIFT_CATEGORY_IDS).length === 0;
+  const scope = {
+    campaignIds: parseIds(env.LGL_GRANT_CAMPAIGN_IDS),
+    awardCategoryIds: parseIds(env.LGL_GRANT_GIFT_CATEGORY_IDS),
+    paymentCategoryIds: parseIds(env.LGL_GRANT_PAYMENT_CATEGORY_IDS),
+  };
+  const unscoped = scope.campaignIds.length === 0 && scope.awardCategoryIds.length === 0;
 
   if (!fixture && !env.LGL_API_KEY) {
     return {
@@ -777,6 +829,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
         unavailableStage("outstanding", "Outstanding", RECONCILIATION_NOTE),
       ],
       exceptions: [],
+      scope,
       awardsByReimbursable: [],
       unscoped,
       retrievedAt: null,
@@ -813,6 +866,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
   return {
     stages,
     exceptions,
+    scope,
     awardsByReimbursable: awards.ok ? splitByReimbursable(awards.items) : [],
     unscoped,
     retrievedAt,
@@ -855,5 +909,6 @@ function toStage<T>(
     status: "ok",
     amount: result.items.reduce((sum, item) => sum + amountOf(item), 0),
     recordCount: result.items.length,
+    provenance: PROVENANCE[key],
   };
 }
