@@ -175,13 +175,26 @@ worth checking whether it enforces the payment-to-award link that hand-entered
 type-1 gifts do not.
 
 Choosing QuickBooks instead needs a **bookkeeping practice**: QuickBooks must
-carry a dimension — class, customer, or project — that ties a deposit or
-expense to a specific grant, applied at entry time. Nothing in
-`worker/src/qbo.ts` reads any such dimension today; it reads Account entities
-and book balances only. (The `Classification` field there is the account-type
-filter for `Asset`, not a QuickBooks Class.) The Phase 1 completeness rule
-governs either way: a deposit attributable to no grant is invisible, so
-incomplete attribution renders unavailable rather than quietly low.
+carry a dimension that ties a deposit or expense to a specific grant, applied
+at entry time. **The dimension is a Customer (or Project), not a Class** —
+decided 2026-09-06, revising an earlier Class recommendation. Class is the
+simpler rule, but **billable expenses attach to a Customer**, and
+`BillableStatus` (`NotBillable` / `Billable` / `HasBeenBilled`) is what answers
+whether reimbursable spending was ever invoiced. With Class that state has to
+be reconstructed by hand; with Customer, QuickBooks maintains it.
+
+**Do not add a custom "reimbursable" field to expenses.** Reimbursability is a
+property of the award, so it is derivable once an expense carries its grant. A
+second hand-maintained flag would eventually disagree with the first and
+nothing would say which is right. What varies per expense is *eligibility*,
+which `BillableStatus` already models.
+
+Nothing in `worker/src/qbo.ts` reads any such dimension today; it reads Account
+entities and book balances only. (The `Classification` field there is the
+account-type filter for `Asset`, not a QuickBooks Class.) The Phase 1
+completeness rule governs either way: a deposit attributable to no grant is
+invisible, so incomplete attribution renders unavailable rather than quietly
+low.
 
 Two more things that matter:
 
@@ -338,6 +351,12 @@ future value cannot change what an existing test means.
   the `reimbursable` flag — unknown on all 10 awards today, which the panel
   now reports as a blocking exception. This is the one figure where being wrong
   costs real money, so it waits for both rather than shipping provisionally.
+
+  Phase 3 also carries the clearest example of what this tool is *for*:
+  cross LGL's reimbursable designation against QuickBooks' `BillableStatus` to
+  find **spending on a reimbursable grant that was never invoiced**. Neither
+  system can answer that alone, and today nobody would notice. Tracked as P5
+  in `KYLE-TODO.md`.
 
 ## Hosting, and where it is going
 
