@@ -210,6 +210,31 @@ POSIX: forward-slash paths (`/c/Users/...` or `~/...`), no `cd` to an absolute
 Windows path, no `python` (not installed — use `node`). PowerShell 5.1 exists
 but lacks `&&`, `||`, and much else; prefer Git Bash.
 
+**But `/c/...` only survives as far as the argument list.** Git Bash rewrites
+path-shaped *arguments* into Windows form before handing them to a native
+binary, so `node /c/Users/.../script.mjs` works. It does **not** rewrite a path
+sitting inside a quoted string, so this fails:
+
+    node -e 'readFileSync("/c/Users/.../worker/.dev.vars")'
+    # ENOENT: open 'C:\c\Users\...'   <- note the stray leading \c
+
+Inside `-e`, a `--config=`, or any other path embedded in a string, use
+`C:/Users/...` or a path relative to the working directory. The same applies to
+anything else that takes a script body rather than a filename.
+
+**Prefer pure shell for one-off file edits involving a secret.** `sed` needs the
+replacement escaped, so a value containing `|`, `&` or a backslash is silently
+mangled — which, when the value is a credential, recreates the exact drift the
+edit was meant to fix. This treats it literally and needs no second interpreter:
+
+    { grep -v '^KEY=' f; printf 'KEY=%s\n' "$V"; } > f.new && mv f.new f
+
+**Scripted credential changes should verify before they persist.** Setting a
+Cloudflare secret and updating `worker/.dev.vars` are two writes that must
+agree, and nothing checks them: a mismatch surfaces later as a 401 that looks
+like a rotation problem. Test the value against the deployed Worker and only
+write the file on a 200.
+
 ## Gotchas that cost real time
 
 - **Never pipe secrets into `wrangler secret put` from PowerShell.** Its
