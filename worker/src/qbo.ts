@@ -60,7 +60,7 @@ interface AccountConfig {
   id?: string;
 }
 
-export const SOURCE_LABEL = "QuickBooks Online — book balance";
+export const SOURCE_LABEL = "QuickBooks Online, book balance";
 
 /** Anything but an explicit "production" is a sandbox — never guess upward. */
 export function qboEnvironment(env: Env): "sandbox" | "production" {
@@ -135,7 +135,7 @@ function toSnapshot(config: AccountConfig, result: AccountReadResult): AccountSn
       hasSubAccounts: false,
       note:
         result.kind === "not_found"
-          ? "Account not found in QuickBooks — check the configured account ID."
+          ? "Account not found in QuickBooks: check the configured account ID."
           : result.detail,
     };
   }
@@ -226,7 +226,7 @@ function totalOf(accounts: AccountSnapshot[]): { total: number | null; note?: st
       .join(", ");
     return {
       total: null,
-      note: `Not shown — ${missing} could not be read, so any total would understate cash on hand.`,
+      note: `Not shown: ${missing} could not be read, so any total would understate cash on hand.`,
     };
   }
   return { total: usable.reduce((sum, a) => sum + (a.balance ?? 0), 0) };

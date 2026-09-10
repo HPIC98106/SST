@@ -31,7 +31,7 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
       {snapshot.environment === "sandbox" && snapshot.connection !== "fixture" ? (
         <p className="banner banner-error">
           <strong>Test company, not HPIC's books.</strong> These are real balances read
-          live from QuickBooks — but from Intuit's <strong>sandbox</strong> company, so
+          live from QuickBooks, but from Intuit's <strong>sandbox</strong> company, so
           every figure below is invented. Switching to HPIC's real accounts needs
           QuickBooks production keys, which need Intuit's approval.
         </p>
@@ -78,7 +78,7 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
 
       <div className="panel-footer">
         <p>
-          <strong>Source:</strong> {snapshot.source}. This is the QuickBooks book balance —
+          <strong>Source:</strong> {snapshot.source}. This is the QuickBooks book balance:
           it reflects transactions entered in QuickBooks, not the live bank-feed balance,
           which the QuickBooks API does not expose.
         </p>

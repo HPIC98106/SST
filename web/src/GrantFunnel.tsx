@@ -44,7 +44,7 @@ function StageCard({ stage }: { stage: FunnelStage }) {
         one without stopping to read a paragraph.
       */}
       {stage.status === "provisional" ? (
-        <p className="provisional-flag">Provisional — not reconciled to the books</p>
+        <p className="provisional-flag">Provisional: not reconciled to the books</p>
       ) : null}
       {/*
         The count appears with every total, never on its own. LGL is a partial
@@ -104,7 +104,7 @@ function ExceptionRecordRow({ record }: { record: DataQualityRecord }) {
         {record.date ? <span>{record.date}</span> : null}
         {record.url ? (
           <a href={record.url} target="_blank" rel="noreferrer">
-            Open in Little Green Light
+            Open in LGL
           </a>
         ) : (
           <span className="muted-cell">gift {record.id}</span>
@@ -158,8 +158,8 @@ function DataQualityPanel({ exceptions }: { exceptions: DataQualityException[] }
       <p className="note">
         Records that break a rule the figures above depend on. Items marked{" "}
         <strong>Affects a figure above</strong> are why a number is missing, provisional, or
-        lower than it should be — each one is excluded from the totals rather than guessed
-        at. Fixing a record in Little Green Light changes this page on the next read.
+        lower than it should be; each one is excluded from the totals rather than guessed
+        at. Fixing a record in LGL changes this page on the next read.
       </p>
       {blocking.length > 0 ? (
         <p className="banner banner-warn">
@@ -178,8 +178,8 @@ function DataQualityPanel({ exceptions }: { exceptions: DataQualityException[] }
       </div>
       <p className="note">
         This checks what can be checked automatically. It cannot tell whether money in a
-        grant category is really a grant — a fee-for-service payment filed as one looks
-        identical here — so the category itself still needs a human eye.
+        grant category is really a grant. A fee-for-service payment filed as one looks
+        identical here, so the category itself still needs a human eye.
       </p>
     </div>
   );
@@ -192,7 +192,7 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
 
       {snapshot.connection === "fixture" ? (
         <p className="banner banner-warn">
-          Showing <strong>fixture data</strong>, not real Little Green Light figures. Set{" "}
+          Showing <strong>fixture data</strong>, not real LGL figures. Set{" "}
           <code>LGL_MODE=live</code> on the Worker and add <code>LGL_API_KEY</code> to
           connect.
         </p>
@@ -206,21 +206,21 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
       */}
       {snapshot.connection === "ok" ? (
         <p className="banner banner-live">
-          <strong>Live data</strong> from Little Green Light — HPIC's real grant records,
+          <strong>Live data</strong> from LGL: HPIC's real grant records,
           read at the time shown below.
         </p>
       ) : null}
 
       {snapshot.connection === "not_configured" ? (
         <p className="banner banner-error">
-          No Little Green Light API key is configured, so there are no grant figures to
+          No LGL API key is configured, so there are no grant figures to
           show. Add <code>LGL_API_KEY</code> as a Worker secret.
         </p>
       ) : null}
 
       {snapshot.connection === "unavailable" ? (
         <p className="banner banner-error">
-          Little Green Light could not be read, so no grant figures are current. The reason
+          LGL could not be read, so no grant figures are current. The reason
           appears on each figure below.
         </p>
       ) : null}
@@ -228,7 +228,7 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
       {snapshot.unscoped ? (
         <p className="banner banner-warn">
           <strong>Not scoped to grants.</strong> No grant campaign or gift category is
-          configured, so these figures count every pledge in Little Green Light —
+          configured, so these figures count every pledge in LGL,
           individual donor activity included. Set{" "}
           <code>LGL_GRANT_CAMPAIGN_IDS</code> on the Worker to narrow them.
         </p>
@@ -248,7 +248,7 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
           <p className="note">
             Shown separately and never added together. A cost-reimbursement award requires
             HPIC to spend first and invoice the funder afterwards, so it is not cash
-            available to start a construction phase — it changes who ultimately bears the
+            available to start a construction phase; it changes who ultimately bears the
             cost, not whether work can begin.
           </p>
           <table className="breakdown">
@@ -270,9 +270,8 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
             </tbody>
           </table>
           <p className="note">
-            This comes from the <strong>Payment Terms</strong> field on the award in Little
-            Green Light. “Payment in full” and “Distribution payments” both count as not
-            reimbursable — the only distinction that changes a number here is whether HPIC
+            This comes from the <strong>Payment Terms</strong> field on the award in LGL. “Payment in full” and “Distribution payments” both count as not
+            reimbursable; the only distinction that changes a number here is whether HPIC
             has to spend before the money arrives. An award with the field unset reads as{" "}
             <strong>unknown</strong> and is never assumed to be spendable; setting it lights
             this up with no code change.
@@ -286,7 +285,7 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
         </p>
         <p className="caveat">{snapshot.completenessNote}</p>
         <p>
-          <strong>Data retrieved from Little Green Light:</strong>{" "}
+          <strong>Data retrieved from LGL:</strong>{" "}
           {formatRetrievedAt(snapshot.retrievedAt)}
         </p>
       </div>

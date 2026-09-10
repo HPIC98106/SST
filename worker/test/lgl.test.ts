@@ -206,7 +206,7 @@ describe("where each figure says it comes from", () => {
 
     for (const key of ["received", "outstanding"]) {
       const { provenance } = stage(snapshot, key);
-      expect(provenance.system).toMatch(/Little Green Light/);
+      expect(provenance.system).toMatch(/LGL/);
       expect(provenance.authority).toBe("QuickBooks");
       expect(provenance.gap).toBeTruthy();
     }
@@ -218,7 +218,7 @@ describe("where each figure says it comes from", () => {
     const snapshot = await getGrants(grantEnv());
     const { provenance } = stage(snapshot, "pledged");
 
-    expect(provenance.system).toMatch(/Little Green Light/);
+    expect(provenance.system).toMatch(/LGL/);
     expect(provenance.authority).toBeUndefined();
     expect(provenance.gap).toBeUndefined();
   });
@@ -581,7 +581,7 @@ describe("reads against LGL", () => {
 
     expect(snapshot.connection).toBe("not_configured");
     expect(stage(snapshot, "pledged").amount).toBeNull();
-    expect(stage(snapshot, "pledged").note).toMatch(/no little green light api key/i);
+    expect(stage(snapshot, "pledged").note).toMatch(/no lgl api key/i);
     // Nothing was called; a missing key is caught before any request.
     expect(calls).toHaveLength(0);
   });

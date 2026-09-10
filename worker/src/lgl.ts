@@ -103,7 +103,7 @@ const PAGE_SIZE = 100;
  */
 const MAX_PAGES = 20;
 
-export const SOURCE_LABEL = "Little Green Light";
+export const SOURCE_LABEL = "LGL";
 
 /**
  * The prototype caveat. LGL is a partial picture: some grants are still
@@ -112,7 +112,7 @@ export const SOURCE_LABEL = "Little Green Light";
  * reconciliation.
  */
 export const COMPLETENESS_NOTE =
-  "These figures reflect what is currently recorded in Little Green Light, not HPIC's " +
+  "These figures reflect what is currently recorded in LGL, not HPIC's " +
   "complete grant history. Some grants are still tracked on the manual spreadsheet and " +
   "have not been entered yet. Record counts appear beside every total so a missing grant " +
   "shows up as a count discrepancy rather than a quietly low number.";
@@ -241,19 +241,19 @@ async function getPage<T>(
       },
     });
   } catch (error) {
-    return { ok: false, detail: `Could not reach Little Green Light: ${String(error)}` };
+    return { ok: false, detail: `Could not reach LGL: ${String(error)}` };
   }
 
   if (response.status === 401 || response.status === 403) {
     return {
       ok: false,
       detail:
-        "Little Green Light rejected the API key. Check LGL_API_KEY and that the key is " +
+        "LGL rejected the API key. Check LGL_API_KEY and that the key is " +
         "still active in LGL's integration settings.",
     };
   }
   if (!response.ok) {
-    return { ok: false, detail: `Little Green Light returned ${response.status}.` };
+    return { ok: false, detail: `LGL returned ${response.status}.` };
   }
 
   try {
@@ -265,7 +265,7 @@ async function getPage<T>(
       date: response.headers.get("date"),
     };
   } catch (error) {
-    return { ok: false, detail: `Unreadable response from Little Green Light: ${String(error)}` };
+    return { ok: false, detail: `Unreadable response from LGL: ${String(error)}` };
   }
 }
 
@@ -478,7 +478,7 @@ async function pledgeGiftTypeId(env: Env): Promise<{ ok: true; id: number } | { 
     return {
       ok: false,
       detail:
-        "Little Green Light did not report a 'Pledge' gift type, so awards cannot be " +
+        "LGL did not report a 'Pledge' gift type, so awards cannot be " +
         "identified. Check the gift types configured in LGL.",
     };
   }
@@ -536,12 +536,12 @@ async function readPayments(env: Env): Promise<ReadResult<LglGift> | null> {
  */
 const PROVENANCE: Record<FunnelStage["key"], FigureProvenance> = {
   pledged: {
-    system: "Little Green Light",
-    records: "award records — one per grant awarded, in the configured campaign",
+    system: "LGL",
+    records: "award records: one per grant awarded, in the configured campaign",
     // No `authority`: LGL *is* the system of record for what was awarded.
   },
   received: {
-    system: "Little Green Light",
+    system: "LGL",
     records: "payment records, each linked to the award it pays",
     authority: "QuickBooks",
     gap:
@@ -550,8 +550,8 @@ const PROVENANCE: Record<FunnelStage["key"], FigureProvenance> = {
       "excluded, so the real figure may be higher.",
   },
   outstanding: {
-    system: "Little Green Light",
-    records: "Pledged minus Received — not read from anywhere directly",
+    system: "LGL",
+    records: "Pledged minus Received; not read from anywhere directly",
     authority: "QuickBooks",
     gap: "Inherits every caveat on Received, and overstates if a payment is missing its link.",
   },
@@ -560,7 +560,7 @@ const PROVENANCE: Record<FunnelStage["key"], FigureProvenance> = {
 /** Provenance for a figure that has no number at all. */
 function unavailableProvenance(key: FunnelStage["key"]): FigureProvenance {
   const base = PROVENANCE[key];
-  return { ...base, system: "nothing — no figure is being computed" };
+  return { ...base, system: "nothing; no figure is being computed" };
 }
 
 // --- Funnel assembly ---
@@ -608,7 +608,7 @@ function provisionalStage(
  */
 export const RECONCILIATION_NOTE =
   "Not shown. Cash received is an accounting fact and QuickBooks is the system of record " +
-  "for it, but no grant payment category is configured here, so Little Green Light cannot " +
+  "for it, but no grant payment category is configured here, so LGL cannot " +
   "supply even a provisional figure. Set LGL_GRANT_PAYMENT_CATEGORY_IDS on the Worker.";
 
 /**
@@ -619,24 +619,24 @@ export const RECONCILIATION_NOTE =
  * confirmed this, without implying the number is worthless.
  */
 export const PROVISIONAL_RECEIVED_NOTE =
-  "Provisional — from Little Green Light, not reconciled against the books. This sums the " +
+  "Provisional: from LGL, not reconciled against the books. This sums the " +
   "payment records linked to each award. QuickBooks is the system of record for cash, and " +
   "that reconciliation is not built yet. Payments that were never linked to an award are " +
   "listed under Data quality and are NOT counted here, so the real figure may be higher.";
 
 export const PROVISIONAL_OUTSTANDING_NOTE =
-  "Provisional — Pledged minus Received, so it inherits every caveat on Received. If a " +
+  "Provisional: Pledged minus Received, so it inherits every caveat on Received. If a " +
   "payment is missing its link to an award, this figure overstates what is still owed.";
 
 /** Spent has no LGL answer at all, and never will. Kept separate from the rest. */
 export const SPENT_NOTE =
-  "Little Green Light has no concept of an expense, so this cannot come from there at any " +
+  "LGL has no concept of an expense, so this cannot come from there at any " +
   "level of data quality. It needs QuickBooks to identify each grant on the transactions " +
   "belonging to it.";
 
 const UNSCOPED_NOTE =
-  "Not scoped to grants — no grant campaign or gift category is configured, so this counts " +
-  "all Little Green Light activity, including individual donor asks and pledges.";
+  "Not scoped to grants: no grant campaign or gift category is configured, so this counts " +
+  "all LGL activity, including individual donor asks and pledges.";
 
 /**
  * Split awards by reimbursable status.
@@ -694,7 +694,7 @@ function receivedAndOutstanding(
   if (!payments.ok) return unavailable(payments.detail);
   if (!payments.complete) {
     return unavailable(
-      `More Little Green Light payment records than this dashboard reads in one pass ` +
+      `More LGL payment records than this dashboard reads in one pass ` +
         `(${MAX_PAGES * PAGE_SIZE}). A partial total would understate cash received, so it ` +
         `is not shown.`,
     );
@@ -851,9 +851,9 @@ async function findExceptions(
       "Payments not linked to an award",
       "These are in a grant payment category but name no award, so nothing can tell which " +
         "grant they belong to. They are excluded from Received, which means Received is " +
-        "understated by up to this amount. Linking each one to its award in Little Green " +
-        "Light fixes it. Note that a payment here may not be a grant at all — if it is " +
-        "not, the fix is to move it out of the grant category rather than to link it.",
+        "understated by up to this amount. Linking each one to its award in LGL fixes it. " +
+        "Note that a payment here may not be a grant at all: if it is not, the fix is to " +
+        "move it out of the grant category rather than to link it.",
       "blocking",
       unlinkedPayments,
       true,
@@ -864,7 +864,7 @@ async function findExceptions(
       "Whether an award is cost-reimbursement decides whether it counts as money HPIC can " +
         "spend now. Set the “Payment Terms” field on each of these awards in Little " +
         "Green Light. Until it is set they are never assumed spendable, so the " +
-        "phase-readiness figure cannot be built at all — this is the cheapest unblock available.",
+        "phase-readiness figure cannot be built at all. This is the cheapest unblock available.",
       "blocking",
       awardsNoTerms,
       true,
@@ -872,12 +872,12 @@ async function findExceptions(
     build(
       "awards_unreadable_reimbursable",
       "Awards whose payment terms cannot be read",
-      "Little Green Light holds a “Payment Terms” value on these awards that this " +
+      "LGL holds a “Payment Terms” value on these awards that this " +
         `dashboard does not recognise (${unreadableValues}). They are treated exactly like an ` +
-        "unset field and are never assumed spendable, so no figure here is wrong — but the " +
+        "unset field and are never assumed spendable, so no figure here is wrong, but the " +
         "data entry has been done and is not being counted. Either correct the value in " +
-        "Little Green Light so it matches the picklist, or have the dashboard taught to " +
-        "read it. Adding an option in Little Green Light without adding it here always " +
+        "LGL so it matches the picklist, or have the dashboard taught to " +
+        "read it. Adding an option in LGL without adding it here always " +
         "lands the award in this list.",
       "blocking",
       awardsUnreadableTerms.map(({ award }) => award),
@@ -886,7 +886,7 @@ async function findExceptions(
     build(
       "awards_missing_campaign",
       "Awards with no campaign",
-      "The funnel is scoped by campaign, so an award without one is invisible here — it " +
+      "The funnel is scoped by campaign, so an award without one is invisible here; it " +
         "will not appear in Pledged at all, and no total will look wrong.",
       "blocking",
       awardsNoCampaign,
@@ -896,7 +896,7 @@ async function findExceptions(
       "awards_missing_goal",
       "Awards not linked to a proposal",
       "The application record a grant came from. Nothing on this page depends on it, but " +
-        "without it the award has no history behind it in Little Green Light.",
+        "without it the award has no history behind it in LGL.",
       "advisory",
       awardsNoGoal,
       true,
@@ -904,8 +904,8 @@ async function findExceptions(
     build(
       "payments_missing_campaign",
       "Payments with no campaign",
-      "This dashboard copes — it reaches the campaign by following the payment up to its " +
-        "award — but Little Green Light's own campaign reports do not, and will show less " +
+      "This dashboard copes, because it reaches the campaign by following the payment up " +
+        "to its award. LGL's own campaign reports do not, and will show less " +
         "money against the campaign than was actually received.",
       "advisory",
       paymentsNoCampaign,
@@ -927,7 +927,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
   if (!fixture && !env.LGL_API_KEY) {
     return {
       stages: [
-        unavailableStage("pledged", "Pledged", "No Little Green Light API key configured."),
+        unavailableStage("pledged", "Pledged", "No LGL API key configured."),
         unavailableStage("received", "Received", RECONCILIATION_NOTE),
         unavailableStage("outstanding", "Outstanding", RECONCILIATION_NOTE),
       ],
@@ -1001,7 +1001,7 @@ function toStage<T>(
     return unavailableStage(
       key,
       label,
-      `More Little Green Light records than this dashboard reads in one pass ` +
+      `More LGL records than this dashboard reads in one pass ` +
         `(${MAX_PAGES * PAGE_SIZE}). A partial total would understate the figure, so it is not shown.`,
     );
   }

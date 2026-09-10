@@ -134,7 +134,7 @@ export async function handleCallback(
   const realmNote =
     realmId && realmId !== env.QBO_REALM_ID
       ? `<p><strong>Set <code>QBO_REALM_ID</code> to <code>${realmId}</code></strong> ` +
-        `and redeploy — it does not match the currently configured value.</p>`
+        `and redeploy; it does not match the currently configured value.</p>`
       : `<p>Company ID (realm): <code>${realmId ?? "not returned"}</code></p>`;
 
   return page(

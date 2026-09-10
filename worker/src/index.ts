@@ -250,14 +250,14 @@ async function handleAccountList(env: Env): Promise<Response> {
         `<tr class="${classes}"><td><code>${escapeHtml(a.id)}</code>${which}</td>` +
         `<td>${escapeHtml(a.name)}${a.active ? "" : " (inactive)"}</td>` +
         `<td>${escapeHtml(a.accountType)}</td><td>${escapeHtml(a.accountSubType)}</td>` +
-        `<td class="num">${balance === null ? "—" : balance.toLocaleString("en-US", { style: "currency", currency: "USD" })}</td></tr>`
+        `<td class="num">${balance === null ? "n/a" : balance.toLocaleString("en-US", { style: "currency", currency: "USD" })}</td></tr>`
       );
     })
     .join("");
 
   return html(
     `<h1>QuickBooks asset accounts</h1>` +
-      `<p>Set the mapping from the IDs below — these are Worker secrets, not <code>wrangler.toml</code> vars:</p>` +
+      `<p>Set the mapping from the IDs below. These are Worker secrets, not <code>wrangler.toml</code> vars:</p>` +
       `<p><code>printf '%s' "&lt;id&gt;" | npx wrangler secret put QBO_OPERATING_ACCOUNT_ID</code><br>` +
       `<code>printf '%s' "&lt;id&gt;" | npx wrangler secret put QBO_REBUILD_FUND_ACCOUNT_ID</code></p>` +
       `<table><tr><th>ID</th><th>Name</th><th>Type</th><th>Sub-type</th><th class="num">Balance</th></tr>${rows}</table>`,
