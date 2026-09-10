@@ -14,14 +14,14 @@ project with no deadline.
 
 ---
 
-## Where things stand — 2026-09-06
+## Where things stand, 2026-09-09
 
 Read this first in a new session; the detail is below.
 
 **The prototype is built, deployed, and reading live data.** Dashboard at
 **https://hpic98106.github.io/SST/** (case-sensitive path), Worker at
 `hpic-sst.kyhuber-ft.workers.dev`. Funds come from a QuickBooks *sandbox*
-company; grants are live Little Green Light.
+company; grants are live LGL.
 
 | | |
 | --- | --- |
@@ -32,20 +32,43 @@ company; grants are live Little Green Light.
 
 Received and Outstanding are computed from LGL payment records and marked
 provisional because **QuickBooks is authoritative for cash** and that
-reconciliation is not built. That contrast is deliberate — it is the argument
+reconciliation is not built. That contrast is deliberate: it is the argument
 for the bookkeeping change, so do not "fix" it by promoting them to `ok`.
 
 **The strategy, which shapes everything below:** ship the product, let it
 expose the data gaps, then use that evidence to introduce the rules. This is
 only safe because the invariants refuse to launder a gap into a clean number.
 
-**Next, in order:** populate "Payment Terms" on the awards (§5 — the field was
-defined 2026-09-09; filling it in clears $1,471,000 of blocking findings and
-unblocks Phase 3), send Alex the message, fix the records the panel names (§8).
+### The immediate thing
 
-**One loose end:** `ACCESS_PASSPHRASE` was rotated on 2026-09-06 and the Worker
-has the new value. `worker/.dev.vars` may still hold the old one — that only
-affects local dev, and §7 has a command that syncs it and verifies.
+**Alex sees the dashboard for the first time on the morning of 2026-09-10.**
+He is the key HPIC partner for this and has offered to help clean up data.
+Galen (grants) and Rachel (QuickBooks) come after, and what Alex agrees to
+shapes both of those conversations. Meeting plan is item N1 below.
+
+### Since 2026-09-06
+
+- **"Payment Terms" is defined in LGL and the dashboard reads it.** Single
+  select on Gift: `Reimbursable` / `Payment in full` / `Distribution payments`.
+  Shipped and deployed 2026-09-09.
+- **One award is populated**, gift 908457, and it verified the whole read path
+  end to end. It is a Programs grant though, so it is outside the dashboard's
+  scope and moved no number. The six in-scope Rebuild awards are still unset.
+- **The dashboard now says "LGL" rather than "Little Green Light"**, and the
+  em-dashes are gone from the UI copy.
+
+**Next, in order:** run the Alex meeting (N1), populate Payment Terms on the
+six awards (N3, and the fastest thing Alex can help with), fix the records the
+panel names (N4).
+
+**Two loose ends:**
+
+- `ACCESS_PASSPHRASE` was rotated on 2026-09-06 and the Worker has the new
+  value. `worker/.dev.vars` may still hold the old one, which only affects
+  local dev; §7 has a command that syncs it and verifies.
+- `gh` is not installed on this machine and the git remote still points at the
+  pre-transfer URL. Neither blocks anything. `git remote set-url origin
+  https://github.com/HPIC98106/SST.git` fixes the second.
 
 ## Start here — the prototype build
 
@@ -96,30 +119,61 @@ a caveat" — it is that rule doing its job.
 Roughly in order of leverage. The first two are the whole point of having
 shipped the thing.
 
-- [ ] **N1. Look at the dashboard and decide whether it reads right.**
-      Unblocked as of 2026-09-06 — the passphrase is rotated and the Worker has
-      it. The one thing no test covers: whether the blocking/advisory split is
+- [ ] **N1. Show Alex the dashboard. 2026-09-10, morning.** He is the key
+      partner, he is excited, and he has offered to help clean up data. Galen
+      and Rachel come after, so this meeting sets up both.
+
+      **The one decision to get:** does Received come from LGL or QuickBooks?
+      Everything marked provisional hangs on it, and it is the question N2 was
+      drafted to ask. The dashboard now makes the case on its own, so ask it
+      out loud instead of sending the message.
+
+      **The one thing to watch for:** whether the blocking/advisory split is
       legible to someone who is not Kyle, and whether "provisional" reads as
-      *useful but unconfirmed* rather than *broken*. This is the version Alex,
-      Galen and Rachel will see, so it is worth one careful read before showing
-      it.
+      *useful but unconfirmed* rather than *broken*. No test covers that, and
+      Alex is the first real reader.
 
-- [ ] **N2. Send Alex the message.** Drafted and reviewed; still unsent. It
-      asks whether Received should come from LGL or QuickBooks and flags the
-      two Commerce payments missing their campaign. The dashboard now makes
-      that argument on its own, so the message can be shorter than it was.
+      **The one ask:** the six awards in N3. It is 15 minutes of work, it is
+      the largest blocking finding, and it is the gate on Phase 3.
 
-- [ ] **N3. Populate "Payment Terms" on the awards — the cheapest unblock
-      there is.** The field was defined on 2026-09-09 (single-select on Gift:
-      `Reimbursable` / `Payment in full` / `Distribution payments`), and the
-      code reads it. What is left is filling it in, which clears the largest
-      blocking finding on the panel: **6 awards, $1,471,000**, every one
-      reading "unknown". It is also the gate on Phase 3.
+      Resist demoing Phase 3. It does not exist, and promising it before the
+      target cost and an authoritative Received both land is how a prototype
+      turns into an expectation.
 
-      **Populate one award first and reload the dashboard**, before doing the
-      rest — until a record has a value the field is invisible to the API, so
-      that is the only way to confirm the name and spellings match. Still to
-      do on the same trip: define `contract_signed`.
+- [x] **N2. Send Alex the message. SUPERSEDED 2026-09-09.** It asked whether
+      Received should come from LGL or QuickBooks and flagged the two Commerce
+      payments missing their campaign. Both are now visible on the dashboard
+      itself, and Alex is being shown it in person, so the questions move into
+      N1 rather than being sent ahead.
+
+- [ ] **N3. Populate "Payment Terms" on the six in-scope awards. The cheapest
+      unblock there is.** The field is defined, the code reads it, and the read
+      path is verified against live LGL. What is left is data entry, and it
+      clears the largest blocking finding on the panel: **6 awards,
+      $1,471,000**, every one reading "unknown". It is also the gate on Phase 3.
+
+      This is the best thing to hand Alex.
+
+      | Gift | Amount | Funder | What the evidence says |
+      | --- | --- | --- | --- |
+      | [904066](https://hpic.littlegreenlight.com/gifts/904066) | $10,000 | Garneau-Nicon | **Do this one first.** Note says outright "Reimbursable grant for Rebuild project". No judgment needed. |
+      | [903691](https://hpic.littlegreenlight.com/gifts/903691) | $485,000 | WA Commerce (LCP) | Fully paid in 3 irregular draws ($279,573.79 / $92,855.92 / $112,570.29). Amounts that odd look like reimbursement claims against actual spend. Inference, not fact: confirm with Galen. |
+      | [909194](https://hpic.littlegreenlight.com/gifts/909194) | $50,000 | Seattle DoN | Arrived as one full payment, but the proposal reportedly described reimbursement after spending. A single reimbursement claim looks identical to a lump sum. Check the parent Goal. |
+      | [906602](https://hpic.littlegreenlight.com/gifts/906602) | $38,000 | Office of Arts & Culture | No note, no payments, nothing to infer from. Must be asked. The other two OAC grants are both reimbursement-shaped, which is a hint and not an answer. |
+      | [905452](https://hpic.littlegreenlight.com/gifts/905452) | $388,000 | WA Commerce (BFA) | Pre-award contracting, no contract yet, so the terms are not final. **Leaving this unset is defensible.** |
+      | [905997](https://hpic.littlegreenlight.com/gifts/905997) | $500,000 | City of Seattle | Not appropriated yet. The note is about the money sitting in Finance General awaiting a supplemental, not about payment terms. **Leave unset.** Nobody can know yet. |
+
+      Those last two are $888,000, and they are the "roughly $900,000,
+      cost-reimbursement, no signed contract" pair the build spec names as the
+      exact failure this tool exists to prevent. Once the other four are set,
+      the panel makes that case from HPIC's own records.
+
+      Worth populating the four Programs grants too while in there. They are
+      out of scope so nothing displays them today, but it is four records now
+      against a cleanup later if programming ever comes into scope.
+
+      Still to do on the same trip: define `contract_signed`. 905452 is exactly
+      the state it exists to capture, currently findable only in a freetext note.
       → `docs/runbook-migration.md` §5
 
 - [ ] **N4. Make the three safe LGL fixes.** Link the 3 unlinked payments to
@@ -132,12 +186,48 @@ shipped the thing.
       which is worth watching once as proof the loop closes.
       → `docs/runbook-migration.md` §8
 
+- [ ] **N4b. Build the restricted / unrestricted breakdown.** *(Claude. No
+      data entry needed, which is what makes it worth doing early.)*
+
+      Checked against live LGL on 2026-09-09: **every grant pledge already
+      carries a fund.** Rebuild Checking holds 6 pledges and $1,471,000,
+      Program Budget holds 5 and $57,422, and the only two without a fund are
+      Annual Fund Drive standard pledges rather than grants. Coverage on grants
+      is complete, so this is a reporting job and not a data-entry one.
+
+      **Do not add a restriction custom field.** The build spec is explicit
+      that restriction comes from campaigns and funds, and the live data backs
+      it. A parallel taxonomy would be a second thing to keep in sync.
+
+      Two things to know before building it:
+
+      - Campaign and fund are almost perfectly collinear today (Rebuild Project
+        ↔ Rebuild Checking, Programs ↔ Program Budget), so the breakdown tells
+        Kyle nothing he does not already know. Its value is prospective: it
+        catches the first award where the two disagree.
+      - It needs an "award with no fund" rule in the exceptions panel, the same
+        way "award with no campaign" exists. A fundless award is invisible in a
+        fund breakdown, which silently understates a bucket. Zero grants would
+        trip it today, so it is cheap to add now.
+
+      The watch-out: a fund records where money was *deposited*, not
+      necessarily what the funder *restricted*. An unrestricted grant the board
+      chose to spend on the rebuild would sit in Rebuild Checking while not
+      actually being restricted. Rare enough not to justify a field, common
+      enough to name here.
+
+      **The related open question, which is Kyle's not Claude's:** "how much
+      can we spend on programming" is mostly a *cash* question, answered by the
+      operating account rather than by this funnel, and answering it on this
+      dashboard means widening scope past campaign 871 for the first time.
+      Worth deciding deliberately rather than drifting into it.
+
 - [ ] **N5 / P3. Add the QuickBooks grant dimension for Received and Spent.**
-      *(Kyle creates the classes; Claude builds the read.)* Fully specified in
-      item 0 — one Class per award, mapped to LGL gift IDs in Worker config.
-      Blocked on the bookkeeping existing, not on code. Until then Received
-      stays provisional from LGL, and **that contrast is the argument for
-      making the change**, so there is no rush to hide it.
+      *(Kyle creates the customers; Claude builds the read.)* Fully specified
+      in item 0: one Customer per award, mapped to LGL gift IDs in Worker
+      config. Blocked on the bookkeeping existing, not on code. Until then
+      Received stays provisional from LGL, and **that contrast is the argument
+      for making the change**, so there is no rush to hide it.
 
 - [ ] **N6. Put `ACCESS_PASSPHRASE` somewhere the board can reach.**
       This is the one credential every board member needs, and it currently
@@ -544,6 +634,31 @@ None of this changes the code. `readAwards` queries `gift_types=in|7`, so the
 funnel sees pledges only and Goals cannot reach it whatever the scope config.
 
 ## Recently done
+
+- **Defined "Payment Terms" in LGL and shipped the code that reads it**
+  (`6fa4903`, 2026-09-09). LGL scopes custom fields by item type and Pledge is
+  not one, so the field lives on Gift and is visible on all ten gift types.
+  That is cosmetic: blank reads as unknown, and the dashboard only reads the
+  field on awards already in scope. Three options rather than yes/no, because
+  "Payment in full" and "Distribution payments" say something a boolean cannot,
+  and both collapse to not-reimbursable for the one distinction that changes a
+  number here.
+
+  Two things learned that would have cost real time to rediscover: LGL gives
+  every field an organisation creates a **UUID key**, so matching has to be on
+  the field *name*; and a gift custom field is **invisible to the API until
+  some record carries a value**, so the field cannot be verified by listing it.
+
+  The panel now separates "no value set" from "a value we cannot read" and
+  quotes the offending string. That is what makes a closed picklist safe: an
+  option added in LGL without being added to the code surfaces instead of
+  disappearing into "unset".
+
+- **Made the dashboard copy board-ready** (2026-09-09). "Little Green Light"
+  reads as "LGL" throughout the UI, and the em-dashes are gone from rendered
+  copy. Also caught two stale claims while in there: the UI still said
+  QuickBooks *Class* after that was revised to *Customer* on 2026-09-06, and
+  still said the two "Grant" categories could only be told apart by ID.
 
 - **Repointed everything at the HPIC98106 organization** (2026-09-06). The
   transfer had silently broken the dashboard: `ALLOWED_ORIGIN` still named the

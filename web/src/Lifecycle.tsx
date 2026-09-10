@@ -48,8 +48,8 @@ const GRANT_STAGES: Stage[] = [
     lgl: {
       state: "present",
       detail:
-        "A Goal record, in the “Grant Proposal” category. It carries no amount — the API " +
-        "exposes none — so the size of an ask is not readable anywhere.",
+        "A Goal record, in the “Grant Proposal” category. It carries no amount; the API " +
+        "exposes none, so the size of an ask is not readable anywhere.",
     },
     qbo: { state: "missing", detail: "Nothing. Applying for money is not an accounting event." },
     dashboard:
@@ -59,8 +59,8 @@ const GRANT_STAGES: Stage[] = [
     check: {
       state: "missing",
       detail:
-        "None. Goals cannot even be listed through the API — they are reachable only by " +
-        "following a link from an award — so nothing can audit them.",
+        "None. Goals cannot even be listed through the API; they are reachable only by " +
+        "following a link from an award, so nothing can audit them.",
     },
   },
   {
@@ -71,7 +71,7 @@ const GRANT_STAGES: Stage[] = [
       state: "present",
       detail:
         "A Pledge record in the grant award category, linked up to the Goal. Its amount is " +
-        "the face value of the award — this is the number the dashboard trusts.",
+        "the face value of the award: this is the number the dashboard trusts.",
     },
     qbo: {
       state: "missing",
@@ -81,13 +81,13 @@ const GRANT_STAGES: Stage[] = [
     },
     dashboard: "Pledged. This figure is authoritative.",
     action:
-      "Create the Pledge, link it to its Goal, set the campaign, and set Payment Terms — " +
+      "Create the Pledge, link it to its Goal, set the campaign, and set Payment Terms. " +
       "Payment Terms is the one that decides whether the money can be spent yet.",
     check: {
       state: "partial",
       detail:
         "The panel catches an award with no campaign, and one whose Payment Terms are unset " +
-        "or unreadable. It cannot catch an award nobody entered at all — that shows only as " +
+        "or unreadable. It cannot catch an award nobody entered at all; that shows only as " +
         "a record count that looks too low to someone who knows better.",
     },
   },
@@ -99,7 +99,7 @@ const GRANT_STAGES: Stage[] = [
       state: "partial",
       detail:
         "A payment record in the grant payment category, linked to the award it pays. A " +
-        "grant can be drawn in several payments — the $485,000 Commerce award came in " +
+        "grant can be drawn in several payments: the $485,000 Commerce award came in " +
         "three. Three payments today carry no link to any award.",
     },
     qbo: {
@@ -111,7 +111,7 @@ const GRANT_STAGES: Stage[] = [
     dashboard: "Received, and Outstanding by subtraction. Both provisional.",
     action:
       "Record the payment and link it to its award. Then code the QuickBooks deposit to " +
-      "that grant — which is not possible yet, because the classes do not exist.",
+      "that grant, which is not possible yet: nothing in QuickBooks names the grant.",
     check: {
       state: "partial",
       detail:
@@ -129,8 +129,8 @@ const EXPENSE_STAGES: Stage[] = [
     lgl: {
       state: "missing",
       detail:
-        "Nothing, and there never will be. Little Green Light has no concept of an " +
-        "expense. This is not a configuration gap — it is what the system is for.",
+        "Nothing, and there never will be. LGL has no concept of an " +
+        "expense. This is not a configuration gap; it is what the system is for.",
     },
     qbo: {
       state: "partial",
@@ -139,14 +139,14 @@ const EXPENSE_STAGES: Stage[] = [
     },
     dashboard: "Nowhere. There is no Spent figure, because nothing could compute one.",
     action:
-      "Code the expense to the grant's class at entry time — once the classes exist. " +
+      "Code the expense to the grant's customer at entry time, once that is set up. " +
       "Applied inconsistently this is worse than not at all: a half-attributed total " +
       "understates spending while looking complete.",
     check: {
       state: "missing",
       detail:
         "None exist. When built, an expense attributable to no grant must be surfaced and " +
-        "excluded, never absorbed — the same rule the grant panel already follows.",
+        "excluded, never absorbed, using the same rule the grant panel already follows.",
     },
   },
   {
@@ -163,7 +163,7 @@ const EXPENSE_STAGES: Stage[] = [
     dashboard: "Nowhere. This is Phase 3, and it is deliberately blocked.",
     action:
       "Total what was spent against the grant, invoice the funder, then record their " +
-      "payment — which re-enters the cycle at step 3.",
+      "payment, which re-enters the cycle at step 3.",
     check: {
       state: "missing",
       detail:
@@ -198,7 +198,7 @@ function StageRow({ stage }: { stage: Stage }) {
       </h3>
       <dl className="lc-grid">
         <div>
-          <dt>Little Green Light</dt>
+          <dt>LGL</dt>
           <dd>
             <Cell {...stage.lgl} />
           </dd>
@@ -235,7 +235,7 @@ export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) 
       <h1>How a grant moves through our systems</h1>
       <p className="note">
        Every figure on the dashboard is one of the stages below. This is for reviewing
-       against what is actually typed into Little Green Light to ensure the dashboard is accurate.
+       against what is actually typed into LGL to ensure the dashboard is accurate.
       </p>
 
       <h2 className="lc-heading">The grant side</h2>
@@ -246,7 +246,7 @@ export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) 
       <h2 className="lc-heading">The expense side</h2>
       <p className="banner banner-warn">
         <strong>Almost none of this exists yet.</strong> It is written out because the
-        missing half is the half that matters for reimbursable grants — most of the Rebuild
+        missing half is the half that matters for reimbursable grants, most of the Rebuild
         money. Until spending can be attributed to a grant, HPIC cannot tell what it is owed
         without working it out by hand.
       </p>
@@ -258,23 +258,23 @@ export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) 
         <h2>What would have to change</h2>
         <ol className="lc-todo">
           <li>
-            <strong>Define reimbursable on awards in Little Green Light.</strong> Purely
-            additive, changes no existing record, and it is the only thing standing between
-            here and a spendable-cash figure.
+            <strong>Set Payment Terms on every grant award in LGL.</strong> The field
+            exists and the dashboard reads it; filling it in is the only thing standing
+            between here and a spendable-cash figure.
           </li>
           <li>
             <strong>Link every payment to the award it pays.</strong> Without it a payment
             belongs to no grant and cannot be counted.
           </li>
           <li>
-            <strong>Give QuickBooks a class per grant, applied at entry.</strong> This is
+            <strong>Give QuickBooks a customer per grant, applied at entry.</strong> This is
             one bookkeeping habit, and it unlocks both an authoritative Received and a Spent
             figure at once.
           </li>
         </ol>
         <p className="note">
-          The first two are Little Green Light housekeeping and could be done this week. The
-          third is a change to how the books are kept, and needs agreement before it starts —
+          The first two are LGL housekeeping and could be done this week. The
+          third is a change to how the books are kept, and needs agreement before it starts;
           applied inconsistently it produces a number that is confidently wrong.
         </p>
       </div>
@@ -285,7 +285,7 @@ export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) 
           use: campaign {scope.campaignIds.join(", ") || "none"} · award category{" "}
           {scope.awardCategoryIds.join(", ") || "none"} · payment category{" "}
           {scope.paymentCategoryIds.join(", ") || "none"}. Both categories display as
-          “Grant” in Little Green Light and can only be told apart by their ID.
+          “Grant” in LGL and are told apart by their ID.
         </p>
       ) : null}
     </section>

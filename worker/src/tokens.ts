@@ -209,7 +209,7 @@ export class TokenStore extends DurableObject<Env> {
       if (body.includes("invalid_grant")) {
         await this.record(
           "refresh_failed",
-          `invalid_grant (HTTP ${response.status}) — the refresh token was rejected. ` +
+          `invalid_grant (HTTP ${response.status}): the refresh token was rejected. ` +
             `Either it expired, the grant was revoked in QuickBooks, or a stale value was used.`,
         );
         await this.ctx.storage.put("needs_reauth", true);
