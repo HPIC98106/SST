@@ -1,4 +1,4 @@
-# Runbook — operational procedures
+# Runbook: operational procedures
 
 Click-by-click steps for the items in `KYLE-TODO.md`. Written to be followed
 without remembering any of the surrounding context.
@@ -28,14 +28,14 @@ Cloudflare account stays personal for now by decision.
 
 ---
 
-## §1 — Create the GitHub organization and transfer the repo
+## §1: Create the GitHub organization and transfer the repo
 
 > **DONE 2026-09-06.** The repo is now `HPIC98106/SST` and the dashboard is
-> live at https://hpic98106.github.io/SST/ — the path is case-sensitive, and
+> live at https://hpic98106.github.io/SST/. The path is case-sensitive, and
 > `/sst/` returns 404. Kept for reference.
 
 1. Go to https://github.com/organizations/plan and choose **Free**.
-2. Name it something durable and organizational — `hpic1919` matches the
+2. Name it something durable and organizational: `hpic1919` matches the
    domain. Avoid anything with a person's name in it.
 3. Set the billing email to an address on the org's Workspace, not a personal
    one.
@@ -56,8 +56,8 @@ git remote -v
 
 A transfer disables Actions and can reset Pages. Both need turning back on.
 
-6. **Settings → Actions → General** — allow Actions to run.
-7. **Settings → Pages** — set **Source** to **GitHub Actions**. The workflow in
+6. **Settings → Actions → General**: allow Actions to run.
+7. **Settings → Pages**: set **Source** to **GitHub Actions**. The workflow in
    `.github/workflows/deploy-pages.yml` publishes through the Actions Pages
    flow, not the legacy branch-based one.
 8. **Actions** tab → *Deploy dashboard to Pages* → **Run workflow** to publish
@@ -66,14 +66,14 @@ A transfer disables Actions and can reset Pages. Both need turning back on.
 ### Verify
 
 Load `https://<neworg>.github.io/SST/`. You should get the passphrase prompt.
-It will *not* show balances yet — `ALLOWED_ORIGIN` still names the old origin,
+It will *not* show balances yet: `ALLOWED_ORIGIN` still names the old origin,
 so the browser blocks the Worker call. That is expected and §3 fixes it.
 
 ---
 
-## §2 — Point `sst.hpic1919.org` at the dashboard
+## §2: Point `sst.hpic1919.org` at the dashboard
 
-> **NOT DOING THIS — decided 2026-09-06.** The board uses the github.io URL
+> **NOT DOING THIS: decided 2026-09-06.** The board uses the github.io URL
 > and the domain stays untouched on Squarespace. The only real gain was a URL
 > that survives moving off GitHub Pages, which is worth little for ten people
 > who can be told directly. Steps kept because the decision is cheap to
@@ -101,12 +101,12 @@ record.
 nslookup sst.hpic1919.org
 ```
 
-Should resolve to GitHub. Then load `https://sst.hpic1919.org` — passphrase
+Should resolve to GitHub. Then load `https://sst.hpic1919.org`: passphrase
 prompt, still no balances until §3.
 
 ---
 
-## §3 — Update `ALLOWED_ORIGIN` and redeploy the Worker
+## §3: Update `ALLOWED_ORIGIN` and redeploy the Worker
 
 > **DONE 2026-09-06** (`3f72c8b`, worker version `8ecb3025`). Set to
 > `https://hpic98106.github.io`, not the custom domain in the original steps
@@ -114,19 +114,19 @@ prompt, still no balances until §3.
 > moves.
 
 The Worker only answers browsers from an origin it recognises. Until this
-lands, the dashboard loads but every data call fails CORS — and that failure
+lands, the dashboard loads but every data call fails CORS, and that failure
 is silent from the server's side: the page renders perfectly and nothing is
 logged as an error. It is worth knowing that symptom, because it looks like a
 data problem rather than a hosting one.
 
-1. Edit `worker/wrangler.toml` — the origin is whatever is in the address bar,
+1. Edit `worker/wrangler.toml`: the origin is whatever is in the address bar,
    scheme included and no trailing slash:
 
 ```toml
 ALLOWED_ORIGIN = "https://hpic98106.github.io"
 ```
 
-2. Deploy — from `worker/`, and note this is deliberately manual because the
+2. Deploy: from `worker/`, and note this is deliberately manual because the
    Worker holds every credential:
 
 ```bash
@@ -141,12 +141,12 @@ npx wrangler deploy
 Open `https://sst.hpic1919.org`, enter the passphrase, and confirm balances
 render. That single check exercises the whole chain: Pages → DNS → CORS →
 Worker → QuickBooks. If the page loads but the panel shows an error, open the
-browser console — a CORS message means `ALLOWED_ORIGIN` and the address bar do
+browser console: a CORS message means `ALLOWED_ORIGIN` and the address bar do
 not match exactly, including the `https://` and any trailing slash.
 
 ---
 
-## §4 — Issue a Little Green Light API key
+## §4: Issue a Little Green Light API key
 
 > **DONE 2026-08-19.** A dedicated key is issued and set as a Worker secret,
 > and the funnel reads live. Kept for the rotation procedure.
@@ -154,7 +154,7 @@ not match exactly, including the `https://` and any trailing slash.
 1. In LGL, open **Settings → Integration Settings** and find the API section.
    (Verify the exact path in LGL's current UI; it moves between releases.)
 2. Generate a **new** key for this tool. Do not reuse the membership lookup
-   tool's key — `worker/wrangler.toml` says so explicitly, and one shared key
+   tool's key: `worker/wrangler.toml` says so explicitly, and one shared key
    means rotating it breaks both tools at once.
 3. Store it in the Worker, from `worker/`, in Git Bash and never PowerShell:
 
@@ -171,14 +171,14 @@ Every comparison then fails while looking correct.
 npx wrangler secret list
 ```
 
-`LGL_API_KEY` should appear. Values are never shown — secrets are write-only,
+`LGL_API_KEY` should appear. Values are never shown: secrets are write-only,
 so record the key in your password manager before you set it.
 
 ---
 
-## §5 — Populate "Payment Terms" on the grant awards
+## §5: Populate "Payment Terms" on the grant awards
 
-> **The field itself is done** — defined in LGL on 2026-09-09. What remains is
+> **The field itself is done**: defined in LGL on 2026-09-09. What remains is
 > data entry, and it is still the highest-leverage item on the list: it clears
 > the largest blocking finding on the dashboard's data-quality panel (**6
 > awards, $1,471,000, every one reading "unknown"**) and it is the single gate
@@ -187,7 +187,7 @@ so record the key in your password manager before you set it.
 ### What was decided, and why it looks like this
 
 LGL scopes a custom field by **item type**, and "Gift" is the finest grain it
-offers — **Pledge is not an available item type**, which answers the question
+offers: **Pledge is not an available item type**, which answers the question
 this section used to ask, in the negative. So the field is necessarily visible
 on all ten gift types, ordinary donations included.
 
@@ -200,7 +200,7 @@ options:
 
 | Option | Dashboard reads it as |
 | --- | --- |
-| `Reimbursable` | reimbursable — not spendable until received |
+| `Reimbursable` | reimbursable, not spendable until received |
 | `Payment in full` | not reimbursable |
 | `Distribution payments` | not reimbursable |
 
@@ -217,8 +217,8 @@ LGL admin stops the dashboard reading it and the awards silently revert to
 `PAYMENT_TERMS_KEYS` first.
 
 **The picklist is closed by contract.** Adding a fourth option in LGL without
-adding it to `toReimbursableStatus` corrupts nothing — the award lands in the
-"payment terms cannot be read" exception with the value quoted back — but it
+adding it to `toReimbursableStatus` corrupts nothing: the award lands in the
+"payment terms cannot be read" exception with the value quoted back, but it
 will not be counted until the code is taught to read it.
 
 ### Do this
@@ -228,7 +228,7 @@ will not be counted until the code is taught to read it.
    for Rebuild project", and the $50,000 Department of Neighborhoods award's
    proposal says HPIC submits for reimbursement after spending.
 2. While you are in there, populate the four Programs grants too. They sit
-   outside the dashboard's current scope so nothing displays them today — but
+   outside the dashboard's current scope so nothing displays them today, but
    it is four extra records now against a data cleanup later if programming
    ever comes into scope.
 3. Still outstanding from the original plan: define `contract_signed` the same
@@ -239,8 +239,8 @@ will not be counted until the code is taught to read it.
 ### Verify
 
 **Populate one award first, then stop and check.** Until some record has a
-value the field is invisible to the API — LGL only returns a gift's
-`custom_fields` once something is set on it — so one populated award is the
+value the field is invisible to the API: LGL only returns a gift's
+`custom_fields` once something is set on it, so one populated award is the
 only way to confirm that the field name and option spellings match what the
 code expects.
 
@@ -250,7 +250,7 @@ Then reload the dashboard and check all three:
 - The **Awarded, by reimbursable status** table moves that amount out of the
   "unknown" row.
 - **No "Awards whose payment terms cannot be read" panel appears.** If one
-  does, it quotes the exact string LGL holds — either correct the spelling in
+  does, it quotes the exact string LGL holds: either correct the spelling in
   LGL to match the table above, or tell Claude the value and it gets added to
   the mapping.
 
@@ -259,7 +259,7 @@ records lights the feature up with no code change.
 
 ---
 
-## §6 — Confirm the Intuit developer account survives you
+## §6: Confirm the Intuit developer account survives you
 
 The account is registered to `kyle.huber@hpic1919.org`, already on the
 organization's Google Workspace. That is the right side of the line. The
@@ -283,7 +283,7 @@ Sign in to the Intuit developer portal with the account and confirm the app
 `hpic-sst` is listed, along with its Development keys.
 ---
 
-## §7 — Rotate `ACCESS_PASSPHRASE`
+## §7: Rotate `ACCESS_PASSPHRASE`
 
 This is the credential the whole board uses. It went wrong once on 2026-09-06
 and took far longer to diagnose than it should have, so the procedure below is
@@ -301,7 +301,7 @@ Run this from anywhere in Git Bash. It sets the secret, then **verifies against
 the deployed Worker before writing the local file**, so the two cannot drift:
 
 ```bash
-cd /c/Users/kyhub/Desktop/hpic/SST/worker && read -rsp 'New passphrase: ' P && echo && printf '%s' "$P" | npx wrangler secret put ACCESS_PASSPHRASE && code=$(curl -s -o /dev/null -w "%{http_code}" https://hpic-sst.kyhuber-ft.workers.dev/api/grants -H "X-HPIC-Auth: $P") && echo "Worker says: HTTP $code" && if [ "$code" = "200" ]; then { grep -v '^ACCESS_PASSPHRASE=' .dev.vars; printf 'ACCESS_PASSPHRASE=%s\n' "$P"; } > .dev.vars.new && mv .dev.vars.new .dev.vars && echo "Match. Both updated."; else echo "MISMATCH — do not trust the local file."; fi; unset P
+cd /c/Users/kyhub/Desktop/hpic/SST/worker && read -rsp 'New passphrase: ' P && echo && printf '%s' "$P" | npx wrangler secret put ACCESS_PASSPHRASE && code=$(curl -s -o /dev/null -w "%{http_code}" https://hpic-sst.kyhuber-ft.workers.dev/api/grants -H "X-HPIC-Auth: $P") && echo "Worker says: HTTP $code" && if [ "$code" = "200" ]; then { grep -v '^ACCESS_PASSPHRASE=' .dev.vars; printf 'ACCESS_PASSPHRASE=%s\n' "$P"; } > .dev.vars.new && mv .dev.vars.new .dev.vars && echo "Match. Both updated."; else echo "MISMATCH: do not trust the local file."; fi; unset P
 ```
 
 Why it is shaped that way, all learned the hard way:
@@ -312,7 +312,7 @@ Why it is shaped that way, all learned the hard way:
   while looking correct.
 - **`printf '%s'`**, not `sed`, writes the local file. `sed` interprets its
   replacement, so a value containing `|`, `&` or a backslash is silently
-  mangled — recreating the exact drift this is meant to prevent.
+  mangled: recreating the exact drift this is meant to prevent.
 - **Absolute path, and no path inside a quoted script body.** Git Bash rewrites
   path-shaped *arguments* for native binaries but not paths embedded in
   strings, so `node -e '...open("/c/...")'` resolves to `C:\c\Users\...` and
@@ -324,12 +324,12 @@ Why it is shaped that way, all learned the hard way:
 ### Verify
 
 Open https://hpic98106.github.io/SST/ and enter the new passphrase. Then put it
-in the shared password manager — see the standing item in `KYLE-TODO.md` about
+in the shared password manager: see the standing item in `KYLE-TODO.md` about
 this being the one credential the board cannot recover without you.
 
 ---
 
-## §8 — Fix the LGL records the data-quality panel names
+## §8: Fix the LGL records the data-quality panel names
 
 The dashboard lists these with a direct link to each record. Fixing one and
 watching the row disappear on the next read is worth doing once deliberately:
@@ -341,23 +341,23 @@ clearly intended, rather than asserting a judgment about what money is:
 
 1. **Link each unlinked payment to its award.** Open the payment in LGL and set
    its parent to the matching pledge. Two of the three are straightforward; the
-   $7,500 Office of Arts & Culture payment is not — see below.
+   $7,500 Office of Arts & Culture payment is not: see below.
 2. **Backfill the campaign on the two Commerce payments** (gifts `906802` and
-   `903696`) to **Rebuild Project**. The dashboard does not need this — it
-   reaches the campaign by walking up to the award — but LGL's own campaign
+   `903696`) to **Rebuild Project**. The dashboard does not need this, it
+   reaches the campaign by walking up to the award, but LGL's own campaign
    reports understate by $372,429.71 without it.
 
 **Do not do without talking to Galen:**
 
 3. **The two Seattle Public Utilities compost records** ($1,500 each). They are
    fee-for-service, not grants, so they do not belong in the grant category at
-   all — but a note on one says it was recoded to Grant *specifically to match
+   all, but a note on one says it was recoded to Grant *specifically to match
    the QuickBooks record*. Changing it back would break an agreement someone
    made on purpose. This is a conversation, not an edit.
 
 4. **The $7,500 Office of Arts & Culture payment** (gift `906707`) is noted as
    an "Addition to 2025 CARE grant award", and **no 2025 CARE award exists in
-   LGL** — the only CARE record is a $3,400 pledge for 2026. There is nothing
+   LGL**: the only CARE record is a $3,400 pledge for 2026. There is nothing
    to link it to. This is a missing award record, and the first concrete
    instance of the development committee's reconciliation backlog.
 
@@ -365,6 +365,6 @@ clearly intended, rather than asserting a judgment about what money is:
 
 Reload the dashboard. Each fixed record should drop out of its exception, and
 "Payments not linked to an award" should fall from 3 records / $10,500. If
-Received rises, that is correct and expected — the payment was always real, it
+Received rises, that is correct and expected: the payment was always real, it
 just could not be attributed to an award.
 

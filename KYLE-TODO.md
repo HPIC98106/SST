@@ -1,7 +1,7 @@
 # Kyle's to-do
 
-The standing list of work that only a human can do — anything needing a login,
-a DNS record, an approval, or a conversation with another person — **plus the
+The standing list of work that only a human can do: anything needing a login,
+a DNS record, an approval, or a conversation with another person, **plus the
 current build plan**, so the two stay visible against each other. Items marked
 *(Claude)* are code; everything else is Kyle's.
 
@@ -9,7 +9,7 @@ current build plan**, so the two stay visible against each other. Items marked
 tick items off and add new ones as decisions get made. Detailed click-by-click
 steps live in `docs/runbook-migration.md`.
 
-Ordered by what unblocks the most. Nothing here is urgent — this is a solo
+Ordered by what unblocks the most. Nothing here is urgent: this is a solo
 project with no deadline.
 
 ---
@@ -70,7 +70,7 @@ panel names (N4).
   pre-transfer URL. Neither blocks anything. `git remote set-url origin
   https://github.com/HPIC98106/SST.git` fixes the second.
 
-## Start here — the prototype build
+## Start here: the prototype build
 
 Ordered so each step produces something demonstrable. The governing idea, which
 is Kyle's and worth stating because it shapes every choice under it: **ship the
@@ -82,9 +82,9 @@ cost of a missing link visible in dollars.
 That only works if the product never launders a gap into a clean number, which
 is exactly what the existing invariants already enforce. Launching on imperfect
 data is not a compromise of "an honest unavailable beats a clean number hiding
-a caveat" — it is that rule doing its job.
+a caveat"; it is that rule doing its job.
 
-- [x] **P1. Render Received and Outstanding provisionally from LGL. — DONE
+- [x] **P1. Render Received and Outstanding provisionally from LGL. DONE
       2026-08-19** (`6107d7e`, worker version `dd0a0d63`). Live figures:
       **Pledged $1,471,000 · Received $545,000 · Outstanding $926,000**, the
       last two carrying a `provisional` status and an on-card flag rather than
@@ -95,7 +95,7 @@ a caveat" — it is that rule doing its job.
       deliberately: it fails seven tests, and against live data it would take
       Received from $545,000 to $172,570.29 without erroring.
 
-- [x] **P2. Build the data-quality panel. — DONE 2026-08-19** (same commit).
+- [x] **P2. Build the data-quality panel. DONE 2026-08-19** (same commit).
       Against live data it surfaces nine records:
 
       | Finding | Severity | Records |
@@ -140,6 +140,11 @@ shipped the thing.
       target cost and an authoritative Received both land is how a prototype
       turns into an expectation.
 
+      **Agenda, talking points and capture sheet:**
+      → `docs/meeting-2026-09-10-alex.md`. Fill in the capture sections during
+      or right after; they seed the Galen and Rachel agendas at the bottom of
+      the same file.
+
 - [x] **N2. Send Alex the message. SUPERSEDED 2026-09-09.** It asked whether
       Received should come from LGL or QuickBooks and flagged the two Commerce
       payments missing their campaign. Both are now visible on the dashboard
@@ -179,7 +184,7 @@ shipped the thing.
 - [ ] **N4. Make the three safe LGL fixes.** Link the 3 unlinked payments to
       their awards, and backfill the campaign on the 2 Commerce payments. Both
       restore intended relationships rather than assert a judgment, so neither
-      needs anyone's permission. **Do not recode the SPU compost records** —
+      needs anyone's permission. **Do not recode the SPU compost records**:
       see rule 3 below; that one is a conversation with Galen.
 
       Each fix should visibly remove a row from the panel on the next read,
@@ -239,7 +244,7 @@ shipped the thing.
 
       A shared password manager, or the organization's Google Workspace. While
       doing it, decide whether one shared passphrase is the right model
-      long-term — it is fine for read-only figures, but rotating means telling
+      long-term: it is fine for read-only figures, but rotating means telling
       everyone, and there is no way to revoke one person.
 
       Rotation procedure is `docs/runbook-migration.md` §7.
@@ -254,14 +259,14 @@ shipped the thing.
       out:
 
       > Expenses attributed to a grant that **LGL marks reimbursable**, sitting
-      > in QuickBooks as **`Billable`** — eligible, spent, and never invoiced.
+      > in QuickBooks as **`Billable`**: eligible, spent, and never invoiced.
 
       That is money HPIC is owed and has not asked for. Today nobody would
       notice, because the two halves live in different systems and nothing
       compares them.
 
       It belongs in the data-quality panel rather than as a funnel figure: it
-      is an exception list with names and amounts, and it is actionable — the
+      is an exception list with names and amounts, and it is actionable: the
       fix is to send an invoice.
 
       Depends on all three of: the QuickBooks dimension (item 0), `reimbursable`
@@ -274,16 +279,16 @@ shipped the thing.
       figure where being wrong costs real money, so it waits for both. The
       Dry-in target cost from the GC is still outstanding regardless.
 
-## Answered — what had been blocking the cutover
+## Answered: what had been blocking the cutover
 
-- [x] **A. Settle what "deposited" means on a grant pledge in LGL. — ANSWERED
+- [x] **A. Settle what "deposited" means on a grant pledge in LGL. ANSWERED
       2026-08-19, and the answer was the dangerous one.**
       `received_amount` on a Pledge is the **award amount, not cash**. The
       `deposited_amount` and `deposit_date` fields are stamped when the pledge is
       entered and do **not** mean money arrived. Trusting them would have
       overstated cash by $926,000.
 
-      Cash lives in separate child records — type-1 `Gift`s whose
+      Cash lives in separate child records: type-1 `Gift`s whose
       `parent_gift_id` points at the pledge. Alex's formula reproduces exactly:
       amount due = pledge amount − sum of child gifts. Three levels, and only
       the middle one is read today:
@@ -303,21 +308,21 @@ shipped the thing.
       labels the total Pledged, which is correct; Received and Outstanding
       render "Not shown". The $1,471,000 was never presented as cash.
 
-- [x] **A2. Decide where Received comes from. — DECIDED 2026-08-19: QuickBooks
+- [x] **A2. Decide where Received comes from. DECIDED 2026-08-19: QuickBooks
       is authoritative, LGL is provisional.** Reasoning below under item 0.
 
 ## Housekeeping, already done
 
-- [x] **B. Re-set the LGL API key as a Worker secret. — DONE 2026-08-19.**
+- [x] **B. Re-set the LGL API key as a Worker secret. DONE 2026-08-19.**
       The `wrangler secret put` failed first with "the latest version of your
       worker isn't currently deployed"; `npx wrangler deploy` from `worker/`
       cleared it. Worth remembering: a secret cannot be bound to a version that
       is not the deployed one. The key in `worker/.dev.vars` was never
-      bracketed — every live read authenticated fine.
-- [x] **C. Push the two local commits. — DONE.** `main` and `origin/main` are
+      bracketed: every live read authenticated fine.
+- [x] **C. Push the two local commits. DONE.** `main` and `origin/main` are
       both at `3c5793b`; nothing is outstanding.
 
-- [x] **D. Scope the funnel, flip to live, deploy once. — DONE 2026-08-19**
+- [x] **D. Scope the funnel, flip to live, deploy once. DONE 2026-08-19**
       (`a8d2903`). `LGL_MODE = "live"`, scoped to campaign 871 and category
       6031, deployed as version `7e381f25`. The bindings came back as expected
       and `/api/grants` still answers 401 without the passphrase, so the auth
@@ -333,7 +338,7 @@ shipped the thing.
       $1,471,000 across 6 records, with Received and Outstanding showing "Not
       shown" and no unscoped banner.
 
-## Phase 2 — the data structure, as recommended
+## Phase 2: the data structure, as recommended
 
 - [ ] **0. Stand up one QuickBooks Customer (or Project) per grant award.**
       Written as a spec rather than as options because Kyle asked for an
@@ -348,7 +353,7 @@ shipped the thing.
       > terms and someone will otherwise re-derive it.
 
       **Why QuickBooks for both Received and Spent, not just Spent.** Spent has
-      no alternative — LGL has no concept of an expense, and invoicing a
+      no alternative: LGL has no concept of an expense, and invoicing a
       cost-reimbursement funder requires knowing what HPIC spent. Once a grant
       dimension exists in QuickBooks for expenses, the *same* dimension gives
       Received for free: a grant deposit coded to it. Sourcing Received from
@@ -356,7 +361,7 @@ shipped the thing.
       reconciling them forever. One dimension, one rule for whoever enters a
       transaction.
 
-      **Why Customer/Project rather than Class.** Class was the simpler rule —
+      **Why Customer/Project rather than Class.** Class was the simpler rule,
       one field behaving identically on a deposit and an expense. But
       **billable expenses attach to a Customer, not a Class**, and billable
       expenses are the mechanism that answers the board's actual question. With
@@ -370,7 +375,7 @@ shipped the thing.
       not a data-model problem, and it is worth paying once.
 
       **Decide this before any transaction is coded.** Switching dimensions
-      later is not a code change — it is re-coding every transaction by hand.
+      later is not a code change; it is re-coding every transaction by hand.
       **Check the QuickBooks plan first:** Class tracking and Projects both
       need Plus or Advanced, and neither exists on Essentials.
 
@@ -378,14 +383,14 @@ shipped the thing.
       is a property of the *award*, so once an expense carries its grant the
       answer is derivable from LGL. A second hand-maintained flag would
       eventually disagree with the first, with nothing to say which is right.
-      What genuinely varies per expense is *eligibility* — agreements exclude
-      categories, cap amounts, require pre-approval — and QuickBooks already
+      What genuinely varies per expense is *eligibility*: agreements exclude
+      categories, cap amounts, require pre-approval, and QuickBooks already
       models that as `BillableStatus`:
 
       | State | Meaning |
       | --- | --- |
       | `NotBillable` | not eligible, or not a grant cost |
-      | `Billable` | **spent, eligible, not yet invoiced** — the money at risk |
+      | `Billable` | **spent, eligible, not yet invoiced**: the money at risk |
       | `HasBeenBilled` | invoiced to the funder |
 
       That middle state is the one the board is worried about, and QuickBooks
@@ -396,11 +401,11 @@ shipped the thing.
       **How the dimension ties to an LGL award: an explicit map in Worker
       config, keyed by LGL gift id.** Not a naming convention. A convention is
       a string match, so renaming or mistyping in QuickBooks silently detaches
-      the grant and a number quietly drops — the exact failure this tool exists
+      the grant and a number quietly drops: the exact failure this tool exists
       to prevent. An explicit map fails loudly instead: a mapped grant whose
       customer has vanished renders unavailable, and a customer with no mapping
       is reported as unattributed. With ~10 grants the map is trivial, and
-      needing a deploy to add one is a feature — it makes adding a grant a
+      needing a deploy to add one is a feature: it makes adding a grant a
       deliberate act.
 
       **The completeness rule, which is not optional:**
@@ -420,7 +425,7 @@ shipped the thing.
       decide whether to backfill history. The code cannot proceed without at
       least one grant coded end to end.
 
-## The LGL rules to introduce — Claude's recommendation
+## The LGL rules to introduce: Claude's recommendation
 
 Not a to-do so much as the standard to hold records to, and the thing P2's
 panel should measure against. Ordered by how much breaks without it.
@@ -429,10 +434,10 @@ panel should measure against. Ordered by how much breaks without it.
    genuinely load-bearing rule; 3 of 11 payments violate it today.
 2. **Every award exists in LGL**, including historical ones. The $7,500 Arts &
    Culture payment references a 2025 CARE award that is not in the system at
-   all — the only CARE record is a $3,400 pledge for 2026.
+   all: the only CARE record is a $3,400 pledge for 2026.
 3. **Category 6076 holds grant payments only.** Two Seattle Public Utilities
    compost-event fee-for-service records sit there today. **Do not "fix" these
-   unilaterally** — a note on one says it was coded that way deliberately to
+   unilaterally**: a note on one says it was coded that way deliberately to
    match the QuickBooks record, so changing it back would break an agreement
    someone made on purpose. That one is a conversation with Galen.
 4. **Payment terms on every grant award.** The "Payment Terms" custom field
@@ -444,32 +449,32 @@ panel should measure against. Ordered by how much breaks without it.
    award landed and was signed.
 6. **Campaign on awards is required; on payments it is optional.** The
    dashboard reaches the campaign by walking to the award, so payments do not
-   need it — but LGL's own campaign reports miss $372,429 of Commerce money
+   need it, but LGL's own campaign reports miss $372,429 of Commerce money
    without it, which is the honest reason to ask for it.
 
 Worth investigating once: **LGL's `Installment` gift type (13) exists and is
 unused.** If it enforces the payment-to-award link that hand-entered type-1
 gifts do not, rule 1 becomes structural instead of a habit.
 
-## Hosting — settled 2026-09-06
+## Hosting: settled 2026-09-06
 
-- [x] **1. Create the HPIC GitHub organization and transfer this repo. — DONE.**
+- [x] **1. Create the HPIC GitHub organization and transfer this repo. DONE.**
       Now `HPIC98106/SST`. The dashboard is live at
-      **https://hpic98106.github.io/SST/** — note the path is case-sensitive,
+      **https://hpic98106.github.io/SST/**. Note the path is case-sensitive,
       `/sst/` returns 404.
 
-- [x] **2. Point `sst.hpic1919.org` at the dashboard. — DECIDED AGAINST,
+- [x] **2. Point `sst.hpic1919.org` at the dashboard. DECIDED AGAINST,
       2026-09-06.** The board reaches the tool at the github.io URL and the
       domain stays on Squarespace untouched. The only real argument for a
-      custom domain was indirection — a URL that survives moving off GitHub
-      Pages — which is worth little for ten people who can simply be told.
+      custom domain was indirection: a URL that survives moving off GitHub
+      Pages, which is worth little for ten people who can simply be told.
 
       **Reversible at any time** for the cost of one CNAME, one Pages setting
       and one `ALLOWED_ORIGIN` change, so deferring costs nothing. The one
       thing it would have protected against: renaming the organization breaks
       the github.io URL.
 
-- [x] **3. Update `ALLOWED_ORIGIN` and redeploy the Worker. — DONE 2026-09-06**
+- [x] **3. Update `ALLOWED_ORIGIN` and redeploy the Worker. DONE 2026-09-06**
       (`3f72c8b`, worker version `8ecb3025`). Now `https://hpic98106.github.io`.
 
       **This was already broken and had not been noticed**, which is the part
@@ -478,7 +483,7 @@ gifts do not, rule 1 becomes structural instead of a habit.
       nothing failing server-side. If the dashboard ever shows no data at all
       after any hosting change, check this before anything else.
 
-- [x] **Modernise the Pages workflow. — DONE 2026-09-06.** The Node 20
+- [x] **Modernise the Pages workflow. DONE 2026-09-06.** The Node 20
       deprecation warning was about the actions, not the build. Current
       releases turned out to be several majors ahead of what was pinned:
       checkout v4→v7, setup-node v4→v7, upload-pages-artifact v3→v5,
@@ -488,11 +493,11 @@ gifts do not, rule 1 becomes structural instead of a habit.
 
 ## Phase 2 prerequisites
 
-- [x] **5. Confirm in LGL admin whether Pledge supports custom fields. —
+- [x] **5. Confirm in LGL admin whether Pledge supports custom fields.
       ANSWERED 2026-09-09: it does not.** LGL scopes custom fields by *item
       type*, and "Gift" is the finest grain there is; Pledge is not an item
       type, so a gift custom field is visible on all ten gift types. That is
-      cosmetic rather than dangerous — blank reads as unknown, and the
+      cosmetic rather than dangerous: blank reads as unknown, and the
       dashboard only reads the field on awards already in scope.
 
       The field created instead is **`Payment Terms`**, a single-select on Gift
@@ -505,7 +510,7 @@ gifts do not, rule 1 becomes structural instead of a habit.
 
 - [ ] **6. Confirm the Intuit developer account is recoverable without you.**
       It is registered to `kyle.huber@hpic1919.org`, which is already on the
-      org's Google Workspace — good. Check that a Workspace admin can recover
+      org's Google Workspace: good. Check that a Workspace admin can recover
       the mailbox, or move the Intuit login to a role address.
       → `docs/runbook-migration.md` §6
 
@@ -519,17 +524,17 @@ gifts do not, rule 1 becomes structural instead of a habit.
 
 Not yours to do, but worth tracking so the wait is visible.
 
-- [ ] **Development committee** — reconcile manually tracked grants into LGL.
+- [ ] **Development committee**: reconcile manually tracked grants into LGL.
       Until this happens, grant figures reflect what is in LGL, not a complete
       grant history, and the UI must say so.
 
       **First concrete instance, found 2026-08-19:** the $7,500 Office of Arts
       & Culture payment (gift 906707) is noted as an "Addition to 2025 CARE
-      grant award", but **no 2025 CARE award exists in LGL** — the only CARE
+      grant award", but **no 2025 CARE award exists in LGL**: the only CARE
       record is a $3,400 pledge for 2026. So this is a missing award record
       rather than a missing link, and it is the kind of gap P2's panel is meant
       to surface automatically instead of by hand.
-- [ ] **General contractor** — the Dry-in target cost. Phase 3 cannot start
+- [ ] **General contractor**: the Dry-in target cost. Phase 3 cannot start
       without it.
 
 ## One-off check
@@ -542,7 +547,7 @@ Not yours to do, but worth tracking so the wait is visible.
 
 ---
 
-## Reference — verified against live LGL, 2026-08-19
+## Reference: verified against live LGL, 2026-08-19
 
 Recorded so tomorrow does not begin by rediscovering it. `lgl-inspect.mjs` at
 the repo root regenerates all of it: `node lgl-inspect.mjs`, reading the key
@@ -553,15 +558,15 @@ from `worker/.dev.vars`. Every request it makes is a GET.
 | Pledge gift type | **7** (resolved by name, as the code expects) |
 | Rebuild Project campaign | **871** |
 | "Grant" gift category | **6031** |
-| Scoped to 871 + 6031 | 6 pledges, **$1,471,000 awarded** (not received — see below) |
-| Category 6031 alone | 10 pledges, $1,528,372 — adds ~$57k of Programs grants |
+| Scoped to 871 + 6031 | 6 pledges, **$1,471,000 awarded** (not received: see below) |
+| Category 6031 alone | 10 pledges, $1,528,372: adds ~$57k of Programs grants |
 | Pledges carrying a custom field | 0 of 13, so reimbursable is "unknown" for every award |
-| Custom field definitions | `/categories` — 17, all `item_type: Constituent`. "Gift" is the finest scoping LGL has; Pledge is not an item type. |
-| Gift categories | `/gift_categories` — 14, each with `gift_type_id`. Name is on `display_name`, not `name`. |
+| Custom field definitions | `/categories`: 17, all `item_type: Constituent`. "Gift" is the finest scoping LGL has; Pledge is not an item type. |
+| Gift categories | `/gift_categories`: 14, each with `gift_type_id`. Name is on `display_name`, not `name`. |
 | Payment terms field | `Payment Terms`, single-select on Gift, defined 2026-09-09. Invisible to the API until some record carries a value. |
 | `auto_sync_to_qbo` | `false` on every record |
 
-### The three-level gift structure — verified 2026-08-19
+### The three-level gift structure: verified 2026-08-19
 
 This is the part that was misread the first time. `node lgl-inspect.mjs`
 regenerates the scope IDs; the payment tree below came from following
@@ -575,7 +580,7 @@ regenerates the scope IDs; the payment tree below came from following
 
 **Awards and payments sit in two different categories that share the display
 name "Grant".** 6031 holds awards, 6076 holds payments. `categories=in|6031`
-returns pledges only — correct for Pledged, and wrong for anything computing
+returns pledges only: correct for Pledged, and wrong for anything computing
 Received, which must read 6076 too. Since the gift-categories endpoint returns
 blank names, the two are indistinguishable from that list; they were told apart
 only by reading `gift_category_id` off known records.
@@ -597,17 +602,17 @@ with no payment against them at all. Reading them as cash overstates by
 $926,000.
 
 **Payment linkage is not reliable, either.** Of 11 records in category 6076,
-3 have no `parent_gift_id` at all, totalling $10,500 — and two of those are
+3 have no `parent_gift_id` at all, totalling $10,500, and two of those are
 not grants: $1,500 twice for a 2025 compost event, recoded from
 Fee-for-Service. So summing child gifts undercounts, and the category itself
 contains non-grant activity. One of those notes reads *"This coding matches
-Quickbooks record"* — somebody is already retrofitting LGL by hand to agree
+Quickbooks record"*: somebody is already retrofitting LGL by hand to agree
 with the books, which is worth weighing in A2.
 
 **A Goal's note is not a status signal.** Pledge 906602 ($38,000) hangs off a
 Goal noted "decision anticipated April 2026", yet the award landed 2025-12-04
 and has a signed OAC Grant Agreement; the note was simply never updated after
-the decision came in. Read the structure instead — a type-7 pledge means
+the decision came in. Read the structure instead: a type-7 pledge means
 awarded, a child type-1 gift means cash arrived. (Confirmed with Kyle in the
 LGL UI, 2026-08-19.)
 
@@ -615,7 +620,7 @@ Note the gift-categories endpoint returns **blank names**, so `6031` was
 identified from the `gift_category_name` on real pledges rather than from that
 list. Anyone re-deriving it should do the same.
 
-### On Goals and applications — settling the 2026-08-19 confusion
+### On Goals and applications: settling the 2026-08-19 confusion
 
 Three separate things got tangled during that session. All now verified:
 
@@ -626,7 +631,7 @@ Three separate things got tangled during that session. All now verified:
   discoverable**: absent from `/gift_types`, zero results from `gifts/search`,
   and absent from a constituent's own gift list. You can follow a pointer to
   one; you cannot enumerate them. They are not a usable data source.
-- **`appeal_requests` are real and populated** — 8 appeals, 210+ requests. The
+- **`appeal_requests` are real and populated**: 8 appeals, 210+ requests. The
   `appeal_request` reads that were deleted worked fine. They were removed
   because applications are out of scope, **not** because they were unavailable.
 
@@ -667,7 +672,7 @@ funnel sees pledges only and Goals cannot reach it whatever the scope config.
   off Node 20.
 - **Shipped the prototype: the funnel renders all three stages and the
   data-quality panel names what is broken** (`6107d7e`, 2026-08-19). This is
-  the point the launch-then-govern strategy was waiting on — there is now
+  the point the launch-then-govern strategy was waiting on: there is now
   something to show Alex, Galen and Rachel, and the case for changing how
   records are entered is made from HPIC's own records.
 - Established what LGL actually exposes for grant cash (2026-08-19): pledges
@@ -681,7 +686,7 @@ funnel sees pledges only and Goals cannot reach it whatever the scope config.
   (`edf4815`, 2026-08-18). Alex confirmed the tool starts at money awarded, not
   requested, after the slice was already built.
 - Redefined Received and Outstanding as QuickBooks figures rather than LGL ones
-  (`b12c7d6`, 2026-08-19), including the note the board reads — it no longer
+  (`b12c7d6`, 2026-08-19), including the note the board reads: it no longer
   blames LGL for a missing field.
 - Issued the LGL API key and ran the first live read (2026-08-19). See the
   reference table above. Item B remains because the stored Worker secret is
@@ -706,19 +711,19 @@ Kept here so they are not re-litigated from memory.
   output they have never seen. The dashboard makes the cost of a missing link
   visible in dollars, which is an argument no policy memo makes as well. This
   is safe only because the invariants refuse to launder a gap into a clean
-  number — launching on imperfect data exercises that rule rather than bending
+  number: launching on imperfect data exercises that rule rather than bending
   it. (Kyle, with board backing, 2026-08-19.)
 - **QuickBooks is authoritative for Received as well as Spent; LGL Received is
   provisional and labelled as such.** Spent has no alternative, and once a
   grant dimension exists in QuickBooks the same dimension answers Received.
   Sourcing Received from LGL instead would mean maintaining two attribution
-  systems forever. Showing both — provisional beside unavailable — is itself
+  systems forever. Showing both, provisional beside unavailable, is itself
   the argument for the bookkeeping change. (2026-08-19, superseding the
   2026-08-19 note below, which was reasoning from a premise since disproved.)
 - **One QuickBooks Customer (or Project) per grant award, mapped to LGL gift
   ids in Worker config.** *Revised 2026-09-06 from Class.* Class was the
   simpler rule, but billable expenses attach to a Customer, and billable
-  expenses are what answer "was this reimbursable spending ever invoiced" —
+  expenses are what answer "was this reimbursable spending ever invoiced",
   the question the board actually asked. Explicit map either way, because a
   naming convention detaches silently when someone renames a record, and
   silent is the one failure mode this tool exists to prevent.
@@ -733,7 +738,7 @@ Kept here so they are not re-litigated from memory.
   question, so that item is closed rather than deferred. The work this creates
   is a QuickBooks class discipline, tracked as item 0. (Kyle, 2026-08-19)
 - **The dashboard lives at the org's github.io URL; no custom domain.** The
-  page is public and the *data* is not — GitHub Pages has no authentication of
+  page is public and the *data* is not: GitHub Pages has no authentication of
   its own on a free organization, and the repository is public anyway. The
   passphrase gate on the page is real: it is checked by the Worker, not in the
   browser, so the static shell is all an unauthenticated visitor can see.
