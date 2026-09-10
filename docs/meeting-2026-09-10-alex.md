@@ -293,6 +293,10 @@ Answer:
 
 https://claude.ai/code/artifact/73463f41-2570-4a73-bae0-129ad80da865
 
+Source is `docs/concept-sheet-2026-09-10.html`, committed so the sheet outlives
+one person's Claude account. The artifact is the shareable link; the file is the
+copy anyone can edit or re-host.
+
 Five sketches of what the single source of truth could cover beyond cash and
 grants: construction spend, reimbursement exposure, operating runway, events,
 membership. **Every figure on it is invented and the page says so in three

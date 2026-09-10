@@ -1,0 +1,552 @@
+<title>What Else Could This Track?</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #f2f4f7;
+    --sheet: #ffffff;
+    --ink: #22282f;
+    --ink-soft: #5b6774;
+    --ink-faint: #8a95a2;
+    --blue: #1d4e89;
+    --blue-wash: #e4ebf4;
+    --clay: #a8452b;
+    --clay-wash: #f6e7e2;
+    --moss: #3d6b4f;
+    --moss-wash: #e2eee7;
+    --rule: #ccd4de;
+    --rule-hard: #9daabb;
+    --grid: rgba(29, 78, 137, 0.055);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181d;
+      --sheet: #1b2028;
+      --ink: #e6ebf1;
+      --ink-soft: #a3b0bf;
+      --ink-faint: #74818f;
+      --blue: #7aa9e0;
+      --blue-wash: #1c2a3a;
+      --clay: #e08a6d;
+      --clay-wash: #33221c;
+      --moss: #7fbf97;
+      --moss-wash: #1c2b22;
+      --rule: #2e3742;
+      --rule-hard: #47535f;
+      --grid: rgba(122, 169, 224, 0.06);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14181d;
+    --sheet: #1b2028;
+    --ink: #e6ebf1;
+    --ink-soft: #a3b0bf;
+    --ink-faint: #74818f;
+    --blue: #7aa9e0;
+    --blue-wash: #1c2a3a;
+    --clay: #e08a6d;
+    --clay-wash: #33221c;
+    --moss: #7fbf97;
+    --moss-wash: #1c2b22;
+    --rule: #2e3742;
+    --rule-hard: #47535f;
+    --grid: rgba(122, 169, 224, 0.06);
+  }
+
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+    padding: 0 1.25rem 5rem;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; }
+
+  /* --- Masthead: a drawing's title block --- */
+  .titleblock {
+    border: 2px solid var(--ink);
+    background: var(--sheet);
+    margin: 1.75rem 0 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+  .titleblock-main { padding: 1.35rem 1.5rem 1.5rem; }
+  .stamp {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    color: var(--clay);
+    border: 2px solid var(--clay);
+    background: var(--clay-wash);
+    padding: 0.3rem 0.7rem;
+    display: inline-block;
+    transform: rotate(-1.2deg);
+    margin-bottom: 0.9rem;
+  }
+  h1 {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.02;
+    letter-spacing: -0.005em;
+    margin: 0 0 0.6rem;
+    text-wrap: balance;
+  }
+  .standfirst { color: var(--ink-soft); max-width: 46ch; margin: 0; font-size: 1.02rem; }
+  .titleblock-meta {
+    border-left: 2px solid var(--ink);
+    padding: 1.35rem 1.25rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 11rem;
+  }
+  .titleblock-meta dt {
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ink-faint);
+    font-size: 0.63rem;
+  }
+  .titleblock-meta dd { margin: 0.1rem 0 0; color: var(--ink); font-weight: 500; }
+
+  /* --- The warning that this is not the real tool --- */
+  .caution {
+    border: 2px solid var(--clay);
+    border-top: none;
+    background: var(--clay-wash);
+    color: var(--ink);
+    padding: 0.95rem 1.5rem;
+    font-size: 0.95rem;
+  }
+  .caution strong { color: var(--clay); }
+
+  h2 {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    margin: 3.25rem 0 0;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--rule-hard);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  h2 .count {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+    text-transform: none;
+  }
+  .lede { color: var(--ink-soft); margin: 0.85rem 0 1.5rem; max-width: 62ch; }
+  .lede strong { color: var(--ink); }
+
+  /* --- Concept sheets --- */
+  .sheets { display: grid; gap: 1.25rem; }
+  @media (min-width: 46rem) { .sheets { grid-template-columns: 1fr 1fr; } }
+
+  .sheet {
+    background: var(--sheet);
+    border: 1px solid var(--rule-hard);
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet-head {
+    padding: 1rem 1.15rem 0.85rem;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .sheet h3 {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    margin: 0 0 0.2rem;
+    letter-spacing: 0.01em;
+  }
+  .asks {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin: 0;
+    font-style: italic;
+  }
+
+  /* Mock figures: obviously a drawing, never a readout */
+  .mock { padding: 1.15rem; border-bottom: 1px dashed var(--rule); flex: 1; }
+  .mock-note {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin: 0 0 0.7rem;
+  }
+  .figs { display: flex; gap: 1.4rem; flex-wrap: wrap; }
+  .fig { display: flex; flex-direction: column; gap: 0.1rem; }
+  .fig-val {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 1.55rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--blue);
+    line-height: 1.1;
+  }
+  .fig-val.muted { color: var(--ink-faint); }
+  .fig-lab {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .bars { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+  .bar-row { display: grid; grid-template-columns: 7.5rem 1fr auto; align-items: center; gap: 0.6rem; font-size: 0.78rem; }
+  .bar-lab { color: var(--ink-soft); }
+  .bar-track { background: var(--blue-wash); height: 0.65rem; position: relative; }
+  .bar-fill { background: var(--blue); height: 100%; }
+  .bar-fill.clay { background: var(--clay); }
+  .bar-fill.moss { background: var(--moss); }
+  .bar-num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spark { display: block; width: 100%; height: auto; margin-top: 0.9rem; }
+
+  .sheet-foot { padding: 0.9rem 1.15rem 1.05rem; display: grid; gap: 0.6rem; }
+  .meta-line { display: grid; grid-template-columns: 5.4rem 1fr; gap: 0.7rem; font-size: 0.82rem; align-items: start; }
+  .meta-key {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    padding-top: 0.22rem;
+  }
+  .meta-val { color: var(--ink-soft); }
+  .meta-val strong { color: var(--ink); font-weight: 600; }
+
+  .flag {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.16rem 0.45rem;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .flag.ready { color: var(--moss); background: var(--moss-wash); }
+  .flag.blocked { color: var(--clay); background: var(--clay-wash); }
+
+  /* --- Real-vs-sketch legend --- */
+  .legend {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--rule-hard);
+    background: var(--sheet);
+    margin-top: 1.5rem;
+  }
+  @media (min-width: 40rem) { .legend { grid-template-columns: 1fr 1fr; } }
+  .legend-col { padding: 1.1rem 1.25rem; }
+  .legend-col + .legend-col { border-top: 1px solid var(--rule); }
+  @media (min-width: 40rem) {
+    .legend-col + .legend-col { border-top: none; border-left: 1px solid var(--rule); }
+  }
+  .legend-col h4 {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.82rem;
+    margin: 0 0 0.6rem;
+  }
+  .legend-col.real h4 { color: var(--moss); }
+  .legend-col.sketch h4 { color: var(--clay); }
+  .legend-col ul { margin: 0; padding-left: 1.05rem; font-size: 0.88rem; color: var(--ink-soft); }
+  .legend-col li { margin-bottom: 0.25rem; }
+
+  /* --- Closing decision --- */
+  .decision {
+    border: 2px solid var(--blue);
+    background: var(--blue-wash);
+    padding: 1.5rem;
+    margin-top: 3rem;
+  }
+  .decision h2 { margin-top: 0; border-bottom-color: var(--blue); color: var(--blue); }
+  .decision ol { margin: 1rem 0 0; padding-left: 1.3rem; }
+  .decision li { margin-bottom: 0.7rem; }
+  .decision li strong { font-weight: 600; }
+
+  footer {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="titleblock">
+    <div class="titleblock-main">
+      <span class="stamp">Concept sketch &middot; not real data</span>
+      <h1>What else could this track?</h1>
+      <p class="standfirst">
+        Five ideas for what the single source of truth could cover beyond cash and
+        grants, drawn up so the board can say which ones are worth building.
+      </p>
+    </div>
+    <dl class="titleblock-meta">
+      <div><dt>Project</dt><dd>HPIC single source of truth</dd></div>
+      <div><dt>Sheet</dt><dd>Concepts, rev A</dd></div>
+      <div><dt>Date</dt><dd>2026-09-10</dd></div>
+      <div><dt>Status</dt><dd>For discussion</dd></div>
+    </dl>
+  </div>
+
+  <p class="caution">
+    <strong>Every number on this page is invented.</strong> These are drawings of
+    panels that do not exist, made to show the shape of an idea. The live dashboard
+    is a separate thing, and nothing on it is made up. Do not read a figure here as
+    a fact about HPIC.
+  </p>
+
+  <h2>Where things actually stand <span class="count">for contrast</span></h2>
+  <div class="legend">
+    <div class="legend-col real">
+      <h4>Built and reading live data</h4>
+      <ul>
+        <li>Cash on hand, per account, from QuickBooks</li>
+        <li>Grant funnel: $1,471,000 awarded across 6 Rebuild awards</li>
+        <li>Data-quality panel naming every record that breaks a rule</li>
+        <li>Phase readiness, showing what it cannot yet answer</li>
+      </ul>
+    </div>
+    <div class="legend-col sketch">
+      <h4>Sketched on this page only</h4>
+      <ul>
+        <li>Membership counts and dues revenue</li>
+        <li>Construction spend against the rebuild</li>
+        <li>Operating burn and runway</li>
+        <li>Reimbursement exposure</li>
+        <li>Event and programming contribution</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>One change unlocks three of them <span class="count">group A</span></h2>
+  <p class="lede">
+    These three look like separate features and are not. Each needs the same single
+    thing: <strong>a QuickBooks dimension that says which grant or project a
+    transaction belongs to</strong>, applied when the entry is made. That is the
+    conversation with Rachel. Agreeing to it once buys all three, which is a much
+    better trade than it looks from the outside.
+  </p>
+
+  <div class="sheets">
+
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>Construction spend</h3>
+        <p class="asks">What have we actually spent on the rebuild, and on what?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Illustrative drawing</p>
+        <div class="figs">
+          <div class="fig"><span class="fig-val">$1.24M</span><span class="fig-lab">spent to date</span></div>
+          <div class="fig"><span class="fig-val muted">$612K</span><span class="fig-lab">committed, unbilled</span></div>
+        </div>
+        <div class="bars">
+          <div class="bar-row"><span class="bar-lab">Site &amp; abatement</span><span class="bar-track"><span class="bar-fill" style="width:96%"></span></span><span class="bar-num">$430K</span></div>
+          <div class="bar-row"><span class="bar-lab">Structure</span><span class="bar-track"><span class="bar-fill" style="width:71%"></span></span><span class="bar-num">$318K</span></div>
+          <div class="bar-row"><span class="bar-lab">Envelope</span><span class="bar-track"><span class="bar-fill" style="width:44%"></span></span><span class="bar-num">$197K</span></div>
+          <div class="bar-row"><span class="bar-lab">Design &amp; permits</span><span class="bar-track"><span class="bar-fill" style="width:66%"></span></span><span class="bar-num">$295K</span></div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Source</span><span class="meta-val">QuickBooks expenses, split by phase</span></div>
+        <div class="meta-line"><span class="meta-key">Needs</span><span class="meta-val"><strong>The grant/project dimension.</strong> Without it an expense belongs to no phase and the whole panel is guesswork.</span></div>
+        <div class="meta-line"><span class="meta-key">Status</span><span class="meta-val"><span class="flag blocked">Blocked on bookkeeping</span></span></div>
+      </div>
+    </article>
+
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>Reimbursement exposure</h3>
+        <p class="asks">Have we spent money on a reimbursable grant and never invoiced for it?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Illustrative drawing</p>
+        <div class="figs">
+          <div class="fig"><span class="fig-val" style="color:var(--clay)">$84,200</span><span class="fig-lab">spent, never billed</span></div>
+          <div class="fig"><span class="fig-val muted">3</span><span class="fig-lab">grants affected</span></div>
+        </div>
+        <div class="bars">
+          <div class="bar-row"><span class="bar-lab">Commerce LCP</span><span class="bar-track"><span class="bar-fill clay" style="width:62%"></span></span><span class="bar-num">$52,100</span></div>
+          <div class="bar-row"><span class="bar-lab">Dept of Neighborhoods</span><span class="bar-track"><span class="bar-fill clay" style="width:28%"></span></span><span class="bar-num">$23,400</span></div>
+          <div class="bar-row"><span class="bar-lab">Garneau-Nicon</span><span class="bar-track"><span class="bar-fill clay" style="width:10%"></span></span><span class="bar-num">$8,700</span></div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Source</span><span class="meta-val">LGL payment terms crossed against QuickBooks billable status</span></div>
+        <div class="meta-line"><span class="meta-key">Needs</span><span class="meta-val">The same dimension, <strong>plus Payment Terms filled in</strong> on the awards.</span></div>
+        <div class="meta-line"><span class="meta-key">Why</span><span class="meta-val">Neither system can answer this alone, and today nobody would notice the money.</span></div>
+      </div>
+    </article>
+
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>Operating burn &amp; runway</h3>
+        <p class="asks">How long can we keep the lights on without touching restricted money?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Illustrative drawing</p>
+        <div class="figs">
+          <div class="fig"><span class="fig-val">7.4</span><span class="fig-lab">months runway</span></div>
+          <div class="fig"><span class="fig-val muted">$11,380</span><span class="fig-lab">avg monthly burn</span></div>
+        </div>
+        <svg class="spark" viewBox="0 0 320 78" role="img" aria-label="Illustrative monthly operating balance trending down over twelve months">
+          <polyline points="6,20 32,24 58,19 84,29 110,27 136,35 162,33 188,42 214,39 240,49 266,52 292,58"
+                    fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <circle cx="292" cy="58" r="4" fill="var(--clay)"></circle>
+          <line x1="6" y1="70" x2="314" y2="70" stroke="var(--rule)" stroke-width="1"></line>
+          <text x="6" y="77" font-family="IBM Plex Mono, monospace" font-size="7" fill="var(--ink-faint)">12 mo ago</text>
+          <text x="266" y="77" font-family="IBM Plex Mono, monospace" font-size="7" fill="var(--ink-faint)">now</text>
+        </svg>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Source</span><span class="meta-val">QuickBooks, operating account only</span></div>
+        <div class="meta-line"><span class="meta-key">Needs</span><span class="meta-val">The dimension, to keep rebuild spending out of the operating figure. Mixing them makes runway look worse than it is.</span></div>
+        <div class="meta-line"><span class="meta-key">Status</span><span class="meta-val"><span class="flag blocked">Blocked on bookkeeping</span></span></div>
+      </div>
+    </article>
+
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>Events &amp; programming</h3>
+        <p class="asks">Does First Friday pay for itself?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Illustrative drawing</p>
+        <div class="figs">
+          <div class="fig"><span class="fig-val" style="color:var(--moss)">+$6,240</span><span class="fig-lab">net, year to date</span></div>
+          <div class="fig"><span class="fig-val muted">18</span><span class="fig-lab">events held</span></div>
+        </div>
+        <div class="bars">
+          <div class="bar-row"><span class="bar-lab">First Friday</span><span class="bar-track"><span class="bar-fill moss" style="width:74%"></span></span><span class="bar-num">+$4,100</span></div>
+          <div class="bar-row"><span class="bar-lab">Compost giveaway</span><span class="bar-track"><span class="bar-fill moss" style="width:31%"></span></span><span class="bar-num">+$1,720</span></div>
+          <div class="bar-row"><span class="bar-lab">Not So Silent</span><span class="bar-track"><span class="bar-fill clay" style="width:16%"></span></span><span class="bar-num">&minus;$880</span></div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Source</span><span class="meta-val">QuickBooks income and expense, tagged per event</span></div>
+        <div class="meta-line"><span class="meta-key">Needs</span><span class="meta-val">The dimension again, extended to events rather than only grants.</span></div>
+        <div class="meta-line"><span class="meta-key">Note</span><span class="meta-val">The grant funnel already trips over this: fee-for-service compost income sits in a grant category today.</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <h2>The one that needs nobody's permission <span class="count">group B</span></h2>
+  <p class="lede">
+    Membership is the only idea here that depends on <strong>no bookkeeping change and
+    nothing anyone else has to deliver</strong>. It comes out of LGL, which HPIC already
+    keeps up to date. If the board wants something new soon, this is the honest answer.
+  </p>
+
+  <div class="sheets">
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>Membership</h3>
+        <p class="asks">How many members do we have, and is that number going up?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Illustrative drawing</p>
+        <div class="figs">
+          <div class="fig"><span class="fig-val">312</span><span class="fig-lab">active members</span></div>
+          <div class="fig"><span class="fig-val muted">$18,720</span><span class="fig-lab">dues, trailing year</span></div>
+          <div class="fig"><span class="fig-val muted">64%</span><span class="fig-lab">renewal rate</span></div>
+        </div>
+        <div class="bars">
+          <div class="bar-row"><span class="bar-lab">Renewed</span><span class="bar-track"><span class="bar-fill" style="width:66%"></span></span><span class="bar-num">198</span></div>
+          <div class="bar-row"><span class="bar-lab">New this year</span><span class="bar-track"><span class="bar-fill moss" style="width:24%"></span></span><span class="bar-num">71</span></div>
+          <div class="bar-row"><span class="bar-lab">Building Booster</span><span class="bar-track"><span class="bar-fill" style="width:14%"></span></span><span class="bar-num">43</span></div>
+          <div class="bar-row"><span class="bar-lab">Expired, solicited</span><span class="bar-track"><span class="bar-fill clay" style="width:29%"></span></span><span class="bar-num">86</span></div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Source</span><span class="meta-val">LGL. The categories above are real ones already on HPIC's records: Building Booster, Renewed, Expired (Solicited).</span></div>
+        <div class="meta-line"><span class="meta-key">Needs</span><span class="meta-val"><strong>A decision, not a system change.</strong> Somebody has to say what counts as active: paid this year, or on the roll and not expired. The number moves a lot depending on the answer.</span></div>
+        <div class="meta-line"><span class="meta-key">Status</span><span class="meta-val"><span class="flag ready">Buildable now</span></span></div>
+      </div>
+    </article>
+
+    <article class="sheet">
+      <div class="sheet-head">
+        <h3>A word on projections</h3>
+        <p class="asks">Should the dashboard forecast, or only report?</p>
+      </div>
+      <div class="mock">
+        <p class="mock-note">Not a drawing. A question.</p>
+        <p style="margin:0 0 0.8rem; font-size:0.92rem; color:var(--ink-soft);">
+          Everything on the dashboard today is a <em>read</em>: it says what happened
+          and where the figure came from. <strong style="color:var(--ink)">Projected
+          membership revenue would be the first number on the page that is not a
+          fact</strong>, but a model with assumptions inside it.
+        </p>
+        <p style="margin:0; font-size:0.92rem; color:var(--ink-soft);">
+          That is not a reason to refuse it. It is a reason to show the assumptions
+          next to it, the same way the phase target now prints where its figure came
+          from. A forecast nobody can interrogate is how a dashboard starts being
+          argued with instead of believed.
+        </p>
+      </div>
+      <div class="sheet-foot">
+        <div class="meta-line"><span class="meta-key">Suggest</span><span class="meta-val">Start with dues actually recorded and the renewal rate. Add the projection once the board agrees what it assumes.</span></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="decision">
+    <h2>What we are actually asking the board</h2>
+    <p class="lede" style="margin-bottom:0;">
+      Not "do these look good." They all look good; that is what a drawing is for.
+      The useful questions are narrower.
+    </p>
+    <ol>
+      <li><strong>Which one would you actually open?</strong> Every panel here costs
+        real effort to keep honest, and a panel nobody reads is worse than none.</li>
+      <li><strong>Is the bookkeeping change worth it?</strong> Three of these five
+        need one habit changed in QuickBooks. That single decision is the difference
+        between this staying a grant tracker and becoming a financial picture.</li>
+      <li><strong>What does "active member" mean?</strong> The membership panel is
+        buildable as soon as somebody answers that. It is a policy question, not a
+        technical one.</li>
+      <li><strong>What is missing from this sheet?</strong> Five ideas came from one
+        person. The board has been running this organization for a lot longer.</li>
+    </ol>
+  </div>
+
+  <footer>
+    <span>HPIC single source of truth &middot; concept sheet, rev A</span>
+    <span>All figures invented &middot; 2026-09-10</span>
+  </footer>
+
+</div>
