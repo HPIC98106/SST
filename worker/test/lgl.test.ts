@@ -13,7 +13,7 @@
 
 import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getGrants, readReimbursable, RECONCILIATION_NOTE } from "../src/lgl";
+import { getGrants, readPaymentTerms, readReimbursable, RECONCILIATION_NOTE } from "../src/lgl";
 import type { Env } from "../src/types";
 
 interface RecordedCall {
@@ -289,7 +289,7 @@ describe("the data-quality panel", () => {
     expect(unlinked?.records[0].url).toBeNull();
   });
 
-  it("flags awards with no reimbursable status as blocking", async () => {
+  it("flags awards with no payment terms set as blocking", async () => {
     // This is what keeps Phase 3 unbuildable, so it is not advisory.
     const snapshot = await getGrants(grantEnv());
 
@@ -375,6 +375,86 @@ describe("reimbursable status", () => {
     // The buckets partition the awards: every award lands in exactly one.
     const bucketed = snapshot.awardsByReimbursable.reduce((n, b) => n + b.recordCount, 0);
     expect(bucketed).toBe(stage(snapshot, "pledged").recordCount);
+  });
+
+  it("reads HPIC's three Payment Terms options, matching on the field name", async () => {
+    // LGL gives every field an organisation defines a UUID key, so the name is
+    // the only thing that can match. A test that used a readable key would
+    // pass while the live field went unread.
+    const terms = (value: string) => ({
+      custom_fields: [{ name: "Payment Terms", key: "c41f9d2e_8a67_4b13_9f0c_2d7e5a1b8c34", values: [{ name: value }] }],
+    });
+
+    expect(readReimbursable(terms("Reimbursable"))).toBe("reimbursable");
+    // Both non-reimbursable options collapse to one status. LGL keeps the
+    // distinction; the dashboard only cares whether HPIC must spend first.
+    expect(readReimbursable(terms("Payment in full"))).toBe("not_reimbursable");
+    expect(readReimbursable(terms("Distribution payments"))).toBe("not_reimbursable");
+  });
+
+  it("reports a value it cannot read as distinct from no value at all", async () => {
+    // Both are "unknown" and neither is ever spendable, but they need opposite
+    // fixes. Collapsing them tells a volunteer that data entry they already
+    // did is missing.
+    const absent = readPaymentTerms({ custom_fields: [] });
+    expect(absent).toEqual({ status: "unknown", unrecognizedValue: null });
+
+    // A field present but never filled in counts as absent — same job undone.
+    expect(readPaymentTerms({ custom_fields: [{ name: "Payment Terms", values: [] }] })).toEqual({
+      status: "unknown",
+      unrecognizedValue: null,
+    });
+
+    // An option added in LGL that nothing here maps. The raw text comes back
+    // so the panel can quote the string that needs correcting.
+    expect(
+      readPaymentTerms({
+        custom_fields: [{ name: "Payment Terms", values: [{ name: "Matching funds" }] }],
+      }),
+    ).toEqual({ status: "unknown", unrecognizedValue: "Matching funds" });
+  });
+
+  it("names the unreadable value in its own exception, not the missing one", async () => {
+    routes["gift_types"] = () => page(GIFT_TYPES);
+    routes["gifts/search"] = (url) => {
+      const query = url.searchParams.get("q[]") ?? "";
+      // Awards and payments both come from gifts/search; only the awards query
+      // names a gift type.
+      if (!query.startsWith("gift_types")) return page([]);
+      return page([
+        { id: 41, gift_type_id: 7, campaign_id: 901, received_amount: 100000, custom_fields: [] },
+        {
+          id: 42,
+          gift_type_id: 7,
+          campaign_id: 901,
+          received_amount: 250000,
+          custom_fields: [{ name: "Payment Terms", values: [{ name: "Matching funds" }] }],
+        },
+      ]);
+    };
+
+    const snapshot = await getGrants(
+      liveEnv({
+        LGL_GRANT_CAMPAIGN_IDS: "901",
+        LGL_GRANT_GIFT_CATEGORY_IDS: "6101",
+        LGL_GRANT_PAYMENT_CATEGORY_IDS: "6102",
+      }),
+    );
+
+    expect(exception(snapshot, "awards_missing_reimbursable")?.records.map((r) => r.id)).toEqual([41]);
+
+    const unreadable = exception(snapshot, "awards_unreadable_reimbursable");
+    expect(unreadable?.records.map((r) => r.id)).toEqual([42]);
+    // Blocking, because the award is held out of the spendable figure exactly
+    // as an unset one is — the money is real and is not being counted.
+    expect(unreadable?.severity).toBe("blocking");
+    expect(unreadable?.amount).toBe(250000);
+    // The offending string is quoted back, because matching it exactly is the fix.
+    expect(unreadable?.detail).toContain('"Matching funds"');
+
+    // And it is still never spendable.
+    const unknownBucket = snapshot.awardsByReimbursable.find((b) => b.status === "unknown");
+    expect(unknownBucket).toMatchObject({ amount: 350000, recordCount: 2 });
   });
 });
 

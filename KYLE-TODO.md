@@ -39,9 +39,9 @@ for the bookkeeping change, so do not "fix" it by promoting them to `ok`.
 expose the data gaps, then use that evidence to introduce the rules. This is
 only safe because the invariants refuse to launder a gap into a clean number.
 
-**Next, in order:** define `reimbursable` in LGL (§5 — clears $1,471,000 of
-blocking findings and unblocks Phase 3), send Alex the message, fix the records
-the panel names (§8).
+**Next, in order:** populate "Payment Terms" on the awards (§5 — the field was
+defined 2026-09-09; filling it in clears $1,471,000 of blocking findings and
+unblocks Phase 3), send Alex the message, fix the records the panel names (§8).
 
 **One loose end:** `ACCESS_PASSPHRASE` was rotated on 2026-09-06 and the Worker
 has the new value. `worker/.dev.vars` may still hold the old one — that only
@@ -78,7 +78,7 @@ a caveat" — it is that rule doing its job.
       | Finding | Severity | Records |
       | --- | --- | --- |
       | Payments not linked to an award | blocking | 3 · $10,500 |
-      | Awards with no reimbursable status | blocking | 6 · $1,471,000 |
+      | Awards with no payment terms set | blocking | 6 · $1,471,000 |
       | Payments with no campaign | advisory | 2 · $372,429.71 |
 
       Each names the funder, amount, date, note, and links into LGL. Blocking
@@ -109,11 +109,17 @@ shipped the thing.
       two Commerce payments missing their campaign. The dashboard now makes
       that argument on its own, so the message can be shorter than it was.
 
-- [ ] **N3. Define `reimbursable` in LGL admin — the cheapest unblock there
-      is.** Purely additive, no existing data changes, and it clears the
-      largest blocking finding on the panel: **6 awards, $1,471,000**, every
-      one reading "unknown". It is also the gate on Phase 3. Same trip: define
-      `contract_signed`.
+- [ ] **N3. Populate "Payment Terms" on the awards — the cheapest unblock
+      there is.** The field was defined on 2026-09-09 (single-select on Gift:
+      `Reimbursable` / `Payment in full` / `Distribution payments`), and the
+      code reads it. What is left is filling it in, which clears the largest
+      blocking finding on the panel: **6 awards, $1,471,000**, every one
+      reading "unknown". It is also the gate on Phase 3.
+
+      **Populate one award first and reload the dashboard**, before doing the
+      rest — until a record has a value the field is invisible to the API, so
+      that is the only way to confirm the name and spellings match. Still to
+      do on the same trip: define `contract_signed`.
       → `docs/runbook-migration.md` §5
 
 - [ ] **N4. Make the three safe LGL fixes.** Link the 3 unlinked payments to
@@ -339,10 +345,10 @@ panel should measure against. Ordered by how much breaks without it.
    unilaterally** — a note on one says it was coded that way deliberately to
    match the QuickBooks record, so changing it back would break an agreement
    someone made on purpose. That one is a conversation with Galen.
-4. **Custom fields on Pledge: `reimbursable` and `contract_signed`.** Zero
-   awards carry any custom field, so reimbursable is unknown on all 10 and
-   Phase 3 is unbuildable. Purely additive to define, so this is the cheapest
-   high-value change available.
+4. **Payment terms on every grant award.** The "Payment Terms" custom field
+   exists as of 2026-09-09 but zero awards carry a value, so reimbursable is
+   unknown on all 10 and Phase 3 is unbuildable. Filling it in is the cheapest
+   high-value change available. `contract_signed` is still undefined.
 5. **Award status lives in a field, not a note.** The Goal note on the $38,000
    OAC award still says a decision was anticipated April 2026, months after the
    award landed and was signed.
@@ -392,15 +398,17 @@ gifts do not, rule 1 becomes structural instead of a habit.
 
 ## Phase 2 prerequisites
 
-- [ ] **5. Confirm in LGL admin whether Pledge supports custom fields.**
-      Partly answered by live data: **0 of 13 pledges carry any custom field**,
-      so every award reads "unknown" today, as designed. That confirms none are
-      *populated* — it does not say whether Pledge *supports* them. If it does,
-      define `reimbursable` and `contract_signed`; if it does not, say so. The
-      build renders "unknown" either way, so this changes what go-live looks
-      like rather than whether anything works. **This is rule 4 of the LGL
-      rules above, and the cheapest high-value change available** — defining a
-      custom field is purely additive and unblocks Phase 3.
+- [x] **5. Confirm in LGL admin whether Pledge supports custom fields. —
+      ANSWERED 2026-09-09: it does not.** LGL scopes custom fields by *item
+      type*, and "Gift" is the finest grain there is; Pledge is not an item
+      type, so a gift custom field is visible on all ten gift types. That is
+      cosmetic rather than dangerous — blank reads as unknown, and the
+      dashboard only reads the field on awards already in scope.
+
+      The field created instead is **`Payment Terms`**, a single-select on Gift
+      with `Reimbursable` / `Payment in full` / `Distribution payments`. Still
+      unpopulated on all 10 awards, which is now item N3 rather than this one.
+      `contract_signed` remains undefined.
       → `docs/runbook-migration.md` §5
 
 ## Before QuickBooks production keys
@@ -458,6 +466,9 @@ from `worker/.dev.vars`. Every request it makes is a GET.
 | Scoped to 871 + 6031 | 6 pledges, **$1,471,000 awarded** (not received — see below) |
 | Category 6031 alone | 10 pledges, $1,528,372 — adds ~$57k of Programs grants |
 | Pledges carrying a custom field | 0 of 13, so reimbursable is "unknown" for every award |
+| Custom field definitions | `/categories` — 17, all `item_type: Constituent`. "Gift" is the finest scoping LGL has; Pledge is not an item type. |
+| Gift categories | `/gift_categories` — 14, each with `gift_type_id`. Name is on `display_name`, not `name`. |
+| Payment terms field | `Payment Terms`, single-select on Gift, defined 2026-09-09. Invisible to the API until some record carries a value. |
 | `auto_sync_to_qbo` | `false` on every record |
 
 ### The three-level gift structure — verified 2026-08-19

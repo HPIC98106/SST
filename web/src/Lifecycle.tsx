@@ -81,14 +81,14 @@ const GRANT_STAGES: Stage[] = [
     },
     dashboard: "Pledged. This figure is authoritative.",
     action:
-      "Create the Pledge, link it to its Goal, set the campaign, and set reimbursable — " +
-      "reimbursable is the one that decides whether the money can be spent yet.",
+      "Create the Pledge, link it to its Goal, set the campaign, and set Payment Terms — " +
+      "Payment Terms is the one that decides whether the money can be spent yet.",
     check: {
       state: "partial",
       detail:
-        "The panel catches an award with no campaign or no reimbursable status. It cannot " +
-        "catch an award nobody entered at all — that shows only as a record count that " +
-        "looks too low to someone who knows better.",
+        "The panel catches an award with no campaign, and one whose Payment Terms are unset " +
+        "or unreadable. It cannot catch an award nobody entered at all — that shows only as " +
+        "a record count that looks too low to someone who knows better.",
     },
   },
   {

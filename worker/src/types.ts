@@ -52,9 +52,10 @@ export interface Env {
    *
    * These are different categories that both display as "Grant" in LGL — 6031
    * holds the type-7 award pledges, 6076 holds the type-1 gifts carrying
-   * actual cash. `/gift_categories` returns blank names, so they cannot be
-   * told apart by listing them. Unset means Received cannot be computed at
-   * all, which renders as unavailable rather than as zero.
+   * actual cash. `/gift_categories` tells them apart by `gift_type_id` (7 vs
+   * 1); the display name is on `display_name`, not `name`, which is what made
+   * an earlier reading of that endpoint look empty. Unset means Received
+   * cannot be computed at all, which renders as unavailable rather than zero.
    */
   LGL_GRANT_PAYMENT_CATEGORY_IDS?: string;
 
@@ -173,9 +174,17 @@ export interface FunnelStage {
 /**
  * Whether an award is cost-reimbursement.
  *
- * "unknown" is a first-class value, not a placeholder. HPIC has not populated
- * the custom field yet, and a reimbursable award defaulted to spendable is the
- * specific error this dashboard exists to prevent.
+ * Derived from LGL's "Payment Terms" field, which carries more detail than
+ * this: "Payment in full" and "Distribution payments" both land on
+ * `not_reimbursable`, because the only distinction that changes a number here
+ * is whether HPIC has to spend before the money arrives. LGL stays the record
+ * of what the funder actually agreed to.
+ *
+ * "unknown" is a first-class value, not a placeholder — a reimbursable award
+ * defaulted to spendable is the specific error this dashboard exists to
+ * prevent. It covers two situations that the data-quality panel reports
+ * separately: no value set, and a value set that this code cannot read. See
+ * `PaymentTermsReading` in `lgl.ts`.
  */
 export type ReimbursableStatus = "reimbursable" | "not_reimbursable" | "unknown";
 

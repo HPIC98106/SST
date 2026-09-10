@@ -136,6 +136,19 @@ have it render "unknown" when the field is absent. The prototype should be
 correct-by-construction here, so that populating the field later lights up the
 feature with no code change.
 
+> **Resolved 2026-09-09 — Pledge is not an available item type.** LGL scopes
+> custom fields by item type and "Gift" is the finest grain it has, so a gift
+> custom field is visible on all ten gift types. The correct-by-construction
+> requirement above is what makes that acceptable: blank reads as unknown, and
+> the field is only read on awards already inside the grant scope.
+>
+> What was defined instead is a single-select on Gift named **`Payment Terms`**
+> — `Reimbursable` / `Payment in full` / `Distribution payments`. The last two
+> both map to not-reimbursable. This is deliberately richer than the binary the
+> spec describes: LGL records what the funder agreed to, and the dashboard
+> derives the spendability question from it. `contract_signed` is not yet
+> defined. See `docs/runbook-migration.md` §5.
+
 ## Hosting and security
 
 - **Frontend**: React, static build, GitHub Pages, served from

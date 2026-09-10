@@ -68,6 +68,11 @@ HPIC's QuickBooks and LGL data.
   first and invoicing after, so it is not cash available to start work.
 - **Reimbursable status is `unknown` whenever the custom field is absent or
   unparseable**, never a default. Every HPIC record is in that state today.
+- **"No value set" and "a value we cannot read" are reported separately.** Both
+  are `unknown` and neither is ever spendable, but they need opposite fixes, and
+  telling a volunteer that data entry they already did is "missing" sends them
+  to stare at a record that is already filled in. `readPaymentTerms` returns the
+  offending string and the panel quotes it back verbatim.
 - **A funnel total renders only from a complete read.** If paging stops at the
   cap, the stage reports unavailable rather than a partial sum — the same rule
   as total cash.
@@ -119,9 +124,12 @@ time if rediscovered the hard way:
   every award — including ones with no payment against them at all. Reading
   those as cash overstates by $926,000 against live data.
 - **6031 and 6076 both display as "Grant".** Awards are in one, payments in the
-  other, and `/gift_categories` returns blank names, so they cannot be told
-  apart by listing them. They were distinguished only by reading
-  `gift_category_id` off records already known to be payments.
+  other. An earlier note here said `/gift_categories` returns blank names and
+  that the two could not be told apart by listing them; **that was wrong** —
+  the field is `display_name`, not `name`, and it comes back populated next to
+  `gift_type_id`. Listing the endpoint distinguishes them cleanly: 6031 is
+  `gift_type_id 7` (Pledge), 6076 is `gift_type_id 1` (Gift). Re-verified
+  2026-09-09.
 - **Payments often do not carry their award's campaign.** Three of eleven have
   `campaign_id = 0`, including two of the three payments against the $485,000
   Commerce award. Scoping payments by `campaigns=in|871` the way awards are
@@ -131,6 +139,43 @@ time if rediscovered the hard way:
 - **Goals are dereferenceable, not discoverable.** Type 14 is absent from
   `/gift_types`, there is no `/goals` endpoint, and `gifts/search` returns
   none. You can follow a pointer to one; you cannot enumerate them.
+
+### Custom fields — how LGL scopes them, verified 2026-09-09
+
+**`/categories` is the custom-field *definition* endpoint.** It is not in the
+documented resource list and it is not the same thing as `/gift_categories`.
+Each row carries `item_type`, `key`, `facet_type`, and the `keywords` that make
+up a picklist.
+
+Three properties that decide what can be tracked and how:
+
+- **`item_type` is the only scoping LGL has, and "Gift" is the finest grain.**
+  There is no per-gift-type visibility: a custom field defined on Gift appears
+  on all ten gift types. **Pledge is not an available item type** — which
+  answers the verification step the build spec asked for, in the negative. The
+  design absorbs this instead: blank reads as unknown, and the dashboard only
+  reads the field on awards already inside scope, so a stray value on a donor
+  pledge is never looked at.
+- **Fields an organisation defines get a UUID `key`.** Only LGL's own stock
+  fields (`tags`, `giving_status`) get readable ones, so **matching must be on
+  `name`**. `readReimbursable` checks both, and the key half will never fire for
+  an HPIC-created field. The fixtures use a UUID key deliberately to keep that
+  honest.
+- **Gift *categories*, unlike custom fields, are scoped per gift type** —
+  `/gift_categories` carries `gift_type_id` on every row. That makes categories
+  the only per-type dimension available. Splitting "Grant" into reimbursable and
+  non-reimbursable categories was considered and rejected on 2026-09-09: the
+  category is already the scope key, so a third grant category added later would
+  silently drop those awards out of the funnel.
+
+**The field HPIC actually created is "Payment Terms"** (2026-09-09), a
+single-select on Gift with three options: `Reimbursable`, `Payment in full`,
+`Distribution payments`. The dashboard maps the last two onto
+`not_reimbursable` — the only distinction that changes a number here is whether
+HPIC must spend before the money arrives, and LGL stays the record of what the
+funder actually agreed to. **The picklist is closed by contract:** any option
+added in LGL without being added to `toReimbursableStatus` lands the award in
+the "payment terms cannot be read" exception rather than being guessed at.
 
 ### Received and Outstanding — built, and provisional
 
@@ -162,9 +207,10 @@ capability, and it is what the exceptions panel now surfaces automatically:
   category, so reading the category flat **overcounts** by $3,000.
 - One of those notes says the recoding was done so the record matches the
   QuickBooks entry — the bookkeeping already treats QuickBooks as authoritative.
-- 0 of 10 awards carry any custom field, so `reimbursable` is unknown for every
-  award, and Phase 3's "spendable excludes unreceived reimbursable awards" is
-  unbuildable until that changes.
+- 0 of 10 awards carry any custom field. The "Payment Terms" field now exists
+  (2026-09-09) but nothing is populated yet, so reimbursable status is still
+  unknown for every award and Phase 3's "spendable excludes unreceived
+  reimbursable awards" stays unbuildable until awards are filled in.
 
 If LGL is chosen instead, the prerequisites are: every payment linked to its
 award, 6076 kept free of non-grant income, custom fields defined on Pledge, and
@@ -349,8 +395,10 @@ future value cannot change what an existing test means.
 - **Phase 3 — phase readiness: not started, and deliberately blocked.** Needs
   the Dry-in target cost from the GC, *and* both an authoritative Received and
   the `reimbursable` flag — unknown on all 10 awards today, which the panel
-  now reports as a blocking exception. This is the one figure where being wrong
-  costs real money, so it waits for both rather than shipping provisionally.
+  now reports as a blocking exception. The LGL field it reads ("Payment Terms")
+  exists as of 2026-09-09; what remains is populating it on the awards. This is
+  the one figure where being wrong costs real money, so it waits for both
+  rather than shipping provisionally.
 
   Phase 3 also carries the clearest example of what this tool is *for*:
   cross LGL's reimbursable designation against QuickBooks' `BillableStatus` to

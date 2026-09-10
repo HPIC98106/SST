@@ -270,10 +270,12 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
             </tbody>
           </table>
           <p className="note">
-            Reimbursable status lives in a Little Green Light custom field that HPIC has
-            not defined or populated yet, so awards read as <strong>unknown</strong>. They
-            are never assumed to be spendable. Populating the field lights this up with no
-            code change.
+            This comes from the <strong>Payment Terms</strong> field on the award in Little
+            Green Light. “Payment in full” and “Distribution payments” both count as not
+            reimbursable — the only distinction that changes a number here is whether HPIC
+            has to spend before the money arrives. An award with the field unset reads as{" "}
+            <strong>unknown</strong> and is never assumed to be spendable; setting it lights
+            this up with no code change.
           </p>
         </div>
       ) : null}
