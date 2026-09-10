@@ -1,4 +1,4 @@
-# HPIC single source of truth — build spec
+# HPIC single source of truth: build spec
 
 ## What this is
 
@@ -26,7 +26,7 @@ API, it is either configuration or it does not appear.
 
 Two APIs. No Google Sheets, no CSV imports, no manual data entry layer.
 
-### QuickBooks Online — authoritative for cash
+### QuickBooks Online: authoritative for cash
 
 QBO's bank feed already imports real bank transactions, so **do not integrate
 with a bank directly**. No Plaid, no aggregator. QBO is the aggregation layer.
@@ -37,13 +37,13 @@ Check current Intuit developer documentation for how to pull account balances
 rather than assuming an endpoint shape. Handle OAuth2 token refresh so this runs
 unattended.
 
-### Little Green Light — authoritative for grants
+### Little Green Light: authoritative for grants
 
 HPIC's grant process maps directly onto LGL's native objects. This is the core
 domain model and the most important thing to get right:
 
-- **Pledge** — created when the grant is awarded. Carries the awarded amount.
-- **Gift** — recorded when payment arrives, applied against the pledge.
+- **Pledge**: created when the grant is awarded. Carries the awarded amount.
+- **Gift**: recorded when payment arrives, applied against the pledge.
 
 LGL is authoritative for **what was awarded**, and that is all this tool asks of
 it:
@@ -52,8 +52,8 @@ it:
 
 **Received and Outstanding do not come from LGL** (decided 2026-08-19). An
 earlier draft of this spec defined them in terms of a pledge's `amount due`.
-LGL's REST API exposes no such field — the strings `amount_due` and `balance`
-appear nowhere in its documentation — but that limitation is not why the
+LGL's REST API exposes no such field: the strings `amount_due` and `balance`
+appear nowhere in its documentation, but that limitation is not why the
 definition changed. It changed because those are cash facts, and QuickBooks is
 the system of record for cash:
 
@@ -69,7 +69,7 @@ its API exposed.
 
 **This moves the hard part from an API limitation to a bookkeeping practice.**
 Attributing a deposit or an expense to a specific grant requires QuickBooks to
-carry a dimension that identifies it — a class, customer, or project applied
+carry a dimension that identifies it: a class, customer, or project applied
 consistently at entry time. That is a process change HPIC controls, which is a
 far better place for a blocker to sit than a vendor's API.
 
@@ -86,7 +86,7 @@ unavailable with the reason attached, never as a total that is quietly low.
 **Applications are deliberately out of scope** (confirmed with Alex,
 2026-08-14). This tool starts at money awarded or promised, not money requested.
 LGL's Goal object does track grant applications, and tracking them is a real
-need — it is simply not this tool's need. Do not add goals back without
+need; it is simply not this tool's need. Do not add goals back without
 revisiting that decision, and do not treat their absence as an oversight.
 
 Reuse the existing LGL integration pattern and API key handling from the
@@ -99,7 +99,7 @@ campaigns and funds are both exposed via the API. Read the campaign or fund a
 pledge is coded to and use that as the restriction dimension. Do not build a
 parallel restriction taxonomy.
 
-## Reimbursement — the correctness requirement
+## Reimbursement: the correctness requirement
 
 A cost-reimbursement grant does not function as cash available to start work.
 HPIC must spend first and invoice the funder afterward. A reimbursable award
@@ -136,14 +136,14 @@ have it render "unknown" when the field is absent. The prototype should be
 correct-by-construction here, so that populating the field later lights up the
 feature with no code change.
 
-> **Resolved 2026-09-09 — Pledge is not an available item type.** LGL scopes
+> **Resolved 2026-09-09: Pledge is not an available item type.** LGL scopes
 > custom fields by item type and "Gift" is the finest grain it has, so a gift
 > custom field is visible on all ten gift types. The correct-by-construction
 > requirement above is what makes that acceptable: blank reads as unknown, and
 > the field is only read on awards already inside the grant scope.
 >
 > What was defined instead is a single-select on Gift named **`Payment Terms`**
-> — `Reimbursable` / `Payment in full` / `Distribution payments`. The last two
+>: `Reimbursable` / `Payment in full` / `Distribution payments`. The last two
 > both map to not-reimbursable. This is deliberately richer than the binary the
 > spec describes: LGL records what the funder agreed to, and the dashboard
 > derives the spendability question from it. `contract_signed` is not yet
@@ -153,7 +153,7 @@ feature with no code change.
 
 - **Frontend**: React, static build, GitHub Pages, served from
   `sst.hpic1919.org`. The repository lives under the HPIC GitHub organization,
-  not a personal account — the org hosts several tools other members need to
+  not a personal account: the org hosts several tools other members need to
   reach, and a volunteer-run nonprofit should not depend on one person's login.
 - **Middleware**: Cloudflare Worker. Reuse the existing Worker and Pages setup
   from the membership lookup tool. The Cloudflare account remains personal for
@@ -175,7 +175,7 @@ feature with no code change.
 - **Later, not now**: Cloudflare Access with a board email allowlist, giving
   per-person access instead of a shared secret. Structure the Worker so this
   can sit in front without rework.
-- All credentials — QBO OAuth tokens, LGL API key, shared passphrase — live
+- All credentials, QBO OAuth tokens, LGL API key, shared passphrase, live
   only in Worker environment variables.
 
 ## Configuration
@@ -183,24 +183,24 @@ feature with no code change.
 Values with no system of record. Worker environment variables, not a spreadsheet
 and not hardcoded in the frontend:
 
-- `QBO_OPERATING_ACCOUNT_ID` — not yet confirmed
-- `QBO_REBUILD_FUND_ACCOUNT_ID` — not yet confirmed
-- `CURRENT_PHASE_NAME` — "Dry-in"
-- `CURRENT_PHASE_TARGET_COST` — not yet confirmed with the general contractor
+- `QBO_OPERATING_ACCOUNT_ID`: not yet confirmed
+- `QBO_REBUILD_FUND_ACCOUNT_ID`: not yet confirmed
+- `CURRENT_PHASE_NAME`: "Dry-in"
+- `CURRENT_PHASE_TARGET_COST`: not yet confirmed with the general contractor
 - `ACCESS_PASSPHRASE`
 
 ## Build order
 
 Build each phase end to end, including UI, before moving on.
 
-### Phase 1 — Funds snapshot
+### Phase 1: Funds snapshot
 
 Operating balance, rebuild fund balance, total cash on hand. QBO only.
 
 No dependency on anyone else. Build against QBO sandbox data with account IDs
 as config so real IDs drop in later.
 
-### Phase 2 — Grant funnel
+### Phase 2: Grant funnel
 
 Pledged from LGL; Received and Outstanding reconciled against QuickBooks (see
 the domain model above).
@@ -216,13 +216,13 @@ Then:
   most decision-relevant number on the dashboard, and it depends on the
   QuickBooks side being in place.
 
-### Phase 3 — Phase readiness
+### Phase 3: Phase readiness
 
 Spendable cash against the current phase target cost, as a progress bar and
 percent-funded figure.
 
 Spendable excludes reimbursable awards not yet received. Make the exclusion
-visible rather than silently applied — a line reading "excludes $900,000 in
+visible rather than silently applied: a line reading "excludes $900,000 in
 unreceived reimbursable awards" is more useful than a clean number hiding the
 caveat.
 
@@ -288,7 +288,7 @@ of these are in flight; this is the canonical list.
 
 - Any write-back to QBO or LGL
 - Per-person authentication for the prototype
-- Historical trend charts — point-in-time snapshot only
+- Historical trend charts: point-in-time snapshot only
 - Prospect and pipeline tracking for grants not yet applied for. These have no
   LGL representation until application, and the research notes behind them are
   qualitative. Out of scope here.

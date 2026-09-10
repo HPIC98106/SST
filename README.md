@@ -4,8 +4,8 @@ A read-only, board-facing financial dashboard for the Highland Park Improvement
 Club. It answers three questions: how much cash do we have, how much grant money
 is applied for and owed to us, and can we afford the next construction phase.
 
-**Phase 1: cash on hand from QuickBooks Online — done.**
-**Phase 2: the Little Green Light grant funnel — a working slice, on fixture
+**Phase 1, cash on hand from QuickBooks Online: done.**
+**Phase 2, the Little Green Light grant funnel: a working slice, on fixture
 data.** Phase readiness follows in Phase 3.
 
 This tool never writes to QuickBooks, Little Green Light, or any bank. Every
@@ -24,7 +24,7 @@ Someone who finds the dashboard URL without the passphrase sees nothing.
 
 ## Running it locally
 
-Copy `worker/.dev.vars.example` to `worker/.dev.vars` first — it holds the local
+Copy `worker/.dev.vars.example` to `worker/.dev.vars` first; it holds the local
 passphrase and lets the Vite dev server's origin through CORS. It is
 git-ignored.
 
@@ -56,7 +56,7 @@ VITE_WORKER_URL=http://127.0.0.1:8787
 
 Then open http://localhost:5173 and enter the passphrase from `.dev.vars`.
 
-To reset local state — stored tokens and the cached snapshot — delete
+To reset local state, stored tokens and the cached snapshot, delete
 `worker/.wrangler/state`.
 
 ## Tests
@@ -65,7 +65,7 @@ To reset local state — stored tokens and the cached snapshot — delete
 cd worker && npm test
 ```
 
-They run inside workerd — the same runtime that serves the deployed Worker —
+They run inside workerd: the same runtime that serves the deployed Worker,
 rather than against a stand-in for the Durable Object storage API. They need no
 credentials and make no network calls; outbound `fetch` is stubbed, so nothing
 reaches Intuit.
@@ -99,7 +99,7 @@ to LGL is a GET.
    sandbox section of the dashboard, and note its **company ID (realm ID)**.
 4. Register the redirect URI:
    `https://<your-worker>.workers.dev/oauth/callback`
-   It must match `QBO_REDIRECT_URI` **exactly** — scheme, casing, trailing
+   It must match `QBO_REDIRECT_URI` **exactly**: scheme, casing, trailing
    slash. A mismatch here is the usual cause of `invalid_grant` during setup.
 
 ### 2. Configure the Worker
@@ -115,7 +115,7 @@ npx wrangler secret put ACCESS_PASSPHRASE
 
 **On Windows, do not pipe values into `wrangler secret put` from PowerShell.**
 Its native-command pipe appends a carriage return that is stored as part of the
-secret, and every comparison then fails with no visible clue — the passphrase
+secret, and every comparison then fails with no visible clue: the passphrase
 looks correct and returns 401 anyway. Type the value at the prompt, or pipe from
 Git Bash with `printf '%s' "$VALUE" | npx wrangler secret put NAME`.
 
@@ -136,7 +136,7 @@ Plain values that remain in `worker/wrangler.toml` under `[vars]`:
 
 | Variable | Meaning |
 | --- | --- |
-| `QBO_ENV` | `sandbox` or `production` — picks the QuickBooks base URL |
+| `QBO_ENV` | `sandbox` or `production`: picks the QuickBooks base URL |
 | `QBO_MODE` | `fixture` or `live` |
 | `QBO_REDIRECT_URI` | Must match the Intuit app registration exactly |
 | `ALLOWED_ORIGIN` | Origin of the GitHub Pages site, for CORS |
@@ -156,7 +156,7 @@ says so in plain words rather than showing a generic error.
 
 ## Account mapping
 
-The two account IDs are configuration, not data — there is no system of record
+The two account IDs are configuration, not data: there is no system of record
 for "which account is the rebuild fund."
 
 QuickBooks does not show chart-of-accounts IDs anywhere in its UI, so the Worker
@@ -168,7 +168,7 @@ https://<your-worker>.workers.dev/admin/accounts?k=<passphrase>
 
 It renders every asset account with its ID, name, type, and balance, and
 highlights the two that are currently mapped. Read-only, behind the same
-passphrase, and not part of the board-facing dashboard — but it is the fastest
+passphrase, and not part of the board-facing dashboard, but it is the fastest
 way to find the real IDs when you connect the production company.
 
 Leaving an ID unset is a valid state: that panel reads **Not configured** and
@@ -189,7 +189,7 @@ https://<your-worker>.workers.dev/admin/status?k=<passphrase>
 ```
 
 It also accepts the passphrase as a header, which keeps it out of shell history
-and proxy logs — prefer this from a terminal:
+and proxy logs, so prefer this from a terminal:
 
 ```bash
 curl -s -H "X-HPIC-Auth: <passphrase>" https://<your-worker>.workers.dev/admin/status
@@ -209,7 +209,7 @@ It returns JSON:
 In `events`, `kind` is one of `seeded`, `refreshed`, `refresh_failed`,
 `revoked`, or `discovery_fallback`. A healthy unattended connection shows
 `refreshed` entries whose detail says the refresh token was `rotated` or
-`unchanged` — either is fine, that is Intuit's choice, not ours.
+`unchanged`: either is fine, that is Intuit's choice, not ours.
 
 `refresh_failed` with `invalid_grant` is the one that matters: the connection is
 gone and no amount of waiting fixes it. Reconnect at `/oauth/start`.
@@ -220,7 +220,7 @@ without calling Intuit.
 
 ## What the balance figure actually is
 
-QuickBooks' API returns the **book balance** — the "In QuickBooks" figure. The
+QuickBooks' API returns the **book balance**: the "In QuickBooks" figure. The
 bank-feed "Bank balance" shown in the QuickBooks web UI is
 [not available through the API](https://help.developer.intuit.com/s/question/0D5G000004Dk6KDKAZ/getting-the-bank-balance-from-a-bank-account-via-the-quickbooks-online-api)
 at all. The dashboard labels this explicitly rather than implying it is a live
@@ -234,7 +234,7 @@ the data is stale, the dashboard says so honestly.
 | Credential | Where it lives | How to rotate |
 | --- | --- | --- |
 | Shared passphrase | Worker secret `ACCESS_PASSPHRASE` | `wrangler secret put ACCESS_PASSPHRASE`, then tell the board. Open tabs get a 401 and re-prompt. |
-| QBO client secret | Worker secret `QBO_CLIENT_SECRET` | Regenerate on the Intuit developer portal, `wrangler secret put`, then re-run `/oauth/start` — rotating the secret invalidates existing tokens. |
+| QBO client secret | Worker secret `QBO_CLIENT_SECRET` | Regenerate on the Intuit developer portal, `wrangler secret put`, then re-run `/oauth/start`: rotating the secret invalidates existing tokens. |
 | QBO access + refresh tokens | Durable Object storage, managed automatically | Nothing to do. If the connection breaks, re-run `/oauth/start`. |
 
 ### Why the tokens are not environment variables
@@ -305,7 +305,7 @@ grant panel.
 
 The funnel is Pledged → Received → Outstanding. **Pledged** comes from LGL: an
 award is a gift whose gift type is "Pledge". That figure works. The other two
-are not missing LGL data — they are deliberately sourced elsewhere.
+are not missing LGL data; they are deliberately sourced elsewhere.
 
 An earlier draft defined both in terms of a pledge's **amount due**, read from
 LGL. That field does not exist: checked against
@@ -325,7 +325,7 @@ and spending exists only in QuickBooks. No LGL field could ever answer that, so
 asking LGL support about a pledge balance was dropped as the wrong question.
 
 What this needs instead is a **bookkeeping practice**: QuickBooks must carry a
-dimension — a class, customer, or project — tying each deposit and expense to a
+dimension, a class, customer, or project, tying each deposit and expense to a
 specific grant, applied consistently at entry time. The Worker reads Account
 entities and book balances today and nothing grant-level, so this is real work,
 not a config flip. The open design decision is what ties a QuickBooks class to
@@ -339,8 +339,8 @@ as unavailable rather than as a total that is quietly low.
 
 ## Not yet built
 
-The rest of Phase 2 — the restricted/unrestricted breakdown by campaign and
-fund, and the detail list of individual applications and awards — and Phase 3
+The rest of Phase 2: the restricted/unrestricted breakdown by campaign and
+fund, and the detail list of individual applications and awards, and Phase 3
 (phase readiness against the Dry-in target cost). See
 `hpic-sst-build-spec-v2.md` for the full specification and the go-live
 checklist.
