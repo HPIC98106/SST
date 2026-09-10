@@ -117,8 +117,22 @@ export const COMPLETENESS_NOTE =
   "have not been entered yet. Record counts appear beside every total so a missing grant " +
   "shows up as a count discrepancy rather than a quietly low number.";
 
-/** Custom field name/key that carries cost-reimbursement status. */
-const REIMBURSABLE_KEYS = ["reimbursable", "is_reimbursable", "cost_reimbursement"];
+/**
+ * Custom field name/key carrying the funder's payment terms.
+ *
+ * HPIC's field is named **"Payment Terms"** (defined 2026-09-09). The *name*
+ * is what actually matches: LGL assigns a UUID `key` to every field an
+ * organisation creates — HPIC's existing ones look like
+ * `db17544d_7600_4e48_bcd4_b5aa803823e4` — and only LGL's own stock fields get
+ * readable keys. The older entries cost nothing to keep and mean a field named
+ * "Reimbursable" would still be read.
+ */
+const PAYMENT_TERMS_KEYS = [
+  "payment_terms",
+  "reimbursable",
+  "is_reimbursable",
+  "cost_reimbursement",
+];
 
 // --- LGL response shapes (only the fields this dashboard reads) ---
 
@@ -344,42 +358,100 @@ function toReimbursableStatus(raw: string | null | undefined): ReimbursableStatu
   if (["yes", "y", "true", "1", "reimbursable", "cost_reimbursement"].includes(value)) {
     return "reimbursable";
   }
-  if (["no", "n", "false", "0", "not_reimbursable"].includes(value)) {
+  if (
+    [
+      "no",
+      "n",
+      "false",
+      "0",
+      "not_reimbursable",
+      // The two non-reimbursable options on HPIC's "Payment Terms" picklist.
+      // Both mean the money arrives without HPIC fronting it, which is the
+      // only distinction this dashboard makes. LGL keeps the finer detail.
+      "payment_in_full",
+      "distribution_payments",
+    ].includes(value)
+  ) {
     return "not_reimbursable";
   }
   return "unknown";
 }
 
+/** Whether a field's key or name is the payment-terms field. */
+function isPaymentTermsField(key: string | null | undefined, name: string | null | undefined): boolean {
+  return PAYMENT_TERMS_KEYS.includes(normalizeKey(key)) || PAYMENT_TERMS_KEYS.includes(normalizeKey(name));
+}
+
 /**
- * Read reimbursable status off an LGL record.
+ * The raw payment-terms value LGL holds, or null when nobody has set one.
  *
- * Returns "unknown" when the field is absent, which is the state every record
- * is in today — HPIC has not defined or populated the custom field yet. The
- * path is built now so that populating the field later lights the feature up
- * with no code change.
+ * A field that exists but holds no value counts as null: it reads on the
+ * record exactly like an absent one, and to a volunteer it is the same job
+ * left undone.
  */
+function readPaymentTermsRaw(record: {
+  custom_fields?: LglCustomField[] | null;
+  custom_attrs?: LglCustomAttr[] | null;
+}): string | null {
+  const nonEmpty = (value: string | null | undefined): string | null =>
+    value && value.trim() !== "" ? value : null;
+
+  for (const field of record.custom_fields ?? []) {
+    if (!isPaymentTermsField(field.key, field.name)) continue;
+    const first = field.values?.[0];
+    return nonEmpty(first?.name ?? first?.short_code);
+  }
+
+  for (const attr of record.custom_attrs ?? []) {
+    if (!isPaymentTermsField(attr.key, attr.name)) continue;
+    return nonEmpty(attr.value);
+  }
+
+  return null;
+}
+
+/** What LGL's payment-terms field says about an award, and what it literally held. */
+export interface PaymentTermsReading {
+  status: ReimbursableStatus;
+  /**
+   * The stored value, when it was present but is not one this code maps.
+   * Null when the field was absent or empty.
+   *
+   * The distinction is the whole point of this type. Both states read as
+   * "unknown" and neither is ever treated as spendable, but they call for
+   * opposite fixes: an absent field means nobody has filled it in, while an
+   * unmapped one means somebody did and the dashboard cannot read what they
+   * chose. Collapsing them tells a volunteer their completed data entry is
+   * missing, which sends them to look at a record that is already filled in.
+   */
+  unrecognizedValue: string | null;
+}
+
+/**
+ * Read the payment terms off an LGL record.
+ *
+ * Returns "unknown" when the field is absent, which is the state every HPIC
+ * record was in until the "Payment Terms" field was defined on 2026-09-09.
+ * Unknown is never treated as spendable — an award defaulted the other way is
+ * the specific failure this dashboard exists to prevent.
+ */
+export function readPaymentTerms(record: {
+  custom_fields?: LglCustomField[] | null;
+  custom_attrs?: LglCustomAttr[] | null;
+}): PaymentTermsReading {
+  const raw = readPaymentTermsRaw(record);
+  if (raw === null) return { status: "unknown", unrecognizedValue: null };
+
+  const status = toReimbursableStatus(raw);
+  return { status, unrecognizedValue: status === "unknown" ? raw.trim() : null };
+}
+
+/** Reimbursable status alone, for the callers that do not care why. */
 export function readReimbursable(record: {
   custom_fields?: LglCustomField[] | null;
   custom_attrs?: LglCustomAttr[] | null;
 }): ReimbursableStatus {
-  for (const field of record.custom_fields ?? []) {
-    const matches =
-      REIMBURSABLE_KEYS.includes(normalizeKey(field.key)) ||
-      REIMBURSABLE_KEYS.includes(normalizeKey(field.name));
-    if (!matches) continue;
-    const first = field.values?.[0];
-    if (!first) return "unknown";
-    return toReimbursableStatus(first.name ?? first.short_code);
-  }
-
-  for (const attr of record.custom_attrs ?? []) {
-    const matches =
-      REIMBURSABLE_KEYS.includes(normalizeKey(attr.key)) ||
-      REIMBURSABLE_KEYS.includes(normalizeKey(attr.name));
-    if (matches) return toReimbursableStatus(attr.value);
-  }
-
-  return "unknown";
+  return readPaymentTerms(record).status;
 }
 
 /** The amount LGL recorded for a gift, preferring the documented field name. */
@@ -722,17 +794,34 @@ async function findExceptions(
 ): Promise<DataQualityException[]> {
   const unlinkedPayments = payments.filter((p) => !p.parent_gift_id);
   const awardsNoCampaign = awards.filter((a) => !a.campaign_id);
-  const awardsNoReimbursable = awards.filter((a) => readReimbursable(a) === "unknown");
+
+  // Two distinct failures, deliberately not merged. Both read as "unknown" and
+  // neither is ever spendable, but one needs data entry and the other needs a
+  // value corrected in LGL or added to the mapping here.
+  const termReadings = awards.map((award) => ({ award, reading: readPaymentTerms(award) }));
+  const awardsNoTerms = termReadings
+    .filter(({ reading }) => reading.status === "unknown" && reading.unrecognizedValue === null)
+    .map(({ award }) => award);
+  const awardsUnreadableTerms = termReadings.filter(({ reading }) => reading.unrecognizedValue !== null);
+
   const awardsNoGoal = awards.filter((a) => !a.parent_gift_id);
   const paymentsNoCampaign = payments.filter((p) => p.parent_gift_id && !p.campaign_id);
 
   const names = await resolveNames(env, [
     ...unlinkedPayments,
     ...awardsNoCampaign,
-    ...awardsNoReimbursable,
+    ...awardsNoTerms,
+    ...awardsUnreadableTerms.map(({ award }) => award),
     ...awardsNoGoal,
     ...paymentsNoCampaign,
   ]);
+
+  // Quoted back verbatim, because the fix is to match this string exactly.
+  const unreadableValues = [
+    ...new Set(awardsUnreadableTerms.map(({ reading }) => reading.unrecognizedValue as string)),
+  ]
+    .map((value) => `"${value}"`)
+    .join(", ");
 
   const build = (
     key: string,
@@ -771,13 +860,27 @@ async function findExceptions(
     ),
     build(
       "awards_missing_reimbursable",
-      "Awards with no reimbursable status",
+      "Awards with no payment terms set",
       "Whether an award is cost-reimbursement decides whether it counts as money HPIC can " +
-        "spend now. With the custom field unset these are never assumed spendable, so the " +
-        "phase-readiness figure cannot be built at all. Defining the field in Little Green " +
-        "Light admin and populating it is the single cheapest unblock available.",
+        "spend now. Set the “Payment Terms” field on each of these awards in Little " +
+        "Green Light. Until it is set they are never assumed spendable, so the " +
+        "phase-readiness figure cannot be built at all — this is the cheapest unblock available.",
       "blocking",
-      awardsNoReimbursable,
+      awardsNoTerms,
+      true,
+    ),
+    build(
+      "awards_unreadable_reimbursable",
+      "Awards whose payment terms cannot be read",
+      "Little Green Light holds a “Payment Terms” value on these awards that this " +
+        `dashboard does not recognise (${unreadableValues}). They are treated exactly like an ` +
+        "unset field and are never assumed spendable, so no figure here is wrong — but the " +
+        "data entry has been done and is not being counted. Either correct the value in " +
+        "Little Green Light so it matches the picklist, or have the dashboard taught to " +
+        "read it. Adding an option in Little Green Light without adding it here always " +
+        "lands the award in this list.",
+      "blocking",
+      awardsUnreadableTerms.map(({ award }) => award),
       true,
     ),
     build(

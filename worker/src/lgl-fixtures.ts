@@ -10,10 +10,13 @@
  * Shapes are copied from the published API documentation at
  * https://api.littlegreenlight.com/api-docs/static.html (read 2026-08-14).
  *
- * The three awards deliberately cover all three reimbursable states —
- * populated yes, populated no, and field absent — because the field is not
- * populated in HPIC's LGL yet and the "unknown" path is the one most likely to
- * regress unnoticed.
+ * The three awards deliberately cover three payment-terms states —
+ * "Reimbursable", "Payment in full", and the field absent entirely — because
+ * nothing in HPIC's LGL is populated yet and the "unknown" path is the one
+ * most likely to regress unnoticed. The fourth state, a value present that the
+ * code cannot map, is covered in `test/lgl.test.ts` rather than here: it needs
+ * its own award, and adding one to this file would move the funnel totals that
+ * several unrelated tests pin.
  */
 
 /**
@@ -70,13 +73,18 @@ const PLEDGE_GIFTS = [
       {
         id: 7701,
         item_type: "Gift",
-        name: "Reimbursable",
-        key: "reimbursable",
+        name: "Payment Terms",
+        // A UUID, as LGL assigns to every field an organisation defines. Only
+        // LGL's own stock fields get readable keys, so the name is what the
+        // code has to match on — this fixture exists to keep that true.
+        key: "c41f9d2e_8a67_4b13_9f0c_2d7e5a1b8c34",
         facet_type: "single_select",
         ordinal: 1,
         removable: true,
         editable: true,
-        values: [{ category_id: 7701, name: "Yes", short_code: "yes", ordinal: 1 }],
+        values: [
+          { category_id: 7701, name: "Reimbursable", short_code: "reimbursable", ordinal: 3 },
+        ],
       },
     ],
     created_at: "2026-05-02T15:44:09Z",
@@ -108,13 +116,15 @@ const PLEDGE_GIFTS = [
       {
         id: 7701,
         item_type: "Gift",
-        name: "Reimbursable",
-        key: "reimbursable",
+        name: "Payment Terms",
+        key: "c41f9d2e_8a67_4b13_9f0c_2d7e5a1b8c34",
         facet_type: "single_select",
         ordinal: 1,
         removable: true,
         editable: true,
-        values: [{ category_id: 7702, name: "No", short_code: "no", ordinal: 2 }],
+        values: [
+          { category_id: 7702, name: "Payment in full", short_code: "payment_in_full", ordinal: 1 },
+        ],
       },
     ],
     created_at: "2026-04-18T22:03:31Z",

@@ -13,7 +13,7 @@ and shows nothing.
 | §2 | Custom domain `sst.hpic1919.org` | decided against |
 | §3 | Update `ALLOWED_ORIGIN` | done |
 | §4 | Issue an LGL API key | done |
-| §5 | Define `reimbursable` on LGL Pledge | **next, and highest leverage** |
+| §5 | Populate "Payment Terms" on the awards | field defined; **populating is next, and highest leverage** |
 | §6 | Confirm the Intuit account survives you | before production keys |
 | §7 | Rotate `ACCESS_PASSPHRASE` | as needed |
 | §8 | Fix the records the data-quality panel names | ongoing |
@@ -176,41 +176,86 @@ so record the key in your password manager before you set it.
 
 ---
 
-## §5 — Define `reimbursable` on LGL Pledge
+## §5 — Populate "Payment Terms" on the grant awards
 
-> **This is the highest-leverage item on the whole list.** Defining the field
-> is purely additive — it changes no existing record — and it clears the
-> largest blocking finding on the dashboard's data-quality panel: **6 awards,
-> $1,471,000, every one reading "unknown"**. It is also the single gate on
-> Phase 3.
+> **The field itself is done** — defined in LGL on 2026-09-09. What remains is
+> data entry, and it is still the highest-leverage item on the list: it clears
+> the largest blocking finding on the dashboard's data-quality panel (**6
+> awards, $1,471,000, every one reading "unknown"**) and it is the single gate
+> on Phase 3.
 
-Live data already answered half the question: **0 of 13 pledges carry any
-custom field**, so nothing is populated. What is still unknown is whether LGL
-lets you attach custom fields to the Pledge item type at all.
+### What was decided, and why it looks like this
 
-1. In LGL admin, open the custom fields settings.
-2. Look at the list of item types custom fields can be attached to.
-3. If **Pledge** is there, define two fields:
-   - `reimbursable` — the one that matters. Values the dashboard understands
-     are `Yes`/`No` (also `true`/`false`, `1`/`0`); anything else, including
-     blank, reads as unknown and is never assumed spendable.
-   - `contract_signed` — not read by any code yet. Define it while you are in
-     there; the $388,000 Building for the Arts award is in pre-award
-     contracting, and that state is currently only findable in a freetext note.
-4. If Pledge is **not** there, note that and tell Claude — the answer changes
-   what go-live looks like, not whether anything works.
-5. Populate `reimbursable` on the six Rebuild awards. Two are already known
+LGL scopes a custom field by **item type**, and "Gift" is the finest grain it
+offers — **Pledge is not an available item type**, which answers the question
+this section used to ask, in the negative. So the field is necessarily visible
+on all ten gift types, ordinary donations included.
+
+That is cosmetic rather than dangerous. Blank reads as unknown and is never
+assumed spendable, and the dashboard only reads the field on awards already
+inside the grant scope, so a value on a donor pledge is never looked at.
+
+The field is a single-select on Gift named **`Payment Terms`**, with three
+options:
+
+| Option | Dashboard reads it as |
+| --- | --- |
+| `Reimbursable` | reimbursable — not spendable until received |
+| `Payment in full` | not reimbursable |
+| `Distribution payments` | not reimbursable |
+
+The two non-reimbursable options collapse to one status on purpose. The only
+distinction that changes a number here is whether HPIC has to spend before the
+money arrives; LGL stays the record of what the funder actually agreed to, and
+having the terms written down gives the funnel something to check the observed
+payments against.
+
+**The name is load-bearing.** LGL gives every field an organisation creates a
+UUID key, so `worker/src/lgl.ts` matches on the field *name*. Renaming it in
+LGL admin stops the dashboard reading it and the awards silently revert to
+"unknown". If it ever needs a different name, add the new one to
+`PAYMENT_TERMS_KEYS` first.
+
+**The picklist is closed by contract.** Adding a fourth option in LGL without
+adding it to `toReimbursableStatus` corrupts nothing — the award lands in the
+"payment terms cannot be read" exception with the value quoted back — but it
+will not be counted until the code is taught to read it.
+
+### Do this
+
+1. Populate `Payment Terms` on the six Rebuild awards. Two are already known
    from their notes: the $10,000 Garneau-Nicon award says "Reimbursable grant
    for Rebuild project", and the $50,000 Department of Neighborhoods award's
    proposal says HPIC submits for reimbursement after spending.
+2. While you are in there, populate the four Programs grants too. They sit
+   outside the dashboard's current scope so nothing displays them today — but
+   it is four extra records now against a data cleanup later if programming
+   ever comes into scope.
+3. Still outstanding from the original plan: define `contract_signed` the same
+   way. Nothing reads it yet. The $388,000 Building for the Arts award is in
+   pre-award contracting, and that state is currently only findable in a
+   freetext note.
 
 ### Verify
 
-Reload the dashboard. "Awards with no reimbursable status" should drop by one
-record per award populated, and the **Awarded, by reimbursable status** table
-should move amounts out of the "unknown" row. Nothing needs redeploying —
-`readReimbursable` in `worker/src/lgl.ts` reads the field by name at runtime,
-so populating it lights the feature up with no code change.
+**Populate one award first, then stop and check.** Until some record has a
+value the field is invisible to the API — LGL only returns a gift's
+`custom_fields` once something is set on it — so one populated award is the
+only way to confirm that the field name and option spellings match what the
+code expects.
+
+Then reload the dashboard and check all three:
+
+- "Awards with no payment terms set" drops by one record.
+- The **Awarded, by reimbursable status** table moves that amount out of the
+  "unknown" row.
+- **No "Awards whose payment terms cannot be read" panel appears.** If one
+  does, it quotes the exact string LGL holds — either correct the spelling in
+  LGL to match the table above, or tell Claude the value and it gets added to
+  the mapping.
+
+Nothing needs redeploying: the field is read by name at runtime, so populating
+records lights the feature up with no code change.
 
 ---
 
