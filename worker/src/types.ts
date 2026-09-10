@@ -66,6 +66,24 @@ export interface Env {
    */
   LGL_UI_BASE_URL?: string;
 
+  /**
+   * The construction phase the readiness panel is measured against, and what
+   * it is estimated to cost.
+   *
+   * Both are typed in by a human, because no system HPIC runs holds them: the
+   * figure comes from the general contractor in an email or a bid document.
+   * That is exactly why `PhaseTarget` carries a `source` string and the panel
+   * prints it. A number whose provenance is "somebody typed it" is fine as
+   * long as the page says so, and dangerous as soon as it looks like a read.
+   *
+   * Unset is the normal state today. The panel then shows what it can and
+   * reports the target as awaited rather than guessing at one.
+   */
+  CURRENT_PHASE_NAME?: string;
+  CURRENT_PHASE_TARGET_COST?: string;
+  /** Where the target cost came from, e.g. "Metis bid, 2026-09-15". */
+  CURRENT_PHASE_TARGET_SOURCE?: string;
+
   // Origin of the GitHub Pages frontend, for CORS.
   ALLOWED_ORIGIN?: string;
 
@@ -239,8 +257,34 @@ export interface DataQualityException {
   records: DataQualityRecord[];
 }
 
+/**
+ * The construction phase the readiness panel measures against.
+ *
+ * `targetCost` is null whenever it has not been supplied, which is the state
+ * today: the figure comes from the general contractor and has not arrived. The
+ * panel renders the phase anyway, because "we do not know what it costs yet"
+ * is a real and reportable answer, and a more useful one than an empty panel.
+ */
+export interface PhaseTarget {
+  /** Null when CURRENT_PHASE_NAME is unset. */
+  name: string | null;
+  /** Null when unset or unparseable. Never defaulted to zero. */
+  targetCost: number | null;
+  /**
+   * Where the figure came from, printed beside it. Null when no target is set.
+   * This is the only number on the dashboard not read from a system, so it is
+   * the one that most needs to say where it came from.
+   */
+  source: string | null;
+}
+
 export interface GrantSnapshot {
   stages: FunnelStage[];
+  /**
+   * The phase readiness panel's target. Always present; its fields are null
+   * until someone configures them.
+   */
+  phaseTarget: PhaseTarget;
   /**
    * The scope actually in force, echoed so the lifecycle view can quote real
    * configuration rather than repeating IDs that would drift from it.

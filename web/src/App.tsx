@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { NotAuthorizedError, fetchFunds, fetchGrants } from "./api";
 import { FundsSnapshotView } from "./FundsSnapshot";
+import { PhaseReadinessView } from "./PhaseReadiness";
 import { GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
 import { PassphraseGate } from "./PassphraseGate";
@@ -123,6 +124,8 @@ export function App() {
         <LifecycleView snapshot={grants.data} />
       ) : (
         <>
+          <PhaseReadinessView funds={funds.data} grants={grants.data} />
+
           {funds.data ? (
             <FundsSnapshotView snapshot={funds.data} />
           ) : (

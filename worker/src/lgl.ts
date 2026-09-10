@@ -86,6 +86,7 @@ import type {
   FigureProvenance,
   FunnelStage,
   GrantSnapshot,
+  PhaseTarget,
   ReimbursableBucket,
   ReimbursableStatus,
 } from "./types";
@@ -915,8 +916,28 @@ async function findExceptions(
 }
 
 /** Assemble the Phase 2 grant funnel snapshot. */
+/**
+ * The construction phase target, as configured.
+ *
+ * Deliberately strict: a target cost that will not parse as a positive finite
+ * number is dropped rather than coerced. `Number("")` is 0, and a phase target
+ * of $0 would report the rebuild as fully funded.
+ */
+function readPhaseTarget(env: Env): PhaseTarget {
+  const raw = env.CURRENT_PHASE_TARGET_COST?.trim();
+  const parsed = raw ? Number(raw.replace(/[$,]/g, "")) : Number.NaN;
+  const targetCost = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+
+  return {
+    name: env.CURRENT_PHASE_NAME?.trim() || null,
+    targetCost,
+    source: targetCost === null ? null : env.CURRENT_PHASE_TARGET_SOURCE?.trim() || "entered by hand",
+  };
+}
+
 export async function getGrants(env: Env): Promise<GrantSnapshot> {
   const fixture = isFixtureMode(env);
+  const phaseTarget = readPhaseTarget(env);
   const scope = {
     campaignIds: parseIds(env.LGL_GRANT_CAMPAIGN_IDS),
     awardCategoryIds: parseIds(env.LGL_GRANT_GIFT_CATEGORY_IDS),
@@ -933,6 +954,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
       ],
       exceptions: [],
       scope,
+      phaseTarget,
       awardsByReimbursable: [],
       unscoped,
       retrievedAt: null,
@@ -970,6 +992,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
     stages,
     exceptions,
     scope,
+    phaseTarget,
     awardsByReimbursable: awards.ok ? splitByReimbursable(awards.items) : [],
     unscoped,
     retrievedAt,

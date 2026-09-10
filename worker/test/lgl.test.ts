@@ -98,6 +98,12 @@ const NO_LGL_CONFIG = {
   LGL_GRANT_GIFT_CATEGORY_IDS: undefined,
   LGL_GRANT_PAYMENT_CATEGORY_IDS: undefined,
   LGL_UI_BASE_URL: undefined,
+  // Listed before any of these is set in wrangler.toml, which is the whole
+  // point: setting a phase target later must not silently turn the tests that
+  // assert an absent one into tests of the deployed configuration.
+  CURRENT_PHASE_NAME: undefined,
+  CURRENT_PHASE_TARGET_COST: undefined,
+  CURRENT_PHASE_TARGET_SOURCE: undefined,
 } as const;
 
 /** Live mode with a key. Individual tests narrow this further. */
@@ -375,6 +381,33 @@ describe("reimbursable status", () => {
     // The buckets partition the awards: every award lands in exactly one.
     const bucketed = snapshot.awardsByReimbursable.reduce((n, b) => n + b.recordCount, 0);
     expect(bucketed).toBe(stage(snapshot, "pledged").recordCount);
+  });
+
+  it("never turns an unusable phase target into a zero", async () => {
+    // `Number("")` is 0, and a phase target of $0 would report the rebuild as
+    // fully funded no matter how little cash there is. Every unusable value
+    // has to land on null so the panel says "not yet received" instead.
+    for (const bad of [undefined, "", "   ", "TBD", "0", "-500000"]) {
+      const snapshot = await getGrants(grantEnv({ CURRENT_PHASE_TARGET_COST: bad }));
+      expect(snapshot.phaseTarget.targetCost).toBeNull();
+      // No source is claimed for a figure that is not there.
+      expect(snapshot.phaseTarget.source).toBeNull();
+    }
+
+    // A real figure survives, currency formatting included, and says where it
+    // came from: this is the one number on the dashboard nothing reads.
+    const set = await getGrants(
+      grantEnv({
+        CURRENT_PHASE_NAME: "Dry-in",
+        CURRENT_PHASE_TARGET_COST: "$1,850,000",
+        CURRENT_PHASE_TARGET_SOURCE: "Metis bid, 2026-09-15",
+      }),
+    );
+    expect(set.phaseTarget).toEqual({
+      name: "Dry-in",
+      targetCost: 1_850_000,
+      source: "Metis bid, 2026-09-15",
+    });
   });
 
   it("reads HPIC's three Payment Terms options, matching on the field name", async () => {
