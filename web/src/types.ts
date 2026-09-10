@@ -88,7 +88,15 @@ export interface DataQualityException {
   records: DataQualityRecord[];
 }
 
+/** The construction phase the readiness panel measures against. */
+export interface PhaseTarget {
+  name: string | null;
+  targetCost: number | null;
+  source: string | null;
+}
+
 export interface GrantSnapshot {
+  phaseTarget: PhaseTarget;
   stages: FunnelStage[];
   exceptions: DataQualityException[];
   scope: {

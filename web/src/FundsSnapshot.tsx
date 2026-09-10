@@ -78,9 +78,10 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
 
       <div className="panel-footer">
         <p>
-          <strong>Source:</strong> {snapshot.source}. This is the QuickBooks book balance:
-          it reflects transactions entered in QuickBooks, not the live bank-feed balance,
-          which the QuickBooks API does not expose.
+          <strong>Source:</strong> {snapshot.source}.{" "}
+          {snapshot.environment === "sandbox"
+            ? "These are test figures. Reading HPIC's real accounts needs QuickBooks production keys, which require Intuit's approval. Nothing else has to change when they are issued."
+            : "Book balance reflects transactions entered in QuickBooks, not the live bank-feed balance, which the QuickBooks API does not expose."}
         </p>
         <p>
           <strong>Data retrieved from QuickBooks:</strong> {formatRetrievedAt(snapshot.retrievedAt)}

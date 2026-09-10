@@ -551,3 +551,48 @@ code {
   background: #e6f2ea;
   color: #2c5c3f;
 }
+
+/*
+ * Phase readiness.
+ *
+ * The rows are colour-coded by whether the money can actually be spent, so
+ * that "awarded but reimbursable" cannot be mistaken for "available" at a
+ * glance. That distinction is the entire point of the panel, and it has to
+ * survive being read quickly in a board meeting.
+ */
+.panel-readiness .pr-table {
+  margin-top: 0.5rem;
+}
+
+.panel-readiness .pr-table th[scope="row"] {
+  white-space: normal;
+}
+
+.pr-detail {
+  font-size: 0.85em;
+  color: var(--muted, #666);
+  padding-left: 1rem;
+  max-width: 34rem;
+}
+
+.pr-available td.num {
+  font-weight: 700;
+}
+
+.pr-excluded td.num,
+.pr-unknown td.num {
+  color: var(--warn-text, #8a5a00);
+}
+
+.pr-unknown th[scope="row"]::after {
+  content: " (blocking)";
+  font-weight: 400;
+  font-size: 0.85em;
+  color: var(--warn-text, #8a5a00);
+}
+
+.pr-gap th[scope="row"],
+.pr-gap td.num {
+  font-weight: 700;
+  border-top: 2px solid currentColor;
+}
