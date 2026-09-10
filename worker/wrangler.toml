@@ -118,3 +118,19 @@ LGL_GRANT_PAYMENT_CATEGORY_IDS = "6076"
 # panel so they can be opened and fixed. Not a secret and not required; unset
 # just means the panel lists record IDs without links.
 LGL_UI_BASE_URL = "https://hpic.littlegreenlight.com"
+
+# The construction phase the readiness panel measures against.
+#
+# This is the one figure on the dashboard that no system holds: it arrives from
+# the general contractor by email. So CURRENT_PHASE_TARGET_SOURCE is printed
+# beside it on the page. Say where the number came from, and say plainly when
+# it is illustrative, because a target nobody can trace is how a readiness
+# figure quietly becomes fiction.
+#
+# Unset is the honest state until Metis sends the Dry-in estimate: the panel
+# renders everything else and reports the target as awaited. Uncomment to fill
+# it in, then `npx wrangler deploy`.
+#
+# CURRENT_PHASE_NAME = "Dry-in"
+# CURRENT_PHASE_TARGET_COST = "1850000"
+# CURRENT_PHASE_TARGET_SOURCE = "Illustrative only, not from Metis"
