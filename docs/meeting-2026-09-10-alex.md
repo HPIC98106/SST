@@ -56,6 +56,21 @@ ask.
 | 6 | Durability: the passphrase | 5 |
 | 7 | Setting up Galen and Rachel | 5 |
 
+### On the readiness panel at the top
+
+Added 2026-09-10. **Do show it**, and let it carry item 2. Earlier advice in
+this file said not to demo phase readiness; that applied to a version that
+produced a single confident number, and this one does not. It shows the three
+figures side by side and refuses to add them, which is the argument rather than
+a preview of it.
+
+What it says today is the point: cash is real but from the sandbox, no award is
+classified, $1,471,000 sits in "terms unknown", and the target cost has not
+arrived. Every blank on that panel is one of the asks in this meeting.
+
+**Do not promise when it turns green.** It needs Metis, it needs Alex's data
+entry, and it needs production keys. Two of those three are not yours.
+
 ---
 
 ## 1. The sandbox caveat, first
@@ -273,6 +288,43 @@ Answer:
 ```
 
 ---
+
+## If there is time: the concepts sheet
+
+https://claude.ai/code/artifact/73463f41-2570-4a73-bae0-129ad80da865
+
+Five sketches of what the single source of truth could cover beyond cash and
+grants: construction spend, reimbursement exposure, operating runway, events,
+membership. **Every figure on it is invented and the page says so in three
+places.** It is drawn as a drafting sheet precisely so it cannot be mistaken
+for the live dashboard.
+
+Open it *after* the real dashboard, never alongside. The whole value of the
+real thing is that nothing on it is made up, and that distinction is easy to
+blur if both are on screen at once.
+
+What it is actually for is one finding: **three of the five ideas need the same
+single change**, the QuickBooks dimension that says which grant or project a
+transaction belongs to. That reframes the Rachel ask from one feature to three,
+which is a much better trade than it looks from outside.
+
+Membership is the only one needing nobody's permission. It comes out of LGL and
+is blocked on a policy question rather than a system change: what counts as an
+active member.
+
+The sheet ends with four questions for the board. The last one matters most:
+**what is missing from it?** Five ideas came from one person.
+
+```
+Which would he actually open:
+
+
+Worth the bookkeeping change?  yes / no
+
+
+What is missing:
+
+```
 
 ## Do not
 
