@@ -127,10 +127,14 @@ LGL_UI_BASE_URL = "https://hpic.littlegreenlight.com"
 # it is illustrative, because a target nobody can trace is how a readiness
 # figure quietly becomes fiction.
 #
-# Unset is the honest state until Metis sends the Dry-in estimate: the panel
-# renders everything else and reports the target as awaited. Uncomment to fill
-# it in, then `npx wrangler deploy`.
+# The cost itself is NOT here. It is a Worker secret, because Metis marks its
+# estimates "not to be distributed" beyond the client and project partners, and
+# this repository is public. Set or change it from Git Bash in worker/:
 #
-# CURRENT_PHASE_NAME = "Dry-in"
-# CURRENT_PHASE_TARGET_COST = "1850000"
-# CURRENT_PHASE_TARGET_SOURCE = "Illustrative only, not from Metis"
+#   printf '%s' "<grand total>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST
+#
+# Then update CURRENT_PHASE_TARGET_SOURCE below to name the estimate it came
+# from, and `npx wrangler deploy`. Unset, the panel reports the target as
+# awaited rather than substituting a placeholder.
+CURRENT_PHASE_NAME = "Dry-in"
+CURRENT_PHASE_TARGET_SOURCE = "Metis control estimate, Framing and Envelope, dated 9/22/26: grand total incl. tax, cost-plus with no contingency"
