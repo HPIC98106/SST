@@ -51,9 +51,23 @@ function StageCard({ stage }: { stage: FunnelStage }) {
         picture during the prototype: a grant nobody entered shows up here as a
         count that looks wrong long before the total does.
       */}
+      {/*
+        The count opens the same records in LGL, so anyone can check the
+        figure against the system it came from. Where the search cannot match
+        the figure exactly, the Worker says why, and that sits right under it.
+      */}
       {stage.recordCount !== null ? (
-        <p className="count">{recordCountLabel(stage.recordCount)}</p>
+        <p className="count">
+          {stage.search ? (
+            <a href={stage.search.url} target="_blank" rel="noreferrer">
+              {recordCountLabel(stage.recordCount)}
+            </a>
+          ) : (
+            recordCountLabel(stage.recordCount)
+          )}
+        </p>
       ) : null}
+      {stage.search?.note ? <p className="count">{stage.search.note}</p> : null}
       {stage.note ? <p className="note">{stage.note}</p> : null}
 
       {/*
@@ -83,12 +97,41 @@ function StageCard({ stage }: { stage: FunnelStage }) {
   );
 }
 
+/**
+ * A bucket's record count, opening to a link per award.
+ *
+ * Listed individually rather than as one search link: the buckets are split
+ * on a custom field, and no LGL search URL that filters on one is known.
+ */
+function BucketRecords({ bucket }: { bucket: ReimbursableBucket }) {
+  const linked = (bucket.awards ?? []).filter((award) => award.url);
+  if (bucket.recordCount === 0 || linked.length === 0) {
+    return <>{recordCountLabel(bucket.recordCount)}</>;
+  }
+  return (
+    <details className="award-links">
+      <summary>{recordCountLabel(bucket.recordCount)}</summary>
+      <ul>
+        {linked.map((award) => (
+          <li key={award.id}>
+            <a href={award.url ?? undefined} target="_blank" rel="noreferrer">
+              {usd.format(award.amount)} · gift {award.id}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 function ReimbursableRow({ bucket }: { bucket: ReimbursableBucket }) {
   return (
     <tr className={bucket.status === "unknown" ? "row-unknown" : undefined}>
       <th scope="row">{bucket.label}</th>
       <td className="num">{usd.format(bucket.amount)}</td>
-      <td className="num muted-cell">{recordCountLabel(bucket.recordCount)}</td>
+      <td className="num muted-cell">
+        <BucketRecords bucket={bucket} />
+      </td>
     </tr>
   );
 }

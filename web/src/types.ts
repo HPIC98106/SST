@@ -58,6 +58,24 @@ export interface FunnelStage {
   recordCount: number | null;
   note?: string;
   provenance: FigureProvenance;
+  /**
+   * The same records as a search in LGL. Optional because the page and the
+   * Worker deploy separately, and a page newer than its Worker must still
+   * render.
+   */
+  search?: LglSearchLink | null;
+}
+
+/** `note` says how the search differs from the figure; null when it does not. */
+export interface LglSearchLink {
+  url: string;
+  note: string | null;
+}
+
+export interface AwardLink {
+  id: number;
+  amount: number;
+  url: string | null;
 }
 
 export type ReimbursableStatus = "reimbursable" | "not_reimbursable" | "unknown";
@@ -67,6 +85,8 @@ export interface ReimbursableBucket {
   label: string;
   amount: number;
   recordCount: number;
+  /** Optional for the same reason as `FunnelStage.search`. */
+  awards?: AwardLink[];
 }
 
 export interface DataQualityRecord {

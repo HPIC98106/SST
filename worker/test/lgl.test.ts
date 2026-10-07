@@ -521,6 +521,72 @@ describe("record counts and scoping", () => {
   });
 });
 
+describe("links back into LGL", () => {
+  const UI = "https://example.littlegreenlight.com";
+
+  it("links Pledged to the same search readAwards sends, in the URL shape LGL uses", async () => {
+    const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
+
+    expect(stage(snapshot, "pledged").search).toEqual({
+      url: `${UI}/fundraising/search/in-ocampaign/901/in-ocategory/6101/in-ophase/7/comb/and:and`,
+      note: null,
+    });
+  });
+
+  it("says how the Received search differs from the figure, rather than letting the counts disagree silently", async () => {
+    // Payment 992002 is counted (its award is in scope) but carries no
+    // campaign, so a campaign-filtered search in LGL cannot find it.
+    const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
+    const received = stage(snapshot, "received");
+
+    expect(received.recordCount).toBe(3);
+    expect(received.search?.url).toBe(
+      `${UI}/fundraising/search/in-ocampaign/901/in-ocategory/6102/in-ophase/1/comb/and:and`,
+    );
+    expect(received.search?.note).toBe(
+      "The LGL search returns 2. 1 counted here is missing from it, because it carries no campaign or a different one.",
+    );
+  });
+
+  it("says Outstanding's link opens the awards, not a balance", async () => {
+    const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
+    const outstanding = stage(snapshot, "outstanding");
+
+    expect(outstanding.search?.url).toBe(stage(snapshot, "pledged").search?.url);
+    expect(outstanding.search?.note).toMatch(/cannot subtract payments/);
+  });
+
+  it("builds no search when the URL shape for the scope has never been seen", async () => {
+    // Only a single ID per filter has been observed in a real LGL search URL.
+    // Guessing the separator would risk a link that opens the wrong records.
+    const snapshot = await getGrants(
+      grantEnv({ LGL_UI_BASE_URL: UI, LGL_GRANT_CAMPAIGN_IDS: "901,902" }),
+    );
+
+    expect(stage(snapshot, "pledged").search).toBeNull();
+    expect(stage(snapshot, "received").search).toBeNull();
+  });
+
+  it("builds no links at all without a UI base URL", async () => {
+    const snapshot = await getGrants(grantEnv());
+
+    for (const s of snapshot.stages) expect(s.search).toBeNull();
+    for (const bucket of snapshot.awardsByReimbursable) {
+      for (const award of bucket.awards) expect(award.url).toBeNull();
+    }
+  });
+
+  it("lists every award in a reimbursable bucket with its own link", async () => {
+    const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
+
+    for (const bucket of snapshot.awardsByReimbursable) {
+      expect(bucket.awards).toHaveLength(bucket.recordCount);
+      expect(bucket.awards.reduce((sum, a) => sum + a.amount, 0)).toBe(bucket.amount);
+      for (const award of bucket.awards) expect(award.url).toBe(`${UI}/gifts/${award.id}`);
+    }
+  });
+});
+
 describe("reads against LGL", () => {
   function standardRoutes() {
     routes["gift_types"] = () => page(GIFT_TYPES);

@@ -187,6 +187,34 @@ export interface FunnelStage {
   note?: string;
   /** Where this figure came from. Always present, including when unavailable. */
   provenance: FigureProvenance;
+  /**
+   * The same records, opened as a search in LGL's own interface, so a reader
+   * can click through and check the figure against the system it came from.
+   * Null when no search can reproduce them: no UI base URL, no scope, or a
+   * scope LGL's search URL is not known to express.
+   */
+  search: LglSearchLink | null;
+}
+
+/**
+ * A search in LGL's web interface.
+ *
+ * `note` says how the search differs from the figure it sits under, and is
+ * null only when the two are the same set of records. A link that silently
+ * opens a different count from the one beside it would invite exactly the
+ * "which number is right" question it exists to answer.
+ */
+export interface LglSearchLink {
+  url: string;
+  note: string | null;
+}
+
+/** One award, linked to its record in LGL. */
+export interface AwardLink {
+  id: number;
+  amount: number;
+  /** Null when LGL_UI_BASE_URL is unset. */
+  url: string | null;
 }
 
 /**
@@ -211,6 +239,11 @@ export interface ReimbursableBucket {
   label: string;
   amount: number;
   recordCount: number;
+  /**
+   * The awards in this bucket, each linked to LGL. Listed individually because
+   * no LGL search URL is known that filters on a custom field.
+   */
+  awards: AwardLink[];
 }
 
 /**

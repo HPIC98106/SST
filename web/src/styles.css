@@ -151,6 +151,26 @@ button.link {
   margin: 0.35rem 0 0;
 }
 
+/* A count that opens its records in LGL. Muted like the count, but visibly a link. */
+.count a,
+.award-links a,
+.award-links summary {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.award-links ul {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+}
+
+.award-links li {
+  margin-top: 0.15rem;
+}
+
 /* --- Reimbursable breakdown --- */
 
 .subpanel {

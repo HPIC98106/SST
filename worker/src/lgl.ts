@@ -80,6 +80,7 @@
 
 import { LGL_FIXTURE_RETRIEVED_AT, lglFixture } from "./lgl-fixtures";
 import type {
+  AwardLink,
   DataQualityException,
   DataQualityRecord,
   Env,
@@ -89,6 +90,7 @@ import type {
   PhaseTarget,
   ReimbursableBucket,
   ReimbursableStatus,
+  LglSearchLink,
 } from "./types";
 
 const BASE_URL = "https://api.littlegreenlight.com/api/v1";
@@ -579,6 +581,7 @@ function unavailableStage(
     recordCount: null,
     note,
     provenance: unavailableProvenance(key),
+    search: null,
   };
 }
 
@@ -596,7 +599,16 @@ function provisionalStage(
   recordCount: number,
   note: string,
 ): FunnelStage {
-  return { key, label, status: "provisional", amount, recordCount, note, provenance: PROVENANCE[key] };
+  return {
+    key,
+    label,
+    status: "provisional",
+    amount,
+    recordCount,
+    note,
+    provenance: PROVENANCE[key],
+    search: null,
+  };
 }
 
 /**
@@ -648,7 +660,141 @@ const UNSCOPED_NOTE =
  * phase. Summing it with unrestricted awards into one "available" number would
  * materially overstate readiness to the board.
  */
-function splitByReimbursable(awards: LglGift[]): ReimbursableBucket[] {
+/**
+ * Payments counted toward Received: those whose parent is one of the awards.
+ * One definition, shared by the figure and by the search link that checks it.
+ */
+function paymentsAgainst(awards: LglGift[], payments: LglGift[]): LglGift[] {
+  const awardIds = new Set(awards.map((award) => award.id));
+  return payments.filter(
+    (payment) => payment.parent_gift_id != null && awardIds.has(payment.parent_gift_id),
+  );
+}
+
+// --- Links into LGL's web interface ---
+
+function uiBase(env: Env): string | null {
+  return env.LGL_UI_BASE_URL?.trim().replace(/\/+$/, "") || null;
+}
+
+function giftUrl(env: Env, id: number): string | null {
+  const base = uiBase(env);
+  return base ? `${base}/gifts/${id}` : null;
+}
+
+/** The one gift type every record shares, or null if they do not share one. */
+function sharedGiftType(gifts: LglGift[]): number | null {
+  const types = new Set(gifts.map((gift) => gift.gift_type_id));
+  const [only] = types;
+  return types.size === 1 && typeof only === "number" ? only : null;
+}
+
+/**
+ * A gift search in LGL's web interface, filtered by campaign, gift category
+ * and gift type.
+ *
+ * The URL shape was read off a real search in HPIC's tenant on 2026-10-07:
+ *
+ *   /fundraising/search/in-ocampaign/871/in-ocategory/6076/in-ophase/7/comb/and:and
+ *
+ * LGL calls gift type "phase" in these URLs, and `comb` joins the three
+ * filters. Only that exact shape has been seen, so only that shape is built:
+ * one ID per filter, all three filters. A scope listing several campaigns or
+ * categories returns null rather than guessing how LGL separates them, because
+ * a link that silently opens the wrong records is worse than no link.
+ */
+function lglSearchUrl(
+  env: Env,
+  campaignIds: number[],
+  categoryIds: number[],
+  giftTypeId: number | null,
+): string | null {
+  const base = uiBase(env);
+  if (!base || giftTypeId === null) return null;
+  if (campaignIds.length !== 1 || categoryIds.length !== 1) return null;
+  return (
+    `${base}/fundraising/search/in-ocampaign/${campaignIds[0]}` +
+    `/in-ocategory/${categoryIds[0]}/in-ophase/${giftTypeId}/comb/and:and`
+  );
+}
+
+/**
+ * Attach a search link to each funnel stage that has a figure.
+ *
+ * Pledged's search is the same query `readAwards` sends, so it opens exactly
+ * the records counted. Received cannot be reproduced exactly: the figure walks
+ * each payment up to its award, and LGL search can only filter on the
+ * payment's own campaign. Rather than hide that, the note counts the
+ * difference in both directions from the records already in hand.
+ */
+function attachSearchLinks(
+  env: Env,
+  stages: FunnelStage[],
+  awards: ReadResult<LglGift>,
+  payments: ReadResult<LglGift> | null,
+): void {
+  if (!awards.ok) return;
+  const campaignIds = parseIds(env.LGL_GRANT_CAMPAIGN_IDS);
+
+  const awardsUrl = lglSearchUrl(
+    env,
+    campaignIds,
+    parseIds(env.LGL_GRANT_GIFT_CATEGORY_IDS),
+    sharedGiftType(awards.items),
+  );
+
+  let received: LglSearchLink | null = null;
+  if (payments?.ok) {
+    const counted = paymentsAgainst(awards.items, payments.items);
+    const typeId = sharedGiftType(counted);
+    const url = lglSearchUrl(env, campaignIds, parseIds(env.LGL_GRANT_PAYMENT_CATEGORY_IDS), typeId);
+    if (url) {
+      // What the search returns: every payment in the configured payment
+      // category (already all of `payments.items`) carrying the campaign and type.
+      const found = payments.items.filter(
+        (p) => p.campaign_id === campaignIds[0] && p.gift_type_id === typeId,
+      );
+      const countedIds = new Set(counted.map((p) => p.id));
+      const foundIds = new Set(found.map((p) => p.id));
+      const extra = found.filter((p) => !countedIds.has(p.id)).length;
+      const missing = counted.filter((p) => !foundIds.has(p.id)).length;
+
+      const parts: string[] = [];
+      if (extra > 0) {
+        parts.push(
+          `${extra} of those ${extra === 1 ? "is" : "are"} not counted here, because ` +
+            `${extra === 1 ? "it is" : "they are"} not linked to any award above.`,
+        );
+      }
+      if (missing > 0) {
+        parts.push(
+          `${missing} counted here ${missing === 1 ? "is" : "are"} missing from it, because ` +
+            `${missing === 1 ? "it carries" : "they carry"} no campaign or a different one.`,
+        );
+      }
+      received = {
+        url,
+        note: parts.length > 0 ? `The LGL search returns ${found.length}. ${parts.join(" ")}` : null,
+      };
+    }
+  }
+
+  for (const stage of stages) {
+    if (stage.status === "unavailable") continue;
+    if (stage.key === "pledged" && awardsUrl) {
+      stage.search = { url: awardsUrl, note: null };
+    } else if (stage.key === "outstanding" && awardsUrl) {
+      stage.search = {
+        url: awardsUrl,
+        note: "Opens the awards. LGL search cannot subtract payments, so each award's balance has to be read on the award itself.",
+      };
+    } else if (stage.key === "received") {
+      stage.search = received;
+    }
+  }
+}
+
+function splitByReimbursable(env: Env, awards: LglGift[]): ReimbursableBucket[] {
   const labels: Record<ReimbursableStatus, string> = {
     reimbursable: "Reimbursable",
     not_reimbursable: "Not reimbursable",
@@ -663,6 +809,9 @@ function splitByReimbursable(awards: LglGift[]): ReimbursableBucket[] {
       label: labels[status],
       amount: matching.reduce((sum, award) => sum + giftAmount(award), 0),
       recordCount: matching.length,
+      awards: matching.map(
+        (award): AwardLink => ({ id: award.id, amount: giftAmount(award), url: giftUrl(env, award.id) }),
+      ),
     };
   });
 }
@@ -709,10 +858,7 @@ function receivedAndOutstanding(
     );
   }
 
-  const awardIds = new Set(awards.items.map((award) => award.id));
-  const matched = payments.items.filter(
-    (payment) => payment.parent_gift_id != null && awardIds.has(payment.parent_gift_id),
-  );
+  const matched = paymentsAgainst(awards.items, payments.items);
   const received = matched.reduce((sum, payment) => sum + giftAmount(payment), 0);
 
   return [
@@ -749,14 +895,13 @@ function constituentName(record: LglConstituent | null): string | null {
 }
 
 function toRecord(env: Env, gift: LglGift, who: string | null): DataQualityRecord {
-  const base = env.LGL_UI_BASE_URL?.replace(/\/+$/, "");
   return {
     id: gift.id,
     amount: giftAmount(gift),
     date: gift.received_date ?? null,
     who,
     note: gift.note?.trim() || null,
-    url: base ? `${base}/gifts/${gift.id}` : null,
+    url: giftUrl(env, gift.id),
   };
 }
 
@@ -970,6 +1115,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
 
   const pledged = toStage("pledged", "Pledged", awards, giftAmount);
   const stages: FunnelStage[] = [pledged, ...receivedAndOutstanding(pledged, awards, payments)];
+  attachSearchLinks(env, stages, awards, payments);
 
   // Exceptions need both reads to have succeeded to mean anything: a failed
   // read produces no records, which must not be reported as a clean account.
@@ -993,7 +1139,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
     exceptions,
     scope,
     phaseTarget,
-    awardsByReimbursable: awards.ok ? splitByReimbursable(awards.items) : [],
+    awardsByReimbursable: awards.ok ? splitByReimbursable(env, awards.items) : [],
     unscoped,
     retrievedAt,
     cached: false,
@@ -1036,5 +1182,6 @@ function toStage<T>(
     amount: result.items.reduce((sum, item) => sum + amountOf(item), 0),
     recordCount: result.items.length,
     provenance: PROVENANCE[key],
+    search: null,
   };
 }
