@@ -71,6 +71,31 @@ function baseUrl(env: Env): string {
   return BASE_URLS[qboEnvironment(env)];
 }
 
+/**
+ * Write one failed QuickBooks call to the Worker log, as a single JSON line.
+ *
+ * The dashboard shows an account's error only until the next read succeeds, so
+ * without this a failure that fixed itself leaves no trace to share with Intuit
+ * support. `intuit_tid` is the field their support team asks for. Deliberately
+ * excluded: the access token, the company (realm) ID and the request URL, so a
+ * log line can be pasted into a support case as it stands.
+ */
+function logQboFailure(
+  operation: string,
+  fields: { status?: number; intuitTid?: string; detail?: string },
+): void {
+  console.error(JSON.stringify({ event: "qbo_error", operation, ...fields }));
+}
+
+/** Intuit's error body, trimmed. Read for the log only; it never reaches the dashboard. */
+async function errorBody(response: Response): Promise<string> {
+  try {
+    return (await response.text()).slice(0, 300);
+  } catch {
+    return "";
+  }
+}
+
 /** Read a single account by ID. */
 async function readAccount(
   env: Env,
@@ -91,16 +116,24 @@ async function readAccount(
       },
     });
   } catch (error) {
+    logQboFailure("account_read", { detail: `Could not reach QuickBooks: ${String(error)}` });
     return { ok: false, kind: "error", detail: `Could not reach QuickBooks: ${String(error)}` };
   }
 
+  // intuit_tid identifies the request in Intuit's logs; worth surfacing when
+  // someone has to open a support case.
+  const tid = response.headers.get("intuit_tid") ?? "none";
+
   if (response.status === 401) {
+    logQboFailure("account_read", { status: 401, intuitTid: tid, detail: await errorBody(response) });
     return { ok: false, kind: "unauthorized", detail: "Access token rejected" };
   }
   if (!response.ok) {
-    // intuit_tid identifies the request in Intuit's logs; worth surfacing when
-    // someone has to open a support case.
-    const tid = response.headers.get("intuit_tid") ?? "none";
+    logQboFailure("account_read", {
+      status: response.status,
+      intuitTid: tid,
+      detail: await errorBody(response),
+    });
     const kind = response.status === 404 || response.status === 400 ? "not_found" : "error";
     return {
       ok: false,
@@ -111,6 +144,7 @@ async function readAccount(
 
   const body = (await response.json()) as QboAccountResponse;
   if (!body.Account) {
+    logQboFailure("account_read", { status: response.status, intuitTid: tid, detail: "Response had no Account" });
     return { ok: false, kind: "error", detail: "QuickBooks response had no Account" };
   }
   return { ok: true, account: body.Account, time: body.time };
@@ -280,13 +314,24 @@ export async function listAssetAccounts(
     `${baseUrl(env)}/v3/company/${env.QBO_REALM_ID}/query` +
     `?query=${encodeURIComponent(statement)}&minorversion=${MINOR_VERSION}`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: { Accept: "application/json", Authorization: `Bearer ${token.accessToken}` },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token.accessToken}` },
+    });
+  } catch (error) {
+    logQboFailure("account_list", { detail: `Could not reach QuickBooks: ${String(error)}` });
+    return { ok: false, detail: `Could not reach QuickBooks: ${String(error)}` };
+  }
 
   if (!response.ok) {
     const tid = response.headers.get("intuit_tid") ?? "none";
+    logQboFailure("account_list", {
+      status: response.status,
+      intuitTid: tid,
+      detail: await errorBody(response),
+    });
     return { ok: false, detail: `QuickBooks returned ${response.status} (intuit_tid: ${tid})` };
   }
 

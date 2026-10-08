@@ -145,6 +145,10 @@ export function App() {
           Reload
         </button>
         {loading ? <span className="muted"> Reloading…</span> : null}
+        <p className="muted">
+          Questions or problems? Contact{" "}
+          <a href="mailto:finance@hpic1919.org">finance@hpic1919.org</a>.
+        </p>
       </footer>
     </main>
   );

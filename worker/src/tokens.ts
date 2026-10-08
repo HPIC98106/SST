@@ -114,6 +114,12 @@ export class TokenStore extends DurableObject<Env> {
   private async record(kind: TokenEvent["kind"], detail?: string): Promise<void> {
     const log = (await this.ctx.storage.get<TokenEvent[]>("events")) ?? [];
     log.push({ at: Date.now(), kind, detail });
+    // The rolling log keeps only the last 20 entries, so a failure is mirrored
+    // to the Worker log where it is retained. Never carries a token: `detail`
+    // is built from status codes and Intuit's error text.
+    if (kind === "refresh_failed" || kind === "discovery_fallback") {
+      console.error(JSON.stringify({ event: "oauth_" + kind, detail }));
+    }
     await this.ctx.storage.put("events", log.slice(-20));
   }
 

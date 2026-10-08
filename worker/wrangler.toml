@@ -38,6 +38,12 @@ new_sqlite_classes = ["TokenStore"]
 [triggers]
 crons = ["0 * * * *"]
 
+# Retain Worker logs so a failed QuickBooks call (status and intuit_tid, never
+# a token) can be shared with Intuit support after the fact. Without this the
+# only trace of a transient failure is whatever the dashboard showed at the time.
+[observability]
+enabled = true
+
 [vars]
 # "sandbox" or "production" — selects the QuickBooks API base URL.
 #
