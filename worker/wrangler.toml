@@ -40,6 +40,13 @@ crons = ["0 * * * *"]
 
 [vars]
 # "sandbox" or "production" — selects the QuickBooks API base URL.
+#
+# Do NOT flip this on its own. Production keys, the production QBO_REALM_ID and
+# a fresh OAuth connection must change in the same sitting, and the sandbox
+# connection should be revoked first. Intuit development keys only reach
+# sandbox companies and production keys only reach production ones, so a
+# half-done switch fails as an unexplained 401 or "needs reauth". The ordered
+# procedure is docs/runbook-migration.md §9.
 QBO_ENV = "sandbox"
 
 # "fixture" serves recorded data and never calls Intuit. Switch to "live" once

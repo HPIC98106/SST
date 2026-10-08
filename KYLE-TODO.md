@@ -520,6 +520,12 @@ gifts do not, rule 1 becomes structural instead of a habit.
       developer account is the one genuinely painful step in the whole
       migration.
 
+      **Drafted 2026-10-08:** answers for the form are in
+      `docs/intuit-production-application.md`, with the gaps only Kyle can
+      close (privacy policy and EULA URLs, role-address contacts, a named
+      HPIC owner). The cutover itself is runbook §9 and is ready to follow
+      once keys arrive; `QBO_ENV` stays `sandbox` until then.
+
 ## Waiting on other people
 
 Not yours to do, but worth tracking so the wait is visible.
