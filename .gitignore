@@ -7,3 +7,7 @@ dist/
 .env
 .env.local
 .env.*.local
+
+# Working notes and meeting prep. Local only, never pushed: some of it names
+# figures a vendor marks as not for distribution, and the repository is public.
+docs/
