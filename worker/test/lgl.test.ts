@@ -383,6 +383,30 @@ describe("reimbursable status", () => {
     expect(bucketed).toBe(stage(snapshot, "pledged").recordCount);
   });
 
+  it("nets cash already received out of each bucket, and never shows a remainder it cannot compute", async () => {
+    // Money already received has been spent or is in cash, so showing the full
+    // award as "reimbursable" double-counts it against Cash available now.
+    const snapshot = await getGrants(grantEnv());
+    const byStatus = Object.fromEntries(
+      snapshot.awardsByReimbursable.map((bucket) => [bucket.status, bucket]),
+    );
+
+    // $750,000 award, $400,000 + $200,000 received (the second carries no
+    // campaign, which must not matter: payments are never filtered by it).
+    expect(byStatus.reimbursable).toMatchObject({ amount: 750000, received: 600000, remaining: 150000 });
+    expect(byStatus.not_reimbursable).toMatchObject({ amount: 150000, received: 150000, remaining: 0 });
+    // The unlinked $12,500 payment belongs to no award, so it reduces nothing.
+    expect(byStatus.unknown).toMatchObject({ amount: 60000, received: 0, remaining: 60000 });
+
+    // Without a payment category nothing is known about what arrived, and a
+    // full-award remainder would be an overstatement presented as fact.
+    const blind = await getGrants(grantEnv({ LGL_GRANT_PAYMENT_CATEGORY_IDS: undefined }));
+    for (const bucket of blind.awardsByReimbursable) {
+      expect(bucket.received).toBeNull();
+      expect(bucket.remaining).toBeNull();
+    }
+  });
+
   it("never turns an unusable phase target into a zero", async () => {
     // `Number("")` is 0, and a phase target of $0 would report the rebuild as
     // fully funded no matter how little cash there is. Every unusable value

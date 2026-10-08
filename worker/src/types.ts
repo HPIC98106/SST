@@ -240,6 +240,20 @@ export interface ReimbursableBucket {
   amount: number;
   recordCount: number;
   /**
+   * Payments received against the awards in this bucket, from the same walk
+   * that produces the Received stage, so it carries the same provisional
+   * caveat. Null when payments could not be read completely: a partial sum
+   * would understate cash received and so overstate `remaining`.
+   */
+  received: number | null;
+  /**
+   * `amount - received`: what is still to arrive from these awards. Money
+   * already received has been spent or is sitting in cash, so counting it again
+   * here would double-count it. Null whenever `received` is. Provisional, and
+   * an overstatement if a payment is not linked to its award.
+   */
+  remaining: number | null;
+  /**
    * The awards in this bucket, each linked to LGL. Listed individually because
    * no LGL search URL is known that filters on a custom field.
    */

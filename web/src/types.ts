@@ -85,6 +85,10 @@ export interface ReimbursableBucket {
   label: string;
   amount: number;
   recordCount: number;
+  /** Provisional, from LGL payment records. Null when payments were unreadable. */
+  received?: number | null;
+  /** `amount - received`: still to arrive. Null whenever `received` is. */
+  remaining?: number | null;
   /** Optional for the same reason as `FunnelStage.search`. */
   awards?: AwardLink[];
 }

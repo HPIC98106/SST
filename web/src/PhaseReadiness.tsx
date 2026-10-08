@@ -100,23 +100,31 @@ export function PhaseReadinessView({
           />
 
           <Row
-            label="Awarded, reimbursable"
-            amount={reimbursable ? usd.format(reimbursable.amount) : "Unavailable"}
+            label="Remaining reimbursable grant funds"
+            amount={
+              reimbursable?.remaining != null ? usd.format(reimbursable.remaining) : "Unavailable"
+            }
             detail={
               !reimbursable
                 ? "The grant funnel could not be read, so no figure here is current."
-                : reimbursable.recordCount > 0
-                  ? `${reimbursable.recordCount} award(s). Real money, but HPIC must spend it before the funder pays, so it cannot fund the start of a phase.`
-                  : "No award is yet marked reimbursable. That is not the same as none being reimbursable: see the row below."
+                : reimbursable.remaining == null
+                  ? "LGL payment records could not be read completely, so how much has already been paid out is unknown."
+                  : reimbursable.recordCount > 0
+                    ? `${reimbursable.recordCount} award(s), ${usd.format(reimbursable.amount)} awarded less ${usd.format(reimbursable.received ?? 0)} already received. Money already received has been spent or is in cash above, so it is not counted twice. What remains arrives only after HPIC spends and invoices, so it cannot fund the start of a phase. Provisional: computed from LGL payment records, and a payment not linked to its award makes this too high.`
+                    : "No award is yet marked reimbursable. That is not the same as none being reimbursable: see the row below."
             }
             tone="excluded"
           />
 
           {unknown && unknown.recordCount > 0 ? (
             <Row
-              label="Awarded, terms unknown"
-              amount={usd.format(unknown.amount)}
-              detail={`${unknown.recordCount} award(s) with no Payment Terms set in LGL. Until they are set, nothing can say whether this money is spendable, so it counts as neither. This is the single largest thing standing between this panel and a real answer.`}
+              label="Remaining, terms unknown"
+              amount={unknown.remaining != null ? usd.format(unknown.remaining) : "Unavailable"}
+              detail={`${unknown.recordCount} award(s) with no Payment Terms set in LGL${
+                unknown.remaining != null
+                  ? `, ${usd.format(unknown.amount)} awarded less ${usd.format(unknown.received ?? 0)} already received`
+                  : ""
+              }. Until the terms are set, nothing can say whether this money is spendable, so it counts as neither. This is the single largest thing standing between this panel and a real answer.`}
               tone="unknown"
             />
           ) : null}

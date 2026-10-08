@@ -66,6 +66,14 @@ HPIC's QuickBooks and LGL data.
   figure.** `splitByReimbursable` in `worker/src/lgl.ts` returns three separate
   buckets and nothing adds them. A cost-reimbursement award requires spending
   first and invoicing after, so it is not cash available to start work.
+- **The readiness panel shows what is *remaining* on an award, never its face
+  value.** Money already received has been spent or is sitting in Cash
+  available now, so listing the full award beside cash counts it twice (Galen,
+  2026-10-08). `ReimbursableBucket.remaining` is `amount − received`, from the
+  same payment walk as Received, so it is `provisional` and **null whenever
+  payments were not read completely**: a missing payment read would otherwise
+  turn into a larger remainder. A payment not linked to its award also makes it
+  too high, which is why the unlinked-payments exception is blocking.
 - **Reimbursable status is `unknown` whenever the custom field is absent or
   unparseable**, never a default. Every HPIC record is in that state today.
 - **"No value set" and "a value we cannot read" are reported separately.** Both

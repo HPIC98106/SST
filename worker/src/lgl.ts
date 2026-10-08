@@ -794,7 +794,15 @@ function attachSearchLinks(
   }
 }
 
-function splitByReimbursable(env: Env, awards: LglGift[]): ReimbursableBucket[] {
+function splitByReimbursable(
+  env: Env,
+  awards: LglGift[],
+  payments: ReadResult<LglGift> | null,
+): ReimbursableBucket[] {
+  // Same completeness rule as Received: a partial or failed payment read must
+  // not become a smaller "received" and therefore a larger "remaining".
+  const paymentsReadable = payments !== null && payments.ok && payments.complete;
+
   const labels: Record<ReimbursableStatus, string> = {
     reimbursable: "Reimbursable",
     not_reimbursable: "Not reimbursable",
@@ -804,11 +812,17 @@ function splitByReimbursable(env: Env, awards: LglGift[]): ReimbursableBucket[] 
 
   return order.map((status) => {
     const matching = awards.filter((award) => readReimbursable(award) === status);
+    const amount = matching.reduce((sum, award) => sum + giftAmount(award), 0);
+    const received = paymentsReadable
+      ? paymentsAgainst(matching, payments.items).reduce((sum, p) => sum + giftAmount(p), 0)
+      : null;
     return {
       status,
       label: labels[status],
-      amount: matching.reduce((sum, award) => sum + giftAmount(award), 0),
+      amount,
       recordCount: matching.length,
+      received,
+      remaining: received === null ? null : amount - received,
       awards: matching.map(
         (award): AwardLink => ({ id: award.id, amount: giftAmount(award), url: giftUrl(env, award.id) }),
       ),
@@ -1139,7 +1153,7 @@ export async function getGrants(env: Env): Promise<GrantSnapshot> {
     exceptions,
     scope,
     phaseTarget,
-    awardsByReimbursable: awards.ok ? splitByReimbursable(env, awards.items) : [],
+    awardsByReimbursable: awards.ok ? splitByReimbursable(env, awards.items, payments) : [],
     unscoped,
     retrievedAt,
     cached: false,
