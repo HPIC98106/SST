@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrants, fetchOperations } from "./api";
+import { LOGO_URL, ORG_NAME } from "./brand";
 import { CommunityView } from "./Community";
 import { formatRetrievedAt, usd0 } from "./format";
 import { FundingBar } from "./FundingBar";
@@ -122,9 +123,12 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <div>
-            <p className="org">Highland Park Improvement Club</p>
-            <p className="org-sub">Board dashboard</p>
+          <div className="brand">
+            <img className="brand-logo" src={LOGO_URL} alt="" width={40} height={48} />
+            <div>
+              <p className="org">{ORG_NAME}</p>
+              <p className="org-sub">Board dashboard</p>
+            </div>
           </div>
           <div className="topbar-meta">
             {funds.data?.retrievedAt ? <span>Balances as of {formatRetrievedAt(funds.data.retrievedAt)}</span> : null}

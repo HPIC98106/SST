@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LOGO_URL, ORG_NAME } from "./brand";
 
 /**
  * Prototype access control.
@@ -20,9 +21,11 @@ export function PassphraseGate({
   const [value, setValue] = useState("");
 
   return (
+    <div className="gate-page">
     <main className="gate">
-      <h1>HPIC Financial Snapshot</h1>
-      <p className="muted">Board use only.</p>
+      <img className="gate-logo" src={LOGO_URL} alt={ORG_NAME} width={83} height={99} />
+      <h1>Board dashboard</h1>
+      <p className="muted">{ORG_NAME}. Board use only.</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -42,5 +45,6 @@ export function PassphraseGate({
       </form>
       {error ? <p className="error">{error}</p> : null}
     </main>
+    </div>
   );
 }
