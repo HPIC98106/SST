@@ -136,6 +136,18 @@ the money is for. The IDs come from `/admin/accounts?k=<passphrase>`. An
 account left off the list is left out of every total, and an entry that cannot
 be parsed blanks every total rather than being skipped.
 
+`QBO_PL_GROUPS` maps income and expense accounts onto the Operations tab's
+board lines. Groups are separated by `;`, each a label and its account IDs;
+a parent account brings its sub-accounts. `exclude` keeps accounts (rebuild
+money) out of operating figures. Every account with activity must land in a
+group or in `exclude`, or the tab stays blank and names the account. The IDs,
+and the group each account currently lands in, are at
+`/admin/pl-accounts?k=<passphrase>`:
+
+```bash
+printf '%s' "Memberships=<id>;Events and programs=<id>,<id>;Operations=<id>;exclude=<id>" | npx wrangler secret put QBO_PL_GROUPS
+```
+
 **A name cannot be both a `[vars]` entry and a secret.** Cloudflare rejects the
 binding collision with `code: 10053`. To convert a var into a secret, delete it
 from `wrangler.toml`, run `wrangler deploy`, and only then run `secret put`.

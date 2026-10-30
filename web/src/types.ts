@@ -150,3 +150,59 @@ export interface GrantSnapshot {
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
   completenessNote: string;
 }
+
+// --- Operations: the year's income and spending against budget ---
+
+export type PlSide = "income" | "spending";
+
+/**
+ * Every figure covers the same completed months. `projectedYearEnd` is a
+ * projection (actual to date plus budget for the months left), never a record,
+ * and is null whenever the budget was not entered by month.
+ */
+export interface OperationsLine {
+  label: string;
+  actual: number;
+  budgetToDate: number | null;
+  budgetFullYear: number | null;
+  projectedYearEnd: number | null;
+  lastYearToDate: number | null;
+}
+
+export interface OperationsGroup extends OperationsLine {
+  side: PlSide;
+  accounts: OperationsLine[];
+}
+
+export interface MonthlySide {
+  actual: (number | null)[];
+  budget: number[] | null;
+  lastYear: number[] | null;
+}
+
+export interface OperationsSnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  ungrouped: { id: string; name: string; side: PlSide }[];
+  invalidConfig: string[];
+  period: {
+    fiscalYearStart: string;
+    fiscalYearEnd: string;
+    through: string;
+    completedMonths: number;
+    showingPriorYear: boolean;
+  } | null;
+  basis: "Accrual";
+  groups: OperationsGroup[];
+  totals: { income: OperationsLine; spending: OperationsLine; net: OperationsLine } | null;
+  excluded: { income: number; spending: number; accounts: string[] } | null;
+  budget: { status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable"; name: string | null; note?: string };
+  lastYear: { status: "ok" | "unavailable"; note?: string };
+  monthly: { months: string[]; income: MonthlySide; spending: MonthlySide } | null;
+  trailingTwelveMonthSpending: number | null;
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
+  environment: "sandbox" | "production";
+}

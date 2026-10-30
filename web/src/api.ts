@@ -6,7 +6,7 @@
  * a QuickBooks company or account.
  */
 
-import type { FundsSnapshot, GrantSnapshot } from "./types";
+import type { FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
 const WORKER_URL: string = import.meta.env.VITE_WORKER_URL ?? "http://127.0.0.1:8787";
 
@@ -30,6 +30,10 @@ async function get<T>(path: string, passphrase: string): Promise<T> {
 
 export function fetchFunds(passphrase: string): Promise<FundsSnapshot> {
   return get<FundsSnapshot>("/api/funds", passphrase);
+}
+
+export function fetchOperations(passphrase: string): Promise<OperationsSnapshot> {
+  return get<OperationsSnapshot>("/api/operations", passphrase);
 }
 
 export function fetchGrants(passphrase: string): Promise<GrantSnapshot> {

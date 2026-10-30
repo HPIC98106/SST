@@ -407,7 +407,7 @@ code {
 .views {
   display: flex;
   gap: 0.4rem;
-  margin-top: 0.9rem;
+  margin: 0.9rem 0 1.75rem;
 }
 
 .view-tab {
@@ -629,4 +629,248 @@ code {
 .pr-gap td.num {
   font-weight: 700;
   border-top: 2px solid currentColor;
+}
+
+/* --- Operations: the year's income and spending against budget --- */
+
+/*
+ * A projection is the one figure here that is not a record. It reads at full
+ * size, but carries a flag and a dashed edge so it is never mistaken for an
+ * actual: the same reasoning as a provisional figure, with its own look,
+ * because "not yet happened" and "not yet reconciled" are different caveats.
+ */
+.status-projection {
+  border-left: 3px dashed var(--muted);
+}
+
+.projection-flag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: #eef0ef;
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  margin: 0.4rem 0 0;
+  display: inline-block;
+}
+
+.ops-table {
+  font-size: 0.92rem;
+}
+
+/* Headers wrap so the line labels, which carry the meaning, stay on one line. */
+.ops-table thead th.num {
+  max-width: 7.5rem;
+  vertical-align: bottom;
+}
+
+.ops-table tbody th[scope="row"],
+.ops-table tfoot th[scope="row"],
+.ops-table td.num {
+  white-space: nowrap;
+}
+
+.ops-table td.ops-projection {
+  font-style: italic;
+}
+
+.ops-side th {
+  padding-top: 1.1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.ops-group th[scope="row"] {
+  font-weight: 500;
+}
+
+/* The global button style is a filled dark button; a row toggle is not that. */
+button.ops-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+button.ops-toggle span {
+  display: inline-block;
+  width: 1rem;
+  color: var(--muted);
+}
+
+.ops-toggle-spacer {
+  padding-left: 1rem;
+}
+
+.ops-account th[scope="row"] {
+  padding-left: 2.2rem;
+  font-weight: 400;
+}
+
+.ops-account th,
+.ops-account td {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ops-total th,
+.ops-total td {
+  font-weight: 700;
+  border-bottom: 2px solid var(--line);
+}
+
+.ops-net th,
+.ops-net td {
+  font-weight: 700;
+  border-top: 2px solid var(--ink);
+  border-bottom: none;
+}
+
+.ops-list {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.ops-monthly {
+  margin-top: 1rem;
+}
+
+.ops-monthly summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* --- Cumulative charts --- */
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+}
+
+.chart {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem 1rem 0.6rem;
+}
+
+.chart-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.chart-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0.35rem 0 0.4rem;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chart-frame {
+  position: relative;
+}
+
+.chart-frame svg[role="img"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-frame svg[role="img"]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Series identity. Validated as a pair (blue, orange) for colour-vision
+   deficiency; the budget is a neutral dashed reference line. Text never wears
+   these colours. */
+.series-actual {
+  --c: #2a78d6;
+}
+
+.series-budget {
+  --c: #52514e;
+}
+
+.series-last {
+  --c: #eb6834;
+}
+
+.chart line[class*="series-"],
+.chart path[class*="series-"] {
+  stroke: var(--c);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart circle.chart-dot {
+  fill: var(--c);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.chart-grid {
+  stroke: #eceeed;
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-end {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0.25rem;
+  pointer-events: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  display: grid;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+
+.chart-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }

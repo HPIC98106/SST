@@ -27,6 +27,7 @@ import type {
   Env,
   FundsSnapshot,
   IntuitTokenResponse,
+  OperationsSnapshot,
 } from "./types";
 
 /** How long a fetched discovery document is trusted before re-reading it. */
@@ -69,6 +70,17 @@ interface TokenEvent {
 interface CachedSnapshot {
   snapshot: FundsSnapshot;
   cachedAt: number;
+}
+
+interface CachedOperations {
+  snapshot: OperationsSnapshot;
+  cachedAt: number;
+  /**
+   * The grouping configuration the snapshot was built with. A changed
+   * configuration misses the cache, so regrouping an account shows up on the
+   * next load rather than up to fifteen minutes later.
+   */
+  configKey: string;
 }
 
 export class TokenStore extends DurableObject<Env> {
@@ -128,6 +140,7 @@ export class TokenStore extends DurableObject<Env> {
     await this.persist(tokens);
     await this.ctx.storage.delete("needs_reauth");
     await this.ctx.storage.delete("snapshot");
+    await this.ctx.storage.delete("operations");
     await this.record("seeded");
   }
 
@@ -270,6 +283,7 @@ export class TokenStore extends DurableObject<Env> {
     const forgetLocally = async () => {
       await this.ctx.storage.delete("tokens");
       await this.ctx.storage.delete("snapshot");
+      await this.ctx.storage.delete("operations");
       await this.ctx.storage.put("needs_reauth", true);
     };
 
@@ -369,5 +383,18 @@ export class TokenStore extends DurableObject<Env> {
   async putCachedSnapshot(snapshot: FundsSnapshot): Promise<void> {
     const entry: CachedSnapshot = { snapshot, cachedAt: Date.now() };
     await this.ctx.storage.put("snapshot", entry);
+  }
+
+  async getCachedOperations(maxAgeMs: number, configKey: string): Promise<CachedOperations | null> {
+    const cached = await this.ctx.storage.get<CachedOperations>("operations");
+    if (!cached) return null;
+    if (cached.configKey !== configKey) return null;
+    if (Date.now() - cached.cachedAt > maxAgeMs) return null;
+    return cached;
+  }
+
+  async putCachedOperations(snapshot: OperationsSnapshot, configKey: string): Promise<void> {
+    const entry: CachedOperations = { snapshot, cachedAt: Date.now(), configKey };
+    await this.ctx.storage.put("operations", entry);
   }
 }

@@ -38,6 +38,7 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Worker | https://hpic-sst.kyhuber-ft.workers.dev |
 | Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
+| P&L grouping tool | `/admin/pl-accounts?k=<passphrase>` (income and expense account IDs, each account's group, and the budgets QuickBooks holds) |
 | Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
 | QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. `QBO_ACCOUNTS` set the same day (runbook §9 step 6 has the mapping). All six balances matched the Balance Sheet to the cent on 2026-10-30. |
 
@@ -110,6 +111,37 @@ HPIC's QuickBooks and LGL data.
   the gaps become arguable from HPIC's own records.
 - **Zero exceptions must mean "nothing is wrong", never "nothing was read".**
   `findExceptions` runs only when both reads succeeded.
+
+### Operations (income and spending against budget)
+
+`worker/src/operations.ts`. Decided 2026-10-30: accrual basis, no variance
+flagging threshold, groupings agreed by Kyle and set in `QBO_PL_GROUPS`.
+
+- **Every column covers the completed months only.** An October 30 read
+  reports through September 30. A month in progress is never compared with a
+  full month's budget.
+- **Budget to date comes from a budget entered by month, or not at all.**
+  Never divide a yearly budget by twelve: HPIC's money is seasonal (First
+  Fridays run May to October) and lumpy (insurance lands in one month), so an
+  even split misreads exactly the months the board asks about. A budget
+  entered any other way shows its full-year figure only. Two active budgets
+  for the same year are ambiguous and are not chosen between.
+- **Operating figures render only when every account with activity is
+  grouped or excluded.** An ungrouped account might be rebuild money; counted
+  as day-to-day income it overstates the year. This is the "total cash renders
+  only when every account reads" rule, for the profit and loss. Listing a
+  parent groups its sub-accounts, so only a new top-level account trips it.
+- **`exclude` keeps rebuild money out, visibly.** What was excluded, and how
+  much, is printed under the table.
+- **QuickBooks' own section totals are checked, month by month, in cents.**
+  A mismatch means the report layout is not what the parser expects, and the
+  tab goes unavailable rather than showing a misread.
+- **A projection is its own kind of figure**, neither `ok` nor `provisional`:
+  actual to date plus budget for the months left. Labelled on the card and the
+  column, never added to cash or to any funded figure.
+- **Dates come from QuickBooks.** The fiscal year from the report's period,
+  "today" from its `Header.Time`. In a fiscal year's first month, nothing has
+  completed, so the previous year is shown in full.
 
 ## Little Green Light: what the API actually exposes
 
@@ -444,6 +476,16 @@ future value cannot change what an existing test means.
   unsettled, waiting on Galen. The Metis estimate's prices lapsed 2026-10-22;
   an updated quote arrived 2026-10-29. Never show Metis line items: the
   estimate is for the client and project partners only.
+- **Phase 4, operations: built 2026-10-30, not yet read live.** An Operations
+  tab (seven-ish board lines, each expandable to its accounts, cumulative
+  charts against budget and last year, a month-by-month table) and a "This
+  year so far" panel on the Overview (net so far against budget, projected
+  year-end, months of operating cash). Tested against fixtures shaped from
+  Intuit's documented layouts only. **Four things are unverified against live
+  QuickBooks:** the ProfitAndLoss JSON layout (the section-total check will
+  catch a misread), `date_macro=This Fiscal Year`, the `Budget` query, and
+  `Active in (true, false)` on the Account query. Verify each on first deploy,
+  then check the tab's totals against QuickBooks' own P&L to the cent.
 
 ### Build backlog (Claude)
 

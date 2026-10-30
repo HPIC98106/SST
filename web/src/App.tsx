@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { NotAuthorizedError, fetchFunds, fetchGrants } from "./api";
+import { NotAuthorizedError, fetchFunds, fetchGrants, fetchOperations } from "./api";
 import { FundsSnapshotView } from "./FundsSnapshot";
 import { PhaseReadinessView } from "./PhaseReadiness";
 import { GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
+import { OperationsView } from "./Operations";
 import { PassphraseGate } from "./PassphraseGate";
-import type { FundsSnapshot, GrantSnapshot } from "./types";
+import { YearSoFarView } from "./YearSoFar";
+import type { FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+
+type View = "overview" | "operations" | "lifecycle";
 
 const STORAGE_KEY = "hpic-sst-passphrase";
 
@@ -26,10 +30,11 @@ export function App() {
   );
   const [funds, setFunds] = useState<Panel<FundsSnapshot>>({ data: null });
   const [grants, setGrants] = useState<Panel<GrantSnapshot>>({ data: null });
-  // Which view is showing. Deliberately local state rather than a router: two
-  // views do not justify a routing dependency, and the passphrase lives in
+  const [operations, setOperations] = useState<Panel<OperationsSnapshot>>({ data: null });
+  // Which view is showing. Deliberately local state rather than a router: a
+  // few views do not justify a routing dependency, and the passphrase lives in
   // memory, so a URL that could be opened directly would not work anyway.
-  const [view, setView] = useState<"figures" | "lifecycle">("figures");
+  const [view, setView] = useState<View>("overview");
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [gateError, setGateError] = useState<string | undefined>();
@@ -37,20 +42,21 @@ export function App() {
   const load = useCallback(async (secret: string) => {
     setLoading(true);
 
-    // A wrong passphrase is a page-level problem, not a panel-level one: both
-    // requests carry the same secret, so both will have failed the same way.
+    // A wrong passphrase is a page-level problem, not a panel-level one: every
+    // request carries the same secret, so all will have failed the same way.
     const forgetPassphrase = (message: string) => {
       sessionStorage.removeItem(STORAGE_KEY);
       setPassphrase(null);
       setGateError(message);
     };
 
-    const [fundsResult, grantsResult] = await Promise.allSettled([
+    const [fundsResult, grantsResult, operationsResult] = await Promise.allSettled([
       fetchFunds(secret),
       fetchGrants(secret),
+      fetchOperations(secret),
     ]);
 
-    const unauthorized = [fundsResult, grantsResult].find(
+    const unauthorized = [fundsResult, grantsResult, operationsResult].find(
       (result) => result.status === "rejected" && result.reason instanceof NotAuthorizedError,
     );
     if (unauthorized && unauthorized.status === "rejected") {
@@ -61,6 +67,7 @@ export function App() {
 
     setFunds(toPanel(fundsResult));
     setGrants(toPanel(grantsResult));
+    setOperations(toPanel(operationsResult));
     setLoading(false);
     setLoaded(true);
   }, []);
@@ -99,10 +106,17 @@ export function App() {
         <nav className="views">
           <button
             type="button"
-            className={view === "figures" ? "view-tab is-active" : "view-tab"}
-            onClick={() => setView("figures")}
+            className={view === "overview" ? "view-tab is-active" : "view-tab"}
+            onClick={() => setView("overview")}
           >
-            Figures
+            Overview
+          </button>
+          <button
+            type="button"
+            className={view === "operations" ? "view-tab is-active" : "view-tab"}
+            onClick={() => setView("operations")}
+          >
+            Operations
           </button>
           {/*
             The lifecycle sits beside the numbers rather than in a document,
@@ -122,15 +136,32 @@ export function App() {
 
       {view === "lifecycle" ? (
         <LifecycleView snapshot={grants.data} />
+      ) : view === "operations" ? (
+        operations.data ? (
+          <OperationsView snapshot={operations.data} />
+        ) : (
+          <PanelError title="Income and spending" detail={operations.error} />
+        )
       ) : (
         <>
-          <PhaseReadinessView funds={funds.data} grants={grants.data} />
-
+          {/* Money available now leads: it is the first thing the board asks. */}
           {funds.data ? (
             <FundsSnapshotView snapshot={funds.data} />
           ) : (
             <PanelError title="Cash on hand" detail={funds.error} />
           )}
+
+          <YearSoFarView
+            operations={operations.data}
+            funds={funds.data}
+            error={operations.error}
+            onOpen={() => {
+              setView("operations");
+              window.scrollTo(0, 0);
+            }}
+          />
+
+          <PhaseReadinessView funds={funds.data} grants={grants.data} />
 
           {grants.data ? (
             <GrantFunnelView snapshot={grants.data} />

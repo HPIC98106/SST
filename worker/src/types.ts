@@ -31,6 +31,21 @@ export interface Env {
    */
   QBO_ACCOUNTS?: string;
 
+  /**
+   * How profit-and-loss accounts roll up into the board's lines on the
+   * Operations tab: `Memberships=45;Events and programs=50,60;exclude=80`.
+   * A secret, like `QBO_ACCOUNTS`, because it names HPIC's accounts.
+   *
+   * Groups are separated by `;`, each a label, `=`, and comma-separated
+   * account IDs. Listing a parent account takes its sub-accounts with it
+   * unless one is listed elsewhere. One group can hold income and spending
+   * accounts both, and shows on each side it has accounts on. The reserved
+   * label `exclude` keeps accounts out of operating figures entirely (rebuild
+   * money, chiefly) while still naming what was kept out. Unset renders "not
+   * configured": without it nothing says which accounts are operating ones.
+   */
+  QBO_PL_GROUPS?: string;
+
   // --- Little Green Light (Phase 2) ---
 
   /**
@@ -392,6 +407,133 @@ export interface GrantSnapshot {
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
   /** Data-completeness caveat. Removed at go-live, once reconciliation is done. */
   completenessNote: string;
+}
+
+// --- Operations: the year's income and spending against budget ---
+
+/** Which side of the books a line sits on. */
+export type PlSide = "income" | "spending";
+
+/**
+ * One line of the year-so-far table, in dollars.
+ *
+ * Every figure covers the same months: the completed months of the fiscal
+ * year, so an October 30 read reports through September 30. A month still in
+ * progress is never compared with a full month's budget.
+ */
+export interface OperationsLine {
+  label: string;
+  /** Actual, from QuickBooks' profit and loss report, accrual basis. */
+  actual: number;
+  /**
+   * The budget for the same completed months. Null unless the budget was
+   * entered by month: dividing a yearly figure evenly would make every
+   * seasonal month look wrong, which is the comparison this exists to avoid.
+   */
+  budgetToDate: number | null;
+  /** Null when no budget covers this fiscal year. */
+  budgetFullYear: number | null;
+  /**
+   * A projection, not a record: actual to date plus the budget for every
+   * month not yet complete. Null whenever `budgetToDate` is. Never added to
+   * cash or to any funded figure.
+   */
+  projectedYearEnd: number | null;
+  /** The same months of the previous fiscal year. Null when that read failed. */
+  lastYearToDate: number | null;
+}
+
+/** A board-level line, with the QuickBooks accounts underneath it. */
+export interface OperationsGroup extends OperationsLine {
+  side: PlSide;
+  accounts: OperationsLine[];
+}
+
+/** Monthly figures for the cumulative chart, one entry per fiscal month. */
+export interface OperationsMonthly {
+  /** Twelve "YYYY-MM" keys, in fiscal order. */
+  months: string[];
+  income: MonthlySide;
+  spending: MonthlySide;
+}
+
+export interface MonthlySide {
+  /** Null for months not yet complete. */
+  actual: (number | null)[];
+  /** Null when no monthly budget covers the year. */
+  budget: number[] | null;
+  /** Null when last year's read failed. */
+  lastYear: number[] | null;
+}
+
+/** Why a budget column reads the way it does. */
+export interface BudgetState {
+  status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable";
+  /** The QuickBooks budget's name, when one was used. */
+  name: string | null;
+  note?: string;
+}
+
+/** An account with activity that no group claims. */
+export interface UngroupedAccount {
+  id: string;
+  name: string;
+  side: PlSide;
+}
+
+export interface OperationsSnapshot {
+  /**
+   * "ok" means every figure below came from a complete read in which every
+   * account with activity is either grouped or deliberately kept out. Any
+   * other status carries no figures, and `note` says why.
+   */
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  /**
+   * Accounts with activity this year, last year, or in the budget that no
+   * group claims. Operating figures are withheld while any exist: an
+   * ungrouped account might be rebuild money, and counting it as day-to-day
+   * income would overstate how the year is going.
+   */
+  ungrouped: UngroupedAccount[];
+  /** `QBO_PL_GROUPS` entries that could not be used, and why. */
+  invalidConfig: string[];
+  /** The months every figure covers. Null when nothing was read. */
+  period: {
+    fiscalYearStart: string;
+    fiscalYearEnd: string;
+    /** Last day of the last completed month. */
+    through: string;
+    completedMonths: number;
+    /**
+     * True in a fiscal year's first month, when no month of it has completed:
+     * the previous year is shown, in full, instead of an empty table.
+     */
+    showingPriorYear: boolean;
+  } | null;
+  /** The accounting basis every figure is reported on. */
+  basis: "Accrual";
+  groups: OperationsGroup[];
+  totals: { income: OperationsLine; spending: OperationsLine; net: OperationsLine } | null;
+  /**
+   * What `exclude` kept out of every figure above, over the same months, so
+   * leaving rebuild money out is visible rather than silent.
+   */
+  excluded: { income: number; spending: number; accounts: string[] } | null;
+  budget: BudgetState;
+  lastYear: { status: "ok" | "unavailable"; note?: string };
+  monthly: OperationsMonthly | null;
+  /**
+   * Operating spending over the last twelve completed months, the basis for
+   * "months of operating cash". Null unless all twelve months were read.
+   */
+  trailingTwelveMonthSpending: number | null;
+  /** QuickBooks' own report timestamp. Never the browser or Worker clock. */
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
+  environment: "sandbox" | "production";
 }
 
 /** Token payload as returned by Intuit's token endpoint. */

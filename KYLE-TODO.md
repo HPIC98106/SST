@@ -30,7 +30,25 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   token refresh.** The last open check on the production cutover; Intuit
   rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
-  Unblocks: real cash figures, and every QuickBooks item below.
+- **Deploy the Operations tab, then group the accounts.** Once the PR is
+  merged, from Git Bash:
+  `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
+  Then open `/admin/pl-accounts?k=<passphrase>`, agree the board lines, and set
+  `QBO_PL_GROUPS` with the command on that page. Put rebuild income and any
+  construction spending under `exclude`. Then ask Claude to check the tab
+  against QuickBooks' own Profit and Loss to the cent. Unblocks: the Operations
+  tab and the Overview's "This year so far" panel, which read "not configured"
+  until the groups are set.
+
+- **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
+  Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
+  the approved figures, keeping each amount in the month the money actually
+  moves. Keep one active budget per year. Reconcile two things in the draft
+  spreadsheet first: the net in its notes disagrees with the sheet's total, and
+  the Licenses and Permits subtotal does not equal its lines. Also check how
+  the 2026 budget was entered (`/admin/pl-accounts` lists it): if not by month,
+  2026's budget-to-date and projection stay blank. Unblocks: budget to date and
+  projected year-end.
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can
