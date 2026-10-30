@@ -191,7 +191,7 @@ function ExceptionCard({ exception }: { exception: DataQualityException }) {
  * reader would be noise, and worse, would look identical to a page where
  * nothing was checked.
  */
-function DataQualityPanel({ exceptions }: { exceptions: DataQualityException[] }) {
+export function DataQualityPanel({ exceptions }: { exceptions: DataQualityException[] }) {
   if (exceptions.length === 0) return null;
 
   const blocking = exceptions.filter((e) => e.severity === "blocking");
@@ -228,7 +228,18 @@ function DataQualityPanel({ exceptions }: { exceptions: DataQualityException[] }
   );
 }
 
-export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
+/**
+ * `showExceptions` is false on the Grants tab: the data-quality list lives on
+ * Housekeeping, where the people who fix records look for it. It is never
+ * dropped, only moved one click away from the board's landing page.
+ */
+export function GrantFunnelView({
+  snapshot,
+  showExceptions = true,
+}: {
+  snapshot: GrantSnapshot;
+  showExceptions?: boolean;
+}) {
   return (
     <section className="panel">
       <h1>Grant funnel</h1>
@@ -283,7 +294,7 @@ export function GrantFunnelView({ snapshot }: { snapshot: GrantSnapshot }) {
         ))}
       </div>
 
-      <DataQualityPanel exceptions={snapshot.exceptions} />
+      {showExceptions ? <DataQualityPanel exceptions={snapshot.exceptions} /> : null}
 
       {snapshot.awardsByReimbursable.length > 0 ? (
         <div className="subpanel">

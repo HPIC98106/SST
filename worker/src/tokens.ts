@@ -24,6 +24,7 @@ import { DurableObject } from "cloudflare:workers";
 import { FALLBACK_ENDPOINTS, fetchDiscovery, type OAuthEndpoints } from "./endpoints";
 import type {
   AccessTokenResult,
+  CommunitySnapshot,
   Env,
   FundsSnapshot,
   IntuitTokenResponse,
@@ -396,5 +397,19 @@ export class TokenStore extends DurableObject<Env> {
   async putCachedOperations(snapshot: OperationsSnapshot, configKey: string): Promise<void> {
     const entry: CachedOperations = { snapshot, cachedAt: Date.now(), configKey };
     await this.ctx.storage.put("operations", entry);
+  }
+
+  // The Community tab reads every gift in LGL, dozens of requests, so it is
+  // cached here too: this object is the application's only storage, and an
+  // LGL snapshot has nothing to do with the QuickBooks tokens beside it.
+
+  async getCachedCommunity(maxAgeMs: number): Promise<{ snapshot: CommunitySnapshot; cachedAt: number } | null> {
+    const cached = await this.ctx.storage.get<{ snapshot: CommunitySnapshot; cachedAt: number }>("community");
+    if (!cached || Date.now() - cached.cachedAt > maxAgeMs) return null;
+    return cached;
+  }
+
+  async putCachedCommunity(snapshot: CommunitySnapshot): Promise<void> {
+    await this.ctx.storage.put("community", { snapshot, cachedAt: Date.now() });
   }
 }

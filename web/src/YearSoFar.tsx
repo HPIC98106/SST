@@ -12,7 +12,7 @@ import { usd } from "./format";
 import { OperationsProblems, periodLabel } from "./Operations";
 import type { FundsSnapshot, OperationsSnapshot } from "./types";
 
-function monthsOfCash(funds: FundsSnapshot | null, operations: OperationsSnapshot) {
+export function monthsOfCash(funds: FundsSnapshot | null, operations: OperationsSnapshot) {
   const programming = funds?.subtotals?.find((s) => s.purpose === "programming");
   const cash = programming?.total ?? null;
   const yearly = operations.trailingTwelveMonthSpending;
@@ -25,7 +25,7 @@ function monthsOfCash(funds: FundsSnapshot | null, operations: OperationsSnapsho
   const monthly = yearly / 12;
   const months = cash / monthly;
   return {
-    value: months >= 3 ? `About ${Math.floor(months)} months` : `About ${months.toFixed(1)} months`,
+    value: months >= 3 ? `${Math.floor(months)} months` : `${months.toFixed(1)} months`,
     note: `Programming cash of ${usd.format(cash)} against average operating spending of ${usd.format(monthly)} a month over the last twelve completed months.`,
   };
 }
@@ -39,7 +39,7 @@ export function YearSoFarView({
   operations: OperationsSnapshot | null;
   funds: FundsSnapshot | null;
   error?: string;
-  onOpen: () => void;
+  onOpen?: () => void;
 }) {
   if (!operations) {
     return (
@@ -99,9 +99,11 @@ export function YearSoFarView({
         </div>
       ) : null}
 
-      <button type="button" className="link" onClick={onOpen}>
-        See every line on the Operations tab
-      </button>
+      {onOpen ? (
+        <button type="button" className="link" onClick={onOpen}>
+          See every line on the Operations tab
+        </button>
+      ) : null}
     </section>
   );
 }

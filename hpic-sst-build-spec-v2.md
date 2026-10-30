@@ -302,4 +302,6 @@ of these are in flight; this is the canonical list.
   restricted grant. This is a real and painful problem for the development
   committee, but it depends on QBO class or fund tracking being configured
   correctly first. Likely future direction; do not build now.
-- Mobile-responsive layout
+- Per-person access tiers (names of members and donors on the dashboard).
+  Mobile layout moved into scope on 2026-10-30; board members read this on a
+  phone.

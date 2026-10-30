@@ -67,3 +67,12 @@ export function compactUsd(n: number): string {
     maximumFractionDigits: 1,
   }).format(n);
 }
+
+/** Whole dollars, for projections and community figures where cents are noise. */
+export const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+/** "+74" / "−12" / "no change", for a count against last year. */
+export function signed(n: number): string {
+  if (n === 0) return "no change";
+  return `${n > 0 ? "+" : "−"}${Math.abs(n).toLocaleString("en-US")}`;
+}

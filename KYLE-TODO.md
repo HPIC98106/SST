@@ -28,24 +28,22 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
   readiness target; the panel says the old one has lapsed.
 
-- **Deploy the Worker once the Metis PR merges, then switch the target to
-  include contingency.** The deploy ships the new source text and price date:
-  `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
-  Straight after, set the grand total including Metis's 6% contingency (the
-  figure is in the 2026-10-30 Claude session, and on the budget sheet as
-  "Grand Total Including Contingency"):
-  `printf '%s' "<that figure>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
-  Back to back, so the panel never pairs the new wording with the old total.
-  One deploy covers this and the Operations PR if both are merged first.
+- **Merge the board dashboard PR, deploy, and finish its setup.** It carries
+  the Operations, Community and Metis changes, so one merge and one deploy
+  cover all of them. In order, from Git Bash:
+  1. `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`
+  2. Straight after, set the Dry-in target including Metis's 6% contingency
+     (the figure is in the 2026-10-30 Claude session, and on the budget sheet
+     as "Grand Total Including Contingency"):
+     `printf '%s' "<that figure>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  3. Group the QuickBooks accounts (next item).
 
 - **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
   token refresh.** The last open check on the production cutover; Intuit
   rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
-- **Deploy the Operations tab, then group the accounts.** Once the PR is
-  merged, from Git Bash:
-  `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
-  Then open `/admin/pl-accounts?k=<passphrase>`, agree the board lines, and set
+- **Group the QuickBooks accounts for the Operations tab.** After the deploy,
+  open `/admin/pl-accounts?k=<passphrase>`, agree the board lines, and set
   `QBO_PL_GROUPS` with the command on that page. Put rebuild income and any
   construction spending under `exclude`. Then ask Claude to check the tab
   against QuickBooks' own Profit and Loss to the cent. Unblocks: the Operations

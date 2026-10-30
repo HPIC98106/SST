@@ -89,6 +89,14 @@ export interface Env {
   LGL_UI_BASE_URL?: string;
 
   /**
+   * Which LGL campaigns hold membership dues, and which the Annual Fund Drive,
+   * for the Community tab. Not secrets: campaign IDs name nothing outside LGL.
+   * Unset leaves that line out rather than guessing at it by name.
+   */
+  LGL_MEMBERSHIP_CAMPAIGN_IDS?: string;
+  LGL_ANNUAL_FUND_CAMPAIGN_IDS?: string;
+
+  /**
    * The construction phase the readiness panel is measured against, and what
    * it is estimated to cost.
    *
@@ -561,3 +569,81 @@ export interface IntuitTokenResponse {
 export type AccessTokenResult =
   | { ok: true; accessToken: string }
   | { ok: false; reason: "needs_reauth" | "not_seeded"; detail?: string };
+
+// --- Community: members, supporters and giving, from Little Green Light ---
+
+/** One campaign's giving, this year to date against the same days last year. */
+export interface CampaignGiving {
+  campaign: string;
+  thisYear: number;
+  lastYearSamePeriod: number;
+  lastYearTotal: number;
+  /** Gifts this year, so a total can be read against how many people gave. */
+  gifts: number;
+}
+
+/**
+ * What the next three months brought in a year earlier. A projection, not a
+ * record or a pledge: it says what this season looked like last time.
+ */
+export interface ExpectedInflow {
+  key: "annual_fund" | "memberships" | "other_giving";
+  label: string;
+  amount: number;
+}
+
+/** A grant award outside the rebuild, and what is still to arrive on it. */
+export interface OperatingAward {
+  id: number;
+  date: string | null;
+  amount: number;
+  received: number;
+  remaining: number;
+  url: string | null;
+}
+
+export interface CommunitySnapshot {
+  /**
+   * "ok" only for a complete read of every gift. A walk that stopped at its
+   * page cap would undercount members and giving, so it shows nothing.
+   */
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  year: number | null;
+  /** The last day counted this year: LGL's own clock, as a Seattle date. */
+  through: string | null;
+  members: {
+    thisYear: number;
+    lastYear: number;
+    /** Members this year who were also members last year. */
+    renewed: number;
+    newThisYear: number;
+    /** Last year's members who have not yet renewed, and what they paid. */
+    dueToRenew: number;
+    dueToRenewAmount: number;
+    duesThisYear: number;
+    duesLastYearSamePeriod: number;
+  } | null;
+  /** Distinct people and organisations giving, grant payments excluded. */
+  supporters: { thisYear: number; lastYear: number; gaveLastYearNotYetThisYear: number } | null;
+  /** Monthly, for the charts. This year's months after `through` are null. */
+  monthly: {
+    months: string[];
+    dues: { thisYear: (number | null)[]; lastYear: number[] };
+    giving: { thisYear: (number | null)[]; lastYear: number[] };
+  } | null;
+  /** Grant payments excluded: grants have their own tab. */
+  byCampaign: CampaignGiving[];
+  nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
+  /**
+   * Provisional, like every LGL payment figure: computed from payment records
+   * linked to their award, so an unlinked payment makes `remaining` too high.
+   */
+  operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;
+  /** Cash gifts read, beside every figure drawn from them. */
+  giftCount: number;
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "not_configured" | "unavailable" | "fixture";
+}

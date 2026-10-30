@@ -12,6 +12,7 @@
  */
 
 import { AUTH_HEADER, authorize, checkPassphrase } from "./auth";
+import { getCommunity } from "./community";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
 import { getOperations, parseGroupConfig, readSetup, resolveGroup } from "./operations";
@@ -106,6 +107,15 @@ export default {
           return json({ error: "Not authorized" }, env, 401);
         }
         return handleOperations(env);
+      }
+
+      // Members, supporters and giving, from every gift in LGL. Counts only:
+      // no names leave the Worker, because the passphrase is shared.
+      case "/api/community": {
+        if (!authorize(request, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return handleCommunity(env);
       }
 
       // Phase 2. Behind the same passphrase, and read-only like everything
@@ -396,6 +406,26 @@ async function keepAlive(env: Env): Promise<void> {
   } catch (error) {
     console.error(JSON.stringify({ event: "operations_warm_failed", detail: String(error) }));
   }
+
+  if (env.LGL_MODE === "live") {
+    try {
+      const community = await getCommunity(env);
+      if (community.status === "ok") await store.putCachedCommunity(community);
+    } catch (error) {
+      console.error(JSON.stringify({ event: "community_warm_failed", detail: String(error) }));
+    }
+  }
+}
+
+async function handleCommunity(env: Env): Promise<Response> {
+  const store = tokenStore(env);
+  if (env.LGL_MODE === "live") {
+    const cached = await store.getCachedCommunity(CACHE_TTL_MS);
+    if (cached) return json({ ...cached.snapshot, cached: true }, env);
+  }
+  const snapshot = await getCommunity(env);
+  if (snapshot.status === "ok" && snapshot.connection === "ok") await store.putCachedCommunity(snapshot);
+  return json(snapshot, env);
 }
 
 async function handleOperations(env: Env): Promise<Response> {

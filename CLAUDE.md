@@ -493,6 +493,33 @@ future value cannot change what an existing test means.
   catch a misread), `date_macro=This Fiscal Year`, the `Budget` query, and
   `Active in (true, false)` on the Account query. Verify each on first deploy,
   then check the tab's totals against QuickBooks' own P&L to the cent.
+- **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
+  board member who is curious rather than expert, and for a phone as well as
+  a projector. Six tabs, each in the URL hash so a link or reload keeps it:
+  - **Overview**, the page to show at a meeting: money available now (with
+    account balances), four tiles (net this year, months of operating cash,
+    members, people giving), what the next three months brought last year,
+    and a funding bar for the current phase. No to-do lists and no names.
+  - **Rebuild**: the funding bar, the readiness table, cash by account.
+  - **Operations**: Phase 4.
+  - **Community** (`worker/src/community.ts`, `/api/community`): members,
+    renewals, people giving, giving by campaign, this year against the same
+    days of last year, from one read of every LGL gift. **Counts only; names
+    stay in LGL** while the passphrase is shared.
+  - **Grants**: the funnel, and operating grants outside the rebuild with what
+    is still to arrive on each (provisional, from linked payments).
+  - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
+    how a grant moves through the systems. Its tab shows a count of blocking
+    records, so problems are one click away and never hidden.
+
+  Rules carried over: the funding bar never calls awarded money available (it
+  is a lighter step of the same hue, labelled "awarded, not yet received");
+  the next-three-months figure is a projection labelled with its basis (the
+  same months a year earlier), never added to cash; rebuild grants are shown
+  as $0 expected because they pay only after HPIC spends. The Community read
+  is cached in `TokenStore` for 15 minutes and warmed by the hourly cron,
+  since it is dozens of LGL requests; a walk that stops at its 50-page cap
+  reports nothing rather than an undercount.
 
 ### Build backlog (Claude)
 

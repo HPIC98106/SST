@@ -105,6 +105,8 @@ const NO_LGL_CONFIG = {
   CURRENT_PHASE_TARGET_COST: undefined,
   CURRENT_PHASE_TARGET_SOURCE: undefined,
   CURRENT_PHASE_PRICES_VALID_UNTIL: undefined,
+  LGL_MEMBERSHIP_CAMPAIGN_IDS: undefined,
+  LGL_ANNUAL_FUND_CAMPAIGN_IDS: undefined,
 } as const;
 
 /** Live mode with a key. Individual tests narrow this further. */

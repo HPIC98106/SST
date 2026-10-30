@@ -131,6 +131,12 @@ LGL_GRANT_PAYMENT_CATEGORY_IDS = "6076"
 # just means the panel lists record IDs without links.
 LGL_UI_BASE_URL = "https://hpic.littlegreenlight.com"
 
+# The Community tab: which campaigns hold membership dues (846 "Memberships")
+# and the Annual Fund Drive (872). Verified against /campaigns on 2026-10-30.
+# Unset leaves that line off the tab rather than guessing at it by name.
+LGL_MEMBERSHIP_CAMPAIGN_IDS = "846"
+LGL_ANNUAL_FUND_CAMPAIGN_IDS = "872"
+
 # The construction phase the readiness panel measures against.
 #
 # This is the one figure on the dashboard that no system holds: it arrives from

@@ -208,3 +208,61 @@ export interface OperationsSnapshot {
   connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
   environment: "sandbox" | "production";
 }
+
+// --- Community: members, supporters and giving, from LGL ---
+
+export interface CampaignGiving {
+  campaign: string;
+  thisYear: number;
+  lastYearSamePeriod: number;
+  lastYearTotal: number;
+  gifts: number;
+}
+
+/** What the same three months brought in a year earlier: a projection. */
+export interface ExpectedInflow {
+  key: "annual_fund" | "memberships" | "other_giving";
+  label: string;
+  amount: number;
+}
+
+export interface OperatingAward {
+  id: number;
+  date: string | null;
+  amount: number;
+  received: number;
+  remaining: number;
+  url: string | null;
+}
+
+export interface CommunitySnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  year: number | null;
+  through: string | null;
+  members: {
+    thisYear: number;
+    lastYear: number;
+    renewed: number;
+    newThisYear: number;
+    dueToRenew: number;
+    dueToRenewAmount: number;
+    duesThisYear: number;
+    duesLastYearSamePeriod: number;
+  } | null;
+  supporters: { thisYear: number; lastYear: number; gaveLastYearNotYetThisYear: number } | null;
+  monthly: {
+    months: string[];
+    dues: { thisYear: (number | null)[]; lastYear: number[] };
+    giving: { thisYear: (number | null)[]; lastYear: number[] };
+  } | null;
+  byCampaign: CampaignGiving[];
+  nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
+  /** Provisional: from LGL payment records linked to their award. */
+  operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;
+  giftCount: number;
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "not_configured" | "unavailable" | "fixture";
+}
