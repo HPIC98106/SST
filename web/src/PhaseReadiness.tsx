@@ -59,10 +59,16 @@ export function PhaseReadinessView({
   const phase = grants?.phaseTarget;
   const phaseName = phase?.name ?? "the next phase";
 
-  // Cash restricted to the rebuild. The operating account is deliberately not
-  // counted: it is unrestricted, which means it is what pays for programming.
-  const rebuild = funds?.accounts.find((a) => a.key === "rebuild_fund");
-  const availableCash = rebuild?.status === "ok" ? rebuild.balance : null;
+  // Cash designated for the rebuild, across every rebuild account. Programming
+  // cash is deliberately not counted: it is unrestricted, and moving it to the
+  // rebuild is a board decision this panel must not presume. The subtotal is
+  // null unless every rebuild account read, so a missing account cannot make
+  // the gap look bigger than it is.
+  const rebuild = funds?.subtotals?.find((s) => s.purpose === "rebuild");
+  const availableCash = rebuild?.total ?? null;
+  const rebuildNames = (funds?.accounts ?? [])
+    .filter((a) => a.purpose === "rebuild")
+    .map((a) => a.label);
 
   const reimbursable = grants ? bucket(grants, "reimbursable") : undefined;
   const unknown = grants ? bucket(grants, "unknown") : undefined;
@@ -86,15 +92,15 @@ export function PhaseReadinessView({
             label="Cash available now"
             amount={
               availableCash === null
-                ? rebuild
+                ? rebuildNames.length > 0
                   ? "Unavailable"
                   : "Not configured"
                 : usd.format(availableCash)
             }
             detail={
               availableCash === null
-                ? "The rebuild account could not be read, so no figure here is current."
-                : "The rebuild account only. Operating cash is unrestricted and is what pays for programming, so it is not counted here."
+                ? rebuild?.note ?? "The rebuild accounts could not be read, so no figure here is current."
+                : `The rebuild accounts only: ${rebuildNames.join(", ")}. Programming cash is unrestricted and pays for programming, so it is not counted here.`
             }
             tone="available"
           />
@@ -164,9 +170,9 @@ export function PhaseReadinessView({
       ) : null}
 
       <p className="note">
-        <strong>What this panel needs to become real:</strong> Payment Terms set on the
-        awards in LGL, the estimated cost from Metis, and QuickBooks production keys.
-        Nothing here is waiting on code.
+        <strong>What this panel still lacks:</strong> an authoritative figure for grant
+        money already received. It is computed from LGL payment records until QuickBooks
+        records which grant each deposit belongs to.
       </p>
     </section>
   );

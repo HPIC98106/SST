@@ -13,7 +13,7 @@
 import { AUTH_HEADER, authorize, checkPassphrase } from "./auth";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
-import { getFunds, listAssetAccounts } from "./qbo";
+import { PURPOSE_LABELS, getFunds, listAssetAccounts, parseAccountConfig } from "./qbo";
 import { TokenStore } from "./tokens";
 import type { Env } from "./types";
 
@@ -230,20 +230,15 @@ async function handleAccountList(env: Env): Promise<Response> {
     return html(`<h1>QuickBooks asset accounts</h1><p>${escapeHtml(result.detail)}</p>`);
   }
 
-  const mapped = new Set(
-    [env.QBO_OPERATING_ACCOUNT_ID, env.QBO_REBUILD_FUND_ACCOUNT_ID].filter(Boolean),
-  );
+  const { configs, invalid } = parseAccountConfig(env.QBO_ACCOUNTS);
+  const mapped = new Map(configs.map((c) => [c.id, c.purpose]));
 
   const rows = result.accounts
     .map((a) => {
       const balance = a.balanceWithSubAccounts ?? a.balance;
-      const which =
-        a.id === env.QBO_OPERATING_ACCOUNT_ID
-          ? " ← operating"
-          : a.id === env.QBO_REBUILD_FUND_ACCOUNT_ID
-            ? " ← rebuild fund"
-            : "";
-      const classes = [mapped.has(a.id) ? "mapped" : "", a.active ? "" : "inactive"]
+      const purpose = mapped.get(a.id);
+      const which = purpose ? ` ← ${PURPOSE_LABELS[purpose].toLowerCase()}` : "";
+      const classes = [purpose ? "mapped" : "", a.active ? "" : "inactive"]
         .filter(Boolean)
         .join(" ");
       return (
@@ -257,9 +252,12 @@ async function handleAccountList(env: Env): Promise<Response> {
 
   return html(
     `<h1>QuickBooks asset accounts</h1>` +
-      `<p>Set the mapping from the IDs below. These are Worker secrets, not <code>wrangler.toml</code> vars:</p>` +
-      `<p><code>printf '%s' "&lt;id&gt;" | npx wrangler secret put QBO_OPERATING_ACCOUNT_ID</code><br>` +
-      `<code>printf '%s' "&lt;id&gt;" | npx wrangler secret put QBO_REBUILD_FUND_ACCOUNT_ID</code></p>` +
+      `<p>List every account that holds cash, each tagged <code>rebuild</code> or <code>programming</code>. ` +
+      `It is one Worker secret, not a <code>wrangler.toml</code> var, and an account left off it is left out of every total:</p>` +
+      `<p><code>printf '%s' "rebuild:&lt;id&gt;,rebuild:&lt;id&gt;,programming:&lt;id&gt;" | npx wrangler secret put QBO_ACCOUNTS</code></p>` +
+      (invalid.length > 0
+        ? `<p><strong>Unreadable entries in QBO_ACCOUNTS:</strong> ${invalid.map((i) => escapeHtml(i.reason)).join(" ")}</p>`
+        : "") +
       `<table><tr><th>ID</th><th>Name</th><th>Type</th><th>Sub-type</th><th class="num">Balance</th></tr>${rows}</table>`,
   );
 }

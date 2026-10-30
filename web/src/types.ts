@@ -8,8 +8,13 @@
 
 export type AccountStatus = "ok" | "unavailable" | "not_configured";
 
+export type AccountPurpose = "rebuild" | "programming";
+
 export interface AccountSnapshot {
-  key: "operating" | "rebuild_fund";
+  /** QuickBooks account ID, or the raw config entry if it could not be parsed. */
+  key: string;
+  /** Null only for a config entry that could not be parsed. */
+  purpose: AccountPurpose | null;
   label: string;
   status: AccountStatus;
   balance: number | null;
@@ -17,8 +22,17 @@ export interface AccountSnapshot {
   note?: string;
 }
 
+export interface PurposeSubtotal {
+  purpose: AccountPurpose;
+  label: string;
+  total: number | null;
+  note?: string;
+}
+
 export interface FundsSnapshot {
   accounts: AccountSnapshot[];
+  /** Optional only because a snapshot cached before this field existed may still be served. */
+  subtotals?: PurposeSubtotal[];
   totalCash: number | null;
   totalCashNote?: string;
   retrievedAt: string | null;

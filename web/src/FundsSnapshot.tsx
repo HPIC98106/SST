@@ -1,5 +1,19 @@
 import { formatRetrievedAt, usd } from "./format";
-import type { AccountSnapshot, FundsSnapshot } from "./types";
+import type { AccountSnapshot, FundsSnapshot, PurposeSubtotal } from "./types";
+
+function SubtotalCard({ subtotal }: { subtotal: PurposeSubtotal }) {
+  return (
+    <section className="card card-subtotal">
+      <h2>{subtotal.label} total</h2>
+      {subtotal.total === null ? (
+        <p className="amount unavailable">Not shown</p>
+      ) : (
+        <p className="amount">{usd.format(subtotal.total)}</p>
+      )}
+      {subtotal.note ? <p className="note">{subtotal.note}</p> : null}
+    </section>
+  );
+}
 
 function AccountCard({ account }: { account: AccountSnapshot }) {
   return (
@@ -60,10 +74,32 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
         </p>
       ) : null}
 
+      {/*
+        One group per purpose, every account on its own card. The point is that
+        an imbalance between accounts is visible on the page rather than
+        averaged into a single figure.
+      */}
+      {(snapshot.subtotals ?? []).map((subtotal) => {
+        const accounts = snapshot.accounts.filter((a) => a.purpose === subtotal.purpose);
+        return (
+          <section key={subtotal.purpose} className="account-group">
+            <h3>{subtotal.label}</h3>
+            <div className="cards">
+              {accounts.map((account) => (
+                <AccountCard key={account.key} account={account} />
+              ))}
+              <SubtotalCard subtotal={subtotal} />
+            </div>
+          </section>
+        );
+      })}
+
       <div className="cards">
-        {snapshot.accounts.map((account) => (
-          <AccountCard key={account.key} account={account} />
-        ))}
+        {snapshot.accounts
+          .filter((a) => a.purpose === null || !snapshot.subtotals)
+          .map((account) => (
+            <AccountCard key={account.key} account={account} />
+          ))}
 
         <section className="card card-total">
           <h2>Total cash on hand</h2>

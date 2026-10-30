@@ -3,10 +3,12 @@
 Read `hpic-sst-build-spec-v2.md` for the full specification. `README.md` covers
 setup, credential rotation, and redeploy. This file is the short orientation.
 
-**`KYLE-TODO.md` is the standing list of work only a human can do**: logins,
-DNS, approvals, conversations. Read it at the start of a session and keep it
-current as things get decided or finished. Step-by-step procedures for those
-items live in `docs/runbook-migration.md`.
+**`KYLE-TODO.md` lists only open actions that need Kyle to unblock
+development**: a login, a credential, a decision, a conversation. Read it at
+the start of a session. When an item is done, **delete it**: don't tick it or
+annotate it. Code work goes under "Phase status" below, and lasting facts or
+decisions go in this file, never in KYLE-TODO. Step-by-step procedures live in
+`docs/runbook-migration.md` (local only, not committed).
 
 ## What this is
 
@@ -36,7 +38,8 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Worker | https://hpic-sst.kyhuber-ft.workers.dev |
 | Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
-| QuickBooks | Sandbox company, `QBO_ENV = "sandbox"` |
+| Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
+| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. Cash accounts are not mapped yet (runbook §9 step 6), so every card reads unavailable until `QBO_ACCOUNTS` is set. |
 
 Frontend deploys via GitHub Actions on pushes to `web/**`. The Worker deploys
 only via `npx wrangler deploy`: deliberately manual, since it holds the
@@ -55,7 +58,12 @@ HPIC's QuickBooks and LGL data.
 
 - **Total cash renders only when every configured account reads successfully.**
   A total that silently drops a failed account overstates available cash. This
-  is the specific failure the tool exists to prevent, not a nicety.
+  is the specific failure the tool exists to prevent, not a nicety. The same
+  rule holds per group: cash accounts are a list in `QBO_ACCOUNTS`, each tagged
+  `rebuild` or `programming` (decided 2026-10-29, because HPIC's rebuild money
+  sits in two accounts), and a group's subtotal renders only when all of its
+  accounts read. Readiness uses the rebuild subtotal. An unparseable entry
+  blanks every figure rather than being skipped.
 - **`retrievedAt` is QuickBooks' own `time` field**, never the browser or Worker
   clock. A dashboard always showing today's date is worse than showing none.
 - **Connection state is never reported as `ok` when QuickBooks is unreachable.**
@@ -75,7 +83,8 @@ HPIC's QuickBooks and LGL data.
   turn into a larger remainder. A payment not linked to its award also makes it
   too high, which is why the unlinked-payments exception is blocking.
 - **Reimbursable status is `unknown` whenever the custom field is absent or
-  unparseable**, never a default. Every HPIC record is in that state today.
+  unparseable**, never a default. As of 2026-10-07 all six in-scope awards carry a value (all
+  `Reimbursable`), but that is the state of the data, not of the code.
 - **"No value set" and "a value we cannot read" are reported separately.** Both
   are `unknown` and neither is ever spendable, but they need opposite fixes, and
   telling a volunteer that data entry they already did is "missing" sends them
@@ -215,10 +224,9 @@ capability, and it is what the exceptions panel now surfaces automatically:
   category, so reading the category flat **overcounts** by $3,000.
 - One of those notes says the recoding was done so the record matches the
   QuickBooks entry: the bookkeeping already treats QuickBooks as authoritative.
-- 0 of 10 awards carry any custom field. The "Payment Terms" field now exists
-  (2026-09-09) but nothing is populated yet, so reimbursable status is still
-  unknown for every award and Phase 3's "spendable excludes unreceived
-  reimbursable awards" stays unbuildable until awards are filled in.
+- Payment Terms was populated on the six in-scope awards by 2026-10-07 (all
+  `Reimbursable`), so reimbursable status is no longer unknown for them. It
+  was 0 of 10 when this was written.
 
 If LGL is chosen instead, the prerequisites are: every payment linked to its
 award, 6076 kept free of non-grant income, custom fields defined on Pledge, and
@@ -307,6 +315,9 @@ write the file on a 200.
   native-command pipe appends a carriage return that becomes part of the secret;
   every comparison then fails while looking correct. Use Git Bash:
   `printf '%s' "$VALUE" | npx wrangler secret put NAME`.
+- **A secret cannot be bound to a version that is not the deployed one.**
+  `wrangler secret put` fails with "the latest version of your worker isn't
+  currently deployed"; `npx wrangler deploy` first, then retry.
 - **A name cannot be both a `[vars]` entry and a secret.** Cloudflare rejects it
   with `code: 10053`. Delete the var, `wrangler deploy`, *then* `secret put`.
 - **Intuit development keys only reach sandbox companies; production keys only
@@ -390,28 +401,59 @@ future value cannot change what an existing test means.
 
 ## Phase status
 
-- **Phase 1, funds snapshot: done**, against sandbox data.
+- **Phase 1, funds snapshot: done**, and connected to production on
+  2026-10-29. Accounts are now a list grouped into Rebuild and Programming,
+  each with a subtotal. Balances have not yet been checked against QuickBooks.
 - **Phase 2, LGL grant funnel: live, and all three stages render.** Pledged is
   authoritative; Received and Outstanding are computed from payment records and
   marked `provisional`, pending the QuickBooks reconciliation. The
   data-quality panel names every record breaking a rule. Live figures:
-  $1,471,000 / $545,000 / $926,000, with 9 exception records surfaced.
+  $1,471,000 / $545,000 / $926,000 on 2026-09-09, and $1,471,000 / $583,000 /
+  $888,000 on 2026-10-07 after the $38,000 OAC payment arrived.
   Applied was built and removed on 2026-08-18, once Alex confirmed the tool
   starts at money awarded rather than requested. Still to do: the campaign/fund
   restriction breakdown and the pledge detail list.
-- **Phase 3, phase readiness: not started, and deliberately blocked.** Needs
-  the Dry-in target cost from the GC, *and* both an authoritative Received and
-  the `reimbursable` flag: unknown on all 10 awards today, which the panel
-  now reports as a blocking exception. The LGL field it reads ("Payment Terms")
-  exists as of 2026-09-09; what remains is populating it on the awards. This is
-  the one figure where being wrong costs real money, so it waits for both
-  rather than shipping provisionally.
+- **Phase 3, phase readiness: shipped, resting on provisional Received.** The
+  panel measures cash against the Dry-in target, $1,628,933.86 from the Metis
+  control estimate dated 9/22/26 (no contingency; prices hold until
+  2026-10-22). Awards are never added to cash; the panel shows what is
+  *remaining* on reimbursable awards. Payment Terms is set on all six in-scope
+  awards. What it still lacks is an authoritative Received: that needs the
+  QuickBooks grant dimension (P3 below), and the figure inherits
+  `provisional` until then. Percent-funded is not built: its denominator is
+  unsettled, waiting on Galen. The Metis estimate's prices lapsed 2026-10-22;
+  an updated quote arrived 2026-10-29. Never show Metis line items: the
+  estimate is for the client and project partners only.
 
-  Phase 3 also carries the clearest example of what this tool is *for*:
-  cross LGL's reimbursable designation against QuickBooks' `BillableStatus` to
-  find **spending on a reimbursable grant that was never invoiced**. Neither
-  system can answer that alone, and today nobody would notice. Tracked as P5
-  in `KYLE-TODO.md`.
+### Build backlog (Claude)
+
+- **N4b, restricted / unrestricted breakdown.** No data entry needed. Every
+  grant pledge already carries a fund (checked 2026-09-09: Rebuild Checking 6
+  pledges / $1,471,000, Program Budget 5 / $57,422). **Do not add a
+  restriction custom field**: the spec says restriction comes from campaigns
+  and funds. Add an "award with no fund" exception alongside "award with no
+  campaign", since a fundless award silently understates a bucket. Campaign
+  and fund are collinear today, so the breakdown's value is catching the first
+  award where they disagree. Caveat to state on the panel: a fund records
+  where money was *deposited*, not what the funder *restricted*.
+- **QuickBooks read of what the LGL sync creates.** LGL has synced new
+  payments to QuickBooks since mid-September (including the $38,000 OAC
+  payment). Once production is connected, read what a synced gift became
+  (Deposit or SalesReceipt, with which Customer, Class or account) before the
+  Rachel conversation. Part of the grant dimension may already exist.
+- **P3, Received and Spent from QuickBooks.** Blocked on the bookkeeping
+  existing. One Customer (or Project) per award, tied to LGL by **an explicit
+  map in Worker config keyed by LGL gift id**, never a naming convention: a
+  renamed customer must fail loudly, not detach silently. Completeness rule:
+  deposits and expenses in the rebuild accounts with no grant attribution are
+  an *unattributed pool*, shown with a count and total; the roll-up "total
+  grant cash received" renders only when that pool is empty.
+- **P5, reimbursable spending never invoiced.** Needs P3. Expenses attributed
+  to an award that LGL marks reimbursable, sitting in QuickBooks as
+  `Billable`: spent, eligible, never invoiced. This is money HPIC is owed
+  and hasn't asked for. Neither system can answer it alone. It belongs in the
+  data-quality panel as a named list, because the fix is to send an invoice.
+- **Pledge detail list** (rest of Phase 2).
 
 ## Hosting, and where it is going
 

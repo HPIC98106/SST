@@ -5,8 +5,12 @@ Club. It answers three questions: how much cash do we have, how much grant money
 is applied for and owed to us, and can we afford the next construction phase.
 
 **Phase 1, cash on hand from QuickBooks Online: done.**
-**Phase 2, the Little Green Light grant funnel: a working slice, on fixture
-data.** Phase readiness follows in Phase 3.
+**Phase 2, the Little Green Light grant funnel: live.** Pledged is
+authoritative; Received and Outstanding are provisional until QuickBooks
+carries a grant dimension.
+**Phase 3, phase readiness: shipped** against the Dry-in target, resting on
+that provisional Received. Cash is still a QuickBooks sandbox company while
+Intuit reviews the production-keys application.
 
 This tool never writes to QuickBooks, Little Green Light, or any bank. Every
 call it makes is a GET.
@@ -119,14 +123,18 @@ secret, and every comparison then fails with no visible clue: the passphrase
 looks correct and returns 401 anyway. Type the value at the prompt, or pipe from
 Git Bash with `printf '%s' "$VALUE" | npx wrangler secret put NAME`.
 
-Three more values are secrets rather than `[vars]`, because this repository is
+Two more values are secrets rather than `[vars]`, because this repository is
 public and they name HPIC's actual QuickBooks company and accounts:
 
 ```bash
 printf '%s' "<value>" | npx wrangler secret put QBO_REALM_ID
-printf '%s' "<value>" | npx wrangler secret put QBO_OPERATING_ACCOUNT_ID
-printf '%s' "<value>" | npx wrangler secret put QBO_REBUILD_FUND_ACCOUNT_ID
+printf '%s' "rebuild:<id>,rebuild:<id>,programming:<id>" | npx wrangler secret put QBO_ACCOUNTS
 ```
+
+`QBO_ACCOUNTS` lists every account that counts as cash, each tagged with what
+the money is for. The IDs come from `/admin/accounts?k=<passphrase>`. An
+account left off the list is left out of every total, and an entry that cannot
+be parsed blanks every total rather than being skipped.
 
 **A name cannot be both a `[vars]` entry and a secret.** Cloudflare rejects the
 binding collision with `code: 10053`. To convert a var into a secret, delete it
@@ -340,7 +348,7 @@ as unavailable rather than as a total that is quietly low.
 ## Not yet built
 
 The rest of Phase 2: the restricted/unrestricted breakdown by campaign and
-fund, and the detail list of individual applications and awards, and Phase 3
-(phase readiness against the Dry-in target cost). See
+fund, and the detail list of individual awards; an authoritative Received from
+QuickBooks; and percent-funded. See
 `hpic-sst-build-spec-v2.md` for the full specification and the go-live
 checklist.

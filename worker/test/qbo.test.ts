@@ -53,8 +53,7 @@ function liveEnv(): Env {
     QBO_MODE: "live",
     QBO_ENV: "sandbox",
     QBO_REALM_ID: REALM_ID,
-    QBO_OPERATING_ACCOUNT_ID: "35",
-    QBO_REBUILD_FUND_ACCOUNT_ID: "36",
+    QBO_ACCOUNTS: "programming:35,rebuild:36",
   } as Env;
 }
 
@@ -98,8 +97,8 @@ describe("QuickBooks error handling", () => {
     const snapshot = await getFunds(liveEnv(), store);
 
     const byKey = Object.fromEntries(snapshot.accounts.map((a) => [a.key, a]));
-    expect(byKey.operating.status).toBe("ok");
-    expect(byKey.rebuild_fund.status).not.toBe("ok");
+    expect(byKey["35"].status).toBe("ok");
+    expect(byKey["36"].status).not.toBe("ok");
     // A total quietly missing an account overstates cash.
     expect(snapshot.totalCash).toBeNull();
 
@@ -119,8 +118,8 @@ describe("QuickBooks error handling", () => {
 
     const snapshot = await getFunds(liveEnv(), store);
 
-    expect(snapshot.accounts.find((a) => a.key === "operating")?.status).toBe("ok");
-    expect(snapshot.accounts.find((a) => a.key === "rebuild_fund")?.status).not.toBe("ok");
+    expect(snapshot.accounts.find((a) => a.key === "35")?.status).toBe("ok");
+    expect(snapshot.accounts.find((a) => a.key === "36")?.status).not.toBe("ok");
     expect(snapshot.totalCash).toBeNull();
     expect(JSON.parse(logged[0])).toMatchObject({ status: 400, intuitTid: "tid-400" });
   });
@@ -159,5 +158,81 @@ describe("QuickBooks error handling", () => {
 
     expect(snapshot.totalCash).toBe(1000);
     expect(logged).toEqual([]);
+  });
+});
+
+describe("accounts grouped by purpose", () => {
+  function groupedEnv(accounts: string): Env {
+    return { ...liveEnv(), QBO_ACCOUNTS: accounts } as Env;
+  }
+
+  function subtotal(snapshot: Awaited<ReturnType<typeof getFunds>>, purpose: string) {
+    return snapshot.subtotals.find((s) => s.purpose === purpose);
+  }
+
+  it("sums every rebuild account into the rebuild subtotal, and keeps programming separate", async () => {
+    const store = await connectedStore("two-rebuild-accounts");
+    const balances: Record<string, number> = { "106": 27598.52, "185": 180278.55, "101": 74160.72 };
+    respond = (url) => {
+      const id = /\/account\/(\d+)/.exec(url)![1];
+      return accountJson(id, balances[id]);
+    };
+
+    const snapshot = await getFunds(groupedEnv("rebuild:106,rebuild:185,programming:101"), store);
+
+    expect(subtotal(snapshot, "rebuild")?.total).toBeCloseTo(207877.07, 2);
+    expect(subtotal(snapshot, "programming")?.total).toBeCloseTo(74160.72, 2);
+    expect(snapshot.totalCash).toBeCloseTo(282037.79, 2);
+    // Labels come from QuickBooks, not from config.
+    expect(snapshot.accounts.find((a) => a.key === "185")?.label).toBe("Account 185");
+  });
+
+  it("suppresses only the subtotal whose account failed", async () => {
+    const store = await connectedStore("one-rebuild-account-fails");
+    respond = (url) => (url.includes("/account/185") ? fault(500, "tid-rebuild") : accountJson("x", 100));
+
+    const snapshot = await getFunds(groupedEnv("rebuild:106,rebuild:185,programming:101"), store);
+
+    // A rebuild figure missing one account would make a phase look further
+    // off than it is; the readiness panel is built on this number.
+    expect(subtotal(snapshot, "rebuild")?.total).toBeNull();
+    expect(subtotal(snapshot, "programming")?.total).toBe(100);
+    expect(snapshot.totalCash).toBeNull();
+  });
+
+  it("refuses every figure when a config entry cannot be parsed", async () => {
+    const store = await connectedStore("typo-in-config");
+    respond = (url) => accountJson("x", 100);
+
+    // "1o6" is the typo this guards against: skipped silently, the rebuild
+    // subtotal would render from 185 alone and look complete.
+    const snapshot = await getFunds(groupedEnv("rebuild:1o6,rebuild:185,programming:101"), store);
+
+    expect(snapshot.subtotals.every((s) => s.total === null)).toBe(true);
+    expect(snapshot.totalCash).toBeNull();
+    const bad = snapshot.accounts.find((a) => a.purpose === null);
+    expect(bad?.status).toBe("unavailable");
+    expect(bad?.note).toContain("rebuild:1o6");
+  });
+
+  it("rejects an account listed twice rather than counting it twice", async () => {
+    const store = await connectedStore("duplicate-in-config");
+    respond = (url) => accountJson("x", 100);
+
+    const snapshot = await getFunds(groupedEnv("rebuild:185,programming:185"), store);
+
+    expect(snapshot.totalCash).toBeNull();
+    expect(snapshot.accounts.find((a) => a.purpose === null)?.note).toContain("more than once");
+  });
+
+  it("reports not configured, not zero, when no accounts are listed", async () => {
+    const store = await connectedStore("no-accounts");
+    respond = (url) => accountJson("x", 100);
+
+    const snapshot = await getFunds(groupedEnv(""), store);
+
+    expect(snapshot.accounts).toEqual([]);
+    expect(snapshot.totalCash).toBeNull();
+    expect(subtotal(snapshot, "rebuild")?.total).toBeNull();
   });
 });
