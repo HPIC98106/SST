@@ -26,15 +26,10 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   Unblocks: the readiness panel, which still measures against the 9/22/26
   estimate whose prices lapsed on 2026-10-22.
 
-- **Finish the QuickBooks production cutover.** The grouped account list is
-  deployed and `QBO_ACCOUNTS` is set. What's left:
-  1. Delete the two retired secrets. Nothing reads them, but Claude can't
-     delete secrets itself. In Git Bash from `worker/`:
-     `npx wrangler secret delete QBO_OPERATING_ACCOUNT_ID`, then the same for
-     `QBO_REBUILD_FUND_ACCOUNT_ID`.
-  2. Ask Claude to run §9's verification: each balance against QuickBooks'
-     Balance Sheet to the cent, and a `rotated` token refresh in
-     `/admin/status` within a day. Needs `.dev.vars` synced first (below).
+- **Verify the QuickBooks production cutover.** Everything is deployed and
+  mapped. Ask Claude to run runbook §9's verification: each balance against
+  QuickBooks' Balance Sheet to the cent, and a `rotated` token refresh in
+  `/admin/status`. Needs `.dev.vars` synced first (below).
 
   Unblocks: real cash figures, and every QuickBooks item below.
 
