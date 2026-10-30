@@ -131,6 +131,8 @@ export interface PhaseTarget {
   name: string | null;
   targetCost: number | null;
   source: string | null;
+  /** YYYY-MM-DD. Optional so a page newer than its Worker still renders. */
+  pricesValidUntil?: string | null;
 }
 
 export interface GrantSnapshot {

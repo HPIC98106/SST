@@ -18,13 +18,20 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
-- **Set the Dry-in target from the updated Metis quote.** Give Claude the date,
-  scope, whether contingency is included, and how long prices hold. Claude
-  updates `CURRENT_PHASE_TARGET_SOURCE` and deploys. The grand total stays out
-  of the repo: set it yourself from `worker/` in Git Bash:
-  `printf '%s' "<grand total>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
-  Unblocks: the readiness panel, which still measures against the 9/22/26
-  estimate whose prices lapsed on 2026-10-22.
+- **Ask Metis to re-price the Dry-in estimate.** The spreadsheet received
+  2026-10-29 is byte-identical to the 9/22/26 estimate already on the
+  dashboard, whose prices held 30 days, to 2026-10-22. When the new one
+  arrives, give it to Claude, who updates the source and price date; then set
+  the grand total yourself from Git Bash:
+  `cd ~/Desktop/hpic/SST/worker && printf '%s' "<grand total>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  While asking, mention that their workbook taxes the 6% contingency at 10.35%
+  on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
+  readiness target; the panel says the old one has lapsed.
+
+- **Deploy the Worker once the Metis PR merges.** It carries the new
+  `CURRENT_PHASE_PRICES_VALID_UNTIL` var, which only ships with a deploy:
+  `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
+  One deploy covers this and the Operations PR if both are merged first.
 
 - **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
   token refresh.** The last open check on the production cutover; Intuit
@@ -55,6 +62,12 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   project cost. Unblocks: percent-funded.
 
 ## Decisions
+
+- **Whether the Dry-in target includes Metis's 6% contractor contingency.**
+  Today it is the grand total before contingency. Metis prices a 6% contingency
+  (plus tax on it) on top. Including it is the more prudent figure to plan and
+  raise money against; excluding it shows the bare estimate. Either way it is
+  one secret change, `CURRENT_PHASE_TARGET_COST`, plus a word in the source.
 
 - **Gifts 906707 and 909414: one $7,500 payment, or two?** Same amount and
   date, one coded Rebuild and one Programs; 909414 was added retroactively
