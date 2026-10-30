@@ -149,7 +149,7 @@ LGL_UI_BASE_URL = "https://hpic.littlegreenlight.com"
 # from, and `npx wrangler deploy`. Unset, the panel reports the target as
 # awaited rather than substituting a placeholder.
 CURRENT_PHASE_NAME = "Dry-in"
-CURRENT_PHASE_TARGET_SOURCE = "Metis control estimate, Framing and Envelope, dated 9/22/26, from drawings dated 6/27/23: grand total including 10.55% tax and Metis's 10% overhead and fee, cost-plus, before Metis's 6% contractor contingency"
+CURRENT_PHASE_TARGET_SOURCE = "Metis control estimate, Framing and Envelope, dated 9/22/26, from drawings dated 6/27/23: grand total including Metis's 6% contractor contingency, with 10.55% tax throughout and Metis's 10% overhead and fee, cost-plus"
 
 # The last day the estimate's prices hold, YYYY-MM-DD. Metis prices for 30
 # days from the estimate date. The panel prints it, and once it has passed says

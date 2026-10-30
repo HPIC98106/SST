@@ -435,8 +435,9 @@ future value cannot change what an existing test means.
   restriction breakdown and the pledge detail list.
 - **Phase 3, phase readiness: shipped, resting on provisional Received.** The
   panel measures cash against the Dry-in target: the grand total of the Metis
-  control estimate dated 9/22/26, before Metis's 6% contractor contingency,
-  held only in the `CURRENT_PHASE_TARGET_COST` secret (never write the figure
+  control estimate dated 9/22/26, including Metis's 6% contractor contingency
+  (the prudent figure, decided 2026-10-30), held only in the
+  `CURRENT_PHASE_TARGET_COST` secret (never write the figure
   into this public repo). Its prices held to 2026-10-22, set in
   `CURRENT_PHASE_PRICES_VALID_UNTIL`, and the panel says they have lapsed.
   Awards are never added to cash; the panel shows what is
@@ -447,7 +448,8 @@ future value cannot change what an existing test means.
   unsettled, waiting on Galen. The spreadsheet received 2026-10-29 is
   byte-identical to the 9/22/26 estimate, so no re-price has arrived yet. Metis's
   own workbook taxes the contingency at 10.35% on its summary sheet and 10.55% on
-  its budget sheet; the target excludes contingency, so neither affects it. Never show Metis line items: the
+  its budget sheet. The target uses the budget sheet's figure, which taxes the
+  contingency at 10.55% like every other line, and is the higher of the two. Never show Metis line items: the
   estimate is for the client and project partners only.
 
 ### Build backlog (Claude)

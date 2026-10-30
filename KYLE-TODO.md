@@ -22,15 +22,20 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   2026-10-29 is byte-identical to the 9/22/26 estimate already on the
   dashboard, whose prices held 30 days, to 2026-10-22. When the new one
   arrives, give it to Claude, who updates the source and price date; then set
-  the grand total yourself from Git Bash:
-  `cd ~/Desktop/hpic/SST/worker && printf '%s' "<grand total>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  the grand total including contingency yourself from Git Bash:
+  `cd ~/Desktop/hpic/SST/worker && printf '%s' "<grand total incl. contingency>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
   While asking, mention that their workbook taxes the 6% contingency at 10.35%
   on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
   readiness target; the panel says the old one has lapsed.
 
-- **Deploy the Worker once the Metis PR merges.** It carries the new
-  `CURRENT_PHASE_PRICES_VALID_UNTIL` var, which only ships with a deploy:
+- **Deploy the Worker once the Metis PR merges, then switch the target to
+  include contingency.** The deploy ships the new source text and price date:
   `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
+  Straight after, set the grand total including Metis's 6% contingency (the
+  figure is in the 2026-10-30 Claude session, and on the budget sheet as
+  "Grand Total Including Contingency"):
+  `printf '%s' "<that figure>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  Back to back, so the panel never pairs the new wording with the old total.
   One deploy covers this and the Operations PR if both are merged first.
 
 - **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
@@ -62,12 +67,6 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   project cost. Unblocks: percent-funded.
 
 ## Decisions
-
-- **Whether the Dry-in target includes Metis's 6% contractor contingency.**
-  Today it is the grand total before contingency. Metis prices a 6% contingency
-  (plus tax on it) on top. Including it is the more prudent figure to plan and
-  raise money against; excluding it shows the bare estimate. Either way it is
-  one secret change, `CURRENT_PHASE_TARGET_COST`, plus a word in the source.
 
 - **Gifts 906707 and 909414: one $7,500 payment, or two?** Same amount and
   date, one coded Rebuild and one Programs; 909414 was added retroactively
