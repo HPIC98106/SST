@@ -39,7 +39,7 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
 | Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
-| QuickBooks | Sandbox company, `QBO_ENV = "sandbox"`. Intuit approved production access 2026-10-29; cutover (runbook §9) not yet done. |
+| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. Cash accounts are not mapped yet (runbook §9 step 6), so every card reads unavailable until `QBO_ACCOUNTS` is set. |
 
 Frontend deploys via GitHub Actions on pushes to `web/**`. The Worker deploys
 only via `npx wrangler deploy`: deliberately manual, since it holds the
@@ -401,7 +401,9 @@ future value cannot change what an existing test means.
 
 ## Phase status
 
-- **Phase 1, funds snapshot: done**, against sandbox data.
+- **Phase 1, funds snapshot: done**, and connected to production on
+  2026-10-29. Accounts are now a list grouped into Rebuild and Programming,
+  each with a subtotal. Balances have not yet been checked against QuickBooks.
 - **Phase 2, LGL grant funnel: live, and all three stages render.** Pledged is
   authoritative; Received and Outstanding are computed from payment records and
   marked `provisional`, pending the QuickBooks reconciliation. The

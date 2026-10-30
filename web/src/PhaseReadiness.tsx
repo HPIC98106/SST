@@ -170,9 +170,9 @@ export function PhaseReadinessView({
       ) : null}
 
       <p className="note">
-        <strong>What this panel needs to become real:</strong> Payment Terms set on the
-        awards in LGL, the estimated cost from Metis, and QuickBooks production keys.
-        Nothing here is waiting on code.
+        <strong>What this panel still lacks:</strong> an authoritative figure for grant
+        money already received. It is computed from LGL payment records until QuickBooks
+        records which grant each deposit belongs to.
       </p>
     </section>
   );

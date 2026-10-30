@@ -26,19 +26,18 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   Unblocks: the readiness panel, which still measures against the 9/22/26
   estimate whose prices lapsed on 2026-10-22.
 
-- **Cut over QuickBooks to production.** Runbook §9, in one sitting. Before you
-  start:
-  - Generate production keys in the Intuit developer portal.
-  - Register `https://hpic-sst.kyhuber-ft.workers.dev/oauth/callback` under the
-    **Production** tab. Development-tab URIs don't carry over.
-  - Make sure someone with admin access to HPIC's real QuickBooks company can
-    consent (step 5).
-  - Know which accounts make up "cash" (step 6). If there are more than the
-    operating and rebuild-fund accounts, decide that before mapping.
+- **Finish the QuickBooks production cutover.** Steps 1–5 of runbook §9 are
+  done: production keys, company ID, `QBO_ENV`, and consent. Step 6 is left,
+  and Claude's deploys are blocked, so run these in Git Bash from `worker/`:
+  1. `npx wrangler deploy`, which ships the grouped account list.
+  2. Set `QBO_ACCOUNTS` and delete `QBO_OPERATING_ACCOUNT_ID` and
+     `QBO_REBUILD_FUND_ACCOUNT_ID`. The exact command, with HPIC's account IDs,
+     is in runbook §9 step 6. The IDs stay out of this public repo.
+  3. Ask Claude to run §9's verification: each balance against QuickBooks'
+     Balance Sheet to the cent, and a `rotated` token refresh in
+     `/admin/status` within a day.
 
-  You enter the credentials (step 2), consent, and pick the accounts. Claude
-  handles the `QBO_ENV` change, deploy, and verification. Unblocks: real cash
-  figures, and every QuickBooks item below.
+  Unblocks: real cash figures, and every QuickBooks item below.
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can
@@ -89,7 +88,14 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   board loses its dashboard. Runbook §7.
 
 - **Sync `worker/.dev.vars` with the passphrase rotated on 2026-09-06.** Local
-  dev only. Runbook §7 has a command that verifies before it writes.
+  dev only, but until it's done Claude can't check the live Worker's status
+  pages itself (confirmed mismatched 2026-10-29). Runbook §7 has a command that
+  verifies before it writes.
+
+- **Delete the stray Worker secret whose name looks like a passphrase.** It
+  shows in `npx wrangler secret list`, does nothing, and if it's a real
+  password it shouldn't be sitting in a name field:
+  `npx wrangler secret delete <name>`.
 
 ## Waiting on others
 
