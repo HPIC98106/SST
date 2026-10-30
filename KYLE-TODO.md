@@ -26,10 +26,9 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   Unblocks: the readiness panel, which still measures against the 9/22/26
   estimate whose prices lapsed on 2026-10-22.
 
-- **Check the dashboard's six balances against QuickBooks' Balance Sheet, to
-  the cent.** All six read on 2026-10-30; Claude has the figures but can't log
-  in to QuickBooks to compare. Then ask Claude to look for a `rotated` token
-  refresh in `/admin/status`, due by about 2026-10-31.
+- **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
+  token refresh.** The last open check on the production cutover; Intuit
+  rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
   Unblocks: real cash figures, and every QuickBooks item below.
 
