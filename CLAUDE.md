@@ -39,7 +39,7 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
 | Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
-| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. Cash accounts are not mapped yet (runbook §9 step 6), so every card reads unavailable until `QBO_ACCOUNTS` is set. |
+| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. `QBO_ACCOUNTS` set the same day (runbook §9 step 6 has the mapping); balances not yet checked against QuickBooks. |
 
 Frontend deploys via GitHub Actions on pushes to `web/**`. The Worker deploys
 only via `npx wrangler deploy`: deliberately manual, since it holds the
