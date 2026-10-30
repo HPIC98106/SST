@@ -131,6 +131,8 @@ export interface PhaseTarget {
   name: string | null;
   targetCost: number | null;
   source: string | null;
+  /** YYYY-MM-DD. Optional so a page newer than its Worker still renders. */
+  pricesValidUntil?: string | null;
 }
 
 export interface GrantSnapshot {
@@ -149,4 +151,118 @@ export interface GrantSnapshot {
   source: string;
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
   completenessNote: string;
+}
+
+// --- Operations: the year's income and spending against budget ---
+
+export type PlSide = "income" | "spending";
+
+/**
+ * Every figure covers the same completed months. `projectedYearEnd` is a
+ * projection (actual to date plus budget for the months left), never a record,
+ * and is null whenever the budget was not entered by month.
+ */
+export interface OperationsLine {
+  label: string;
+  actual: number;
+  budgetToDate: number | null;
+  budgetFullYear: number | null;
+  projectedYearEnd: number | null;
+  lastYearToDate: number | null;
+}
+
+export interface OperationsGroup extends OperationsLine {
+  side: PlSide;
+  accounts: OperationsLine[];
+}
+
+export interface MonthlySide {
+  actual: (number | null)[];
+  budget: number[] | null;
+  lastYear: number[] | null;
+}
+
+export interface OperationsSnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  ungrouped: { id: string; name: string; side: PlSide }[];
+  invalidConfig: string[];
+  period: {
+    fiscalYearStart: string;
+    fiscalYearEnd: string;
+    through: string;
+    completedMonths: number;
+    showingPriorYear: boolean;
+  } | null;
+  basis: "Accrual";
+  groups: OperationsGroup[];
+  totals: { income: OperationsLine; spending: OperationsLine; net: OperationsLine } | null;
+  excluded: { income: number; spending: number; accounts: string[] } | null;
+  budget: { status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable"; name: string | null; note?: string };
+  lastYear: { status: "ok" | "unavailable"; note?: string };
+  monthly: { months: string[]; income: MonthlySide; spending: MonthlySide } | null;
+  trailingTwelveMonthSpending: number | null;
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "needs_reauth" | "not_connected" | "fixture";
+  environment: "sandbox" | "production";
+}
+
+// --- Community: members, supporters and giving, from LGL ---
+
+export interface CampaignGiving {
+  campaign: string;
+  thisYear: number;
+  lastYearSamePeriod: number;
+  lastYearTotal: number;
+  gifts: number;
+}
+
+/** What the same three months brought in a year earlier: a projection. */
+export interface ExpectedInflow {
+  key: "annual_fund" | "memberships" | "other_giving";
+  label: string;
+  amount: number;
+}
+
+export interface OperatingAward {
+  id: number;
+  date: string | null;
+  amount: number;
+  received: number;
+  remaining: number;
+  url: string | null;
+}
+
+export interface CommunitySnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  year: number | null;
+  through: string | null;
+  members: {
+    thisYear: number;
+    lastYear: number;
+    renewed: number;
+    newThisYear: number;
+    dueToRenew: number;
+    dueToRenewAmount: number;
+    duesThisYear: number;
+    duesLastYearSamePeriod: number;
+  } | null;
+  supporters: { thisYear: number; lastYear: number; gaveLastYearNotYetThisYear: number } | null;
+  monthly: {
+    months: string[];
+    dues: { thisYear: (number | null)[]; lastYear: number[] };
+    giving: { thisYear: (number | null)[]; lastYear: number[] };
+  } | null;
+  byCampaign: CampaignGiving[];
+  nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
+  /** Provisional: from LGL payment records linked to their award. */
+  operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;
+  giftCount: number;
+  retrievedAt: string | null;
+  cached: boolean;
+  source: string;
+  connection: "ok" | "not_configured" | "unavailable" | "fixture";
 }

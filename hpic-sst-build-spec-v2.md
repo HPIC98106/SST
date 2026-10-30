@@ -8,12 +8,16 @@ place to see the organization's financial position. Answering "can we afford to
 start the next construction phase" today means manually cross-referencing
 QuickBooks, a hand-maintained grant spreadsheet, and a contractor estimate.
 
-This tool is a read-only, internal, board-facing dashboard answering three
+This tool is a read-only, internal, board-facing dashboard answering four
 questions:
 
 1. How much cash do we actually have right now?
 2. How much grant money has been awarded to us, and how much is still owed?
 3. Can we afford to start the next construction phase?
+4. How is the year going: income and spending so far against budget, and
+   where is it heading? (Added 2026-10-30. Accrual basis, from QuickBooks'
+   profit and loss and a budget entered by month in QuickBooks; see CLAUDE.md,
+   "Operations".)
 
 It does not move money, does not write to any system, and is not public.
 
@@ -288,7 +292,9 @@ of these are in flight; this is the canonical list.
 
 - Any write-back to QBO or LGL
 - Per-person authentication for the prototype
-- Historical trend charts: point-in-time snapshot only
+- Historical trend charts beyond the current and previous fiscal year. The
+  Operations tab charts this year against last, month by month; QuickBooks'
+  reports produce those months on request, so this still needs no database.
 - Prospect and pipeline tracking for grants not yet applied for. These have no
   LGL representation until application, and the research notes behind them are
   qualitative. Out of scope here.
@@ -296,4 +302,6 @@ of these are in flight; this is the canonical list.
   restricted grant. This is a real and painful problem for the development
   committee, but it depends on QBO class or fund tracking being configured
   correctly first. Likely future direction; do not build now.
-- Mobile-responsive layout
+- Per-person access tiers (names of members and donors on the dashboard).
+  Mobile layout moved into scope on 2026-10-30; board members read this on a
+  phone.

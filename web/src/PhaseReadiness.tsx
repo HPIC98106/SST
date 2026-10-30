@@ -24,6 +24,29 @@
 import { usd } from "./format";
 import type { FundsSnapshot, GrantSnapshot, ReimbursableStatus } from "./types";
 
+/** "October 22, 2026" from "2026-10-22", read as a calendar date in any zone. */
+function calendarDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Today in Seattle, as YYYY-MM-DD.
+ *
+ * The one place this dashboard reads the clock, and deliberately: whether a
+ * contractor's prices still hold is a question about today, not about when any
+ * data was retrieved. Seattle's date, so the notice flips at local midnight
+ * for the board rather than at UTC midnight.
+ */
+function todayInSeattle(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
+
 /** One line of the readiness arithmetic. */
 function Row({
   label,
@@ -75,6 +98,9 @@ export function PhaseReadinessView({
 
   const targetCost = phase?.targetCost ?? null;
   const gap = availableCash !== null && targetCost !== null ? targetCost - availableCash : null;
+
+  const validUntil = phase?.pricesValidUntil ?? null;
+  const lapsed = validUntil !== null && todayInSeattle() > validUntil;
 
   return (
     <section className="panel panel-readiness">
@@ -141,7 +167,11 @@ export function PhaseReadinessView({
             detail={
               targetCost === null
                 ? "Awaiting the figure from Metis. No placeholder is shown, because a made-up target would make every number above look like an answer."
-                : `Entered by hand. Source: ${phase?.source ?? "unstated"}.`
+                : `Entered by hand. Source: ${phase?.source ?? "unstated"}.${
+                    validUntil
+                      ? ` Prices ${lapsed ? "held" : "hold"} until ${calendarDate(validUntil)}${lapsed ? ", and have lapsed" : ""}.`
+                      : ""
+                  }`
             }
             tone="target"
           />
@@ -160,6 +190,19 @@ export function PhaseReadinessView({
           </tr>
         </tfoot>
       </table>
+
+      {/*
+        Shown on the panel rather than only in the row's small print: the
+        target is the denominator of everything above, and a reader planning
+        around it needs to know it may move before they read the detail.
+      */}
+      {lapsed && validUntil ? (
+        <p className="banner banner-warn">
+          <strong>This estimate's prices lapsed on {calendarDate(validUntil)}.</strong> It is still the most
+          recent figure from Metis, but re-pricing could move it. Ask Metis for an updated estimate before
+          relying on the gap above.
+        </p>
+      ) : null}
 
       {funds?.environment === "sandbox" ? (
         <p className="banner banner-error">

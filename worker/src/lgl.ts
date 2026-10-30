@@ -206,7 +206,7 @@ interface LglPage<T> {
  * A completed read. `complete` is false when paging stopped at MAX_PAGES,
  * which makes any sum over `items` an undercount.
  */
-type ReadResult<T> =
+export type ReadResult<T> =
   | { ok: true; items: T[]; complete: boolean; date: string | null }
   | { ok: false; detail: string };
 
@@ -296,16 +296,17 @@ async function getRecord<T>(env: Env, path: string): Promise<T | null> {
   }
 }
 
-/** Page through a list endpoint until it runs out or MAX_PAGES is reached. */
-async function getAll<T>(
+/** Page through a list endpoint until it runs out or `maxPages` is reached. */
+export async function getAll<T>(
   env: Env,
   path: string,
   extraParams: Array<[string, string]> = [],
+  maxPages = MAX_PAGES,
 ): Promise<ReadResult<T>> {
   const items: T[] = [];
   let date: string | null = null;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page < maxPages; page++) {
     const params = new URLSearchParams({
       limit: String(PAGE_SIZE),
       offset: String(page * PAGE_SIZE),
@@ -328,14 +329,14 @@ async function getAll<T>(
   return { ok: true, items, complete: false, date };
 }
 
-function isFixtureMode(env: Env): boolean {
+export function isFixtureMode(env: Env): boolean {
   // Defaults to fixture: an unset mode must never start calling a live API.
   return (env.LGL_MODE ?? "fixture") !== "live";
 }
 
 // --- Configuration ---
 
-function parseIds(raw: string | undefined): number[] {
+export function parseIds(raw: string | undefined): number[] {
   if (!raw) return [];
   return raw
     .split(",")
@@ -1087,10 +1088,18 @@ function readPhaseTarget(env: Env): PhaseTarget {
   const parsed = raw ? Number(raw.replace(/[$,]/g, "")) : Number.NaN;
   const targetCost = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 
+  // A date that does not survive a round trip (2026-02-30) is dropped rather
+  // than rolled forward into a different day.
+  const until = env.CURRENT_PHASE_PRICES_VALID_UNTIL?.trim() ?? "";
+  const validDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(until) &&
+    new Date(`${until}T00:00:00Z`).toISOString().slice(0, 10) === until;
+
   return {
     name: env.CURRENT_PHASE_NAME?.trim() || null,
     targetCost,
     source: targetCost === null ? null : env.CURRENT_PHASE_TARGET_SOURCE?.trim() || "entered by hand",
+    pricesValidUntil: targetCost !== null && validDate ? until : null,
   };
 }
 

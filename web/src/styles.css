@@ -1,17 +1,47 @@
 /*
- * Desktop layout. This is shown on a laptop at board meetings; mobile is
- * explicitly not a priority, so there are no breakpoints to maintain.
+ * HPIC board dashboard.
+ *
+ * Built to be read two ways: on a laptop projected at a board meeting, and on
+ * a phone the evening before. Layout is a single column under 720px, and every
+ * wide table scrolls inside its own frame rather than the page.
+ *
+ * Colour carries meaning sparingly. The accent is for navigation and the one
+ * headline figure; status colours are reserved for status; data colours live
+ * with the charts. Numbers use tabular figures throughout so columns align.
  */
 
 :root {
-  --ink: #1c2321;
-  --muted: #5f6b68;
-  --line: #dfe3e1;
-  --warn: #8a6100;
-  --warn-bg: #fff6e0;
+  /* HPIC brand, from hpic1919.org: navy, gold, orange, cream. */
+  --navy: #092857;
+  --navy-2: #1f4e96;
+  --navy-tint: #e6ebf3;
+  --gold: #f0d36a;
+  --gold-soft: #fbe79d;
+  --orange: #d68100;
+  /* The brand orange is 3:1 on white: fine for marks, too light for small
+     text. This darker step is what orange text uses (5.4:1). */
+  --orange-ink: #9a5c00;
+
+  --bg: #f7f4ec;
+  --surface: #ffffff;
+  --ink: #13213a;
+  --muted: #5d6470;
+  --faint: #8d93a0;
+  --line: #e7e2d6;
+  --accent: var(--navy);
+  --accent-ink: #ffffff;
+  --accent-soft: var(--navy-tint);
+  --warn: var(--orange-ink);
+  --warn-bg: #fdf1d8;
   --error: #8f2419;
   --error-bg: #fdecea;
-  --unavailable: #7a8481;
+  --good: #2c5c3f;
+  --good-bg: #e6f2ea;
+  --unavailable: #7d8390;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(9, 40, 87, 0.06), 0 6px 18px rgba(9, 40, 87, 0.05);
+  --font-text: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
 * {
@@ -20,32 +50,39 @@
 
 body {
   margin: 0;
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.6 var(--font-text);
   color: var(--ink);
-  background: #f7f8f8;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
+  font-weight: 650;
   margin: 0 0 0.25rem;
-}
-
-h1.page-title {
-  font-size: 1.75rem;
+  letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 650;
   color: var(--muted);
   margin: 0 0 0.5rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+}
+
+a {
+  color: var(--accent);
 }
 
 .muted {
   color: var(--muted);
   margin: 0;
+}
+
+.small {
+  font-size: 0.82rem;
 }
 
 /* --- Passphrase gate --- */
@@ -54,9 +91,10 @@ h2 {
   max-width: 24rem;
   margin: 6rem auto;
   padding: 2rem;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .gate form {
@@ -76,60 +114,75 @@ button {
   font: inherit;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 6px;
 }
 
 button {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
   cursor: pointer;
 }
 
-button.link {
+button.link,
+button.link-button {
   background: none;
   border: none;
   padding: 0;
-  color: var(--muted);
+  color: var(--accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.88rem;
 }
 
-/* --- Dashboard --- */
-
-.dashboard {
-  max-width: 60rem;
-  margin: 3rem auto;
-  padding: 0 1.5rem;
+button.link-button:disabled {
+  color: var(--faint);
+  cursor: default;
 }
+
+/* --- Panels and cards --- */
 
 /* Each data source gets its own panel, so one failing source degrades in
    place rather than taking the page with it. */
 .panel {
-  margin: 0 0 3rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.4rem 1.5rem;
+  margin: 0;
+}
+
+.panel > h1 + .muted {
+  margin-bottom: 0.5rem;
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin: 1.25rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.9rem;
+  margin: 1.1rem 0;
 }
 
 .card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1.25rem;
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+}
+
+.card-pad {
+  padding: 1.25rem 1.4rem;
+  box-shadow: var(--shadow);
 }
 
 .card-total {
   border-color: var(--ink);
 }
 
-/* Accounts are grouped by what the money is for, each group with its subtotal. */
 .account-group h3 {
-  font-size: 1.05rem;
-  margin: 1.5rem 0 0;
+  font-size: 1rem;
+  margin: 1.4rem 0 0;
 }
 
 .account-group .cards {
@@ -137,22 +190,25 @@ button.link {
 }
 
 .card-subtotal {
-  background: #f1f3f2;
+  background: #f3f5f4;
 }
 
 .amount {
-  font-size: 1.9rem;
+  font-size: 1.7rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .amount.unavailable {
   color: var(--unavailable);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
+  font-weight: 500;
 }
 
 .note {
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   color: var(--muted);
   margin: 0.6rem 0 0;
 }
@@ -404,28 +460,6 @@ code {
 
 /* --- View tabs, provenance, and the lifecycle page --- */
 
-.views {
-  display: flex;
-  gap: 0.4rem;
-  margin-top: 0.9rem;
-}
-
-.view-tab {
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 0.35rem 0.7rem;
-  color: var(--muted);
-}
-
-.view-tab.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-}
 
 /*
  * Where a figure came from, under the figure. Small and quiet: it must be
@@ -629,4 +663,1102 @@ code {
 .pr-gap td.num {
   font-weight: 700;
   border-top: 2px solid currentColor;
+}
+
+/* --- Operations: the year's income and spending against budget --- */
+
+/*
+ * A projection is the one figure here that is not a record. It reads at full
+ * size, but carries a flag and a dashed edge so it is never mistaken for an
+ * actual: the same reasoning as a provisional figure, with its own look,
+ * because "not yet happened" and "not yet reconciled" are different caveats.
+ */
+.status-projection {
+  border-left: 3px dashed var(--muted);
+}
+
+.projection-flag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: #eef0ef;
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  margin: 0.4rem 0 0;
+  display: inline-block;
+}
+
+.ops-table {
+  font-size: 0.92rem;
+}
+
+/* Headers wrap so the line labels, which carry the meaning, stay on one line. */
+.ops-table thead th.num {
+  max-width: 7.5rem;
+  vertical-align: bottom;
+}
+
+.ops-table tbody th[scope="row"],
+.ops-table tfoot th[scope="row"],
+.ops-table td.num {
+  white-space: nowrap;
+}
+
+.ops-table td.ops-projection {
+  font-style: italic;
+}
+
+.ops-side th {
+  padding-top: 1.1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.ops-group th[scope="row"] {
+  font-weight: 500;
+}
+
+/* The global button style is a filled dark button; a row toggle is not that. */
+button.ops-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+button.ops-toggle span {
+  display: inline-block;
+  width: 1rem;
+  color: var(--muted);
+}
+
+.ops-toggle-spacer {
+  padding-left: 1rem;
+}
+
+.ops-account th[scope="row"] {
+  padding-left: 2.2rem;
+  font-weight: 400;
+}
+
+.ops-account th,
+.ops-account td {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ops-total th,
+.ops-total td {
+  font-weight: 700;
+  border-bottom: 2px solid var(--line);
+}
+
+.ops-net th,
+.ops-net td {
+  font-weight: 700;
+  border-top: 2px solid var(--ink);
+  border-bottom: none;
+}
+
+.ops-list {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.ops-monthly {
+  margin-top: 1rem;
+}
+
+.ops-monthly summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* --- Cumulative charts --- */
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+}
+
+.chart {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem 1rem 0.6rem;
+}
+
+.chart-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.chart-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0.35rem 0 0.4rem;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chart-frame {
+  position: relative;
+}
+
+.chart-frame svg[role="img"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-frame svg[role="img"]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Series identity. Validated as a pair (blue, orange) for colour-vision
+   deficiency; the budget is a neutral dashed reference line. Text never wears
+   these colours. */
+.series-actual {
+  --c: #2a78d6;
+}
+
+.series-budget {
+  --c: #52514e;
+}
+
+.series-last {
+  --c: #eb6834;
+}
+
+.chart line[class*="series-"],
+.chart path[class*="series-"] {
+  stroke: var(--c);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart circle.chart-dot {
+  fill: var(--c);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.chart-grid {
+  stroke: #eceeed;
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-end {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0.25rem;
+  pointer-events: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  display: grid;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+
+.chart-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* --- App shell --- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--accent);
+  color: var(--accent-ink);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-inner,
+.tabs-inner,
+.content,
+.site-footer p {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.topbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.5rem;
+}
+
+.org {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.org-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+  opacity: 0.92;
+  text-align: right;
+}
+
+.topbar .link-button {
+  color: var(--accent-ink);
+}
+
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs-inner {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tab {
+  color: var(--accent-ink);
+  opacity: 0.78;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.6rem 0.75rem 0.7rem;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tab:hover {
+  opacity: 1;
+}
+
+.tab.is-active {
+  opacity: 1;
+  border-bottom-color: var(--accent-ink);
+}
+
+.tab-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--accent-ink);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  line-height: 1.35;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  padding-top: 1.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.site-footer p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+.section-title {
+  margin: 1.6rem 0 0.2rem;
+}
+
+/* --- Hero: money available now --- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.6rem 1.75rem;
+}
+
+.hero-label {
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.hero-value {
+  font-size: 3.1rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0.35rem 0 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-value.unavailable {
+  font-size: 1.6rem;
+  color: var(--unavailable);
+}
+
+.hero-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+}
+
+.hero-split div {
+  display: grid;
+}
+
+.hero-split span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.hero-split strong {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 1rem 0 0;
+}
+
+.hero-accounts {
+  border-left: 1px solid var(--line);
+  padding-left: 2rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.account-list h3 {
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 0.3rem;
+}
+
+.account-list ul,
+.line-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.account-list li,
+.line-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.38rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.account-list li:last-child,
+.line-list li:last-child {
+  border-bottom: none;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.num.unavailable,
+.unavailable {
+  color: var(--unavailable);
+}
+
+.line-list small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.line-list-secondary {
+  margin-top: 0.8rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--line);
+}
+
+.big-figure {
+  font-size: 2rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0.2rem 0 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Headline tiles --- */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.kpis-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kpi {
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  text-align: left;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.1rem;
+  font: inherit;
+}
+
+button.kpi-link {
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+button.kpi-link:hover,
+button.kpi-link:focus-visible {
+  border-color: var(--accent);
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.kpi-value {
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-value.unavailable {
+  font-size: 1.15rem;
+  font-weight: 500;
+  padding: 0.35rem 0;
+}
+
+.kpi-detail {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.kpi-projection {
+  border-left: 3px dashed var(--muted);
+}
+
+.tag {
+  justify-self: start;
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: #eef1f0;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+.tag-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.warn-text {
+  color: var(--warn);
+}
+
+/* --- Rebuild funding bar --- */
+
+.funding-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+}
+
+.funding-bar {
+  display: flex;
+  height: 18px;
+  background: #e6ebe9;
+  border-radius: 999px;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.funding-bar span {
+  display: block;
+  height: 100%;
+}
+
+/* One hue, two steps: in the bank, and awarded but not in hand. */
+.funding-cash,
+.swatch-cash {
+  background: #2a78d6;
+}
+
+.funding-awarded,
+.swatch-awarded {
+  background: #86b6ef;
+}
+
+.swatch-raise {
+  background: #e6ebe9;
+  border: 1px solid #cfd6d3;
+}
+
+.funding-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.funding-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 0.6rem;
+  align-items: start;
+  font-size: 0.9rem;
+}
+
+.funding-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.funding-label small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-top: 0.3rem;
+}
+
+/* --- Tables that may be wider than a phone --- */
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --- Loading --- */
+
+.skeleton {
+  background: linear-gradient(90deg, #e8ecea 25%, #f1f4f3 37%, #e8ecea 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius);
+}
+
+.skeleton-hero {
+  height: 13rem;
+}
+
+.skeleton-kpi {
+  height: 6.5rem;
+}
+
+.skeleton-card {
+  height: 16rem;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* --- Phones and narrow windows --- */
+
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-2,
+  .charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar-inner,
+  .tabs-inner,
+  .content,
+  .site-footer p {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .topbar-meta span {
+    display: none;
+  }
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.25rem;
+  }
+  .hero-accounts {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+  }
+  .hero-value {
+    font-size: 2.4rem;
+  }
+  .panel {
+    padding: 1.1rem 1rem;
+  }
+  .kpi-value {
+    font-size: 1.4rem;
+  }
+  /* The readiness table's explanations stack under each row on a phone. */
+  .pr-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+  .pr-table .pr-detail {
+    grid-column: 1 / -1;
+    padding-left: 0.6rem;
+    max-width: none;
+  }
+}
+
+/* ==========================================================================
+   HPIC brand layer: navy and gold from hpic1919.org, Playfair Display for
+   headings, Montserrat for everything else. Written last so it overrides the
+   neutral defaults above without touching what each panel means.
+   ========================================================================== */
+
+h1,
+.panel > h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.6rem;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+}
+
+h2,
+.section-title,
+.kpi-label,
+.hero-label,
+.account-list h3 {
+  font-family: var(--font-text);
+}
+
+h2,
+.section-title {
+  color: var(--orange-ink);
+}
+
+a,
+button.link,
+button.link-button {
+  color: var(--navy);
+}
+
+/* Primary buttons wear the site's orange. Navy text, not white: white on
+   this orange is 3:1, navy is 4.9:1. */
+button[type="submit"] {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: var(--navy);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* --- Header: navy band, logo, gold serif name, gold wave beneath --- */
+
+.topbar {
+  background: var(--navy);
+}
+
+.topbar::after {
+  content: "";
+  display: block;
+  height: 16px;
+  margin-bottom: -16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 32' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1200V6C860 30 340 30 0 6Z' fill='%23092857'/%3E%3Cpath d='M0 6C340 30 860 30 1200 6' fill='none' stroke='%23f0d36a' stroke-width='3'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.brand-logo {
+  height: 48px;
+  width: auto;
+  display: block;
+}
+
+.org {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--gold);
+  letter-spacing: 0;
+}
+
+.org-sub {
+  color: #c9d3e3;
+  opacity: 1;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.topbar-meta {
+  color: #c9d3e3;
+}
+
+.topbar .link-button {
+  color: var(--gold);
+}
+
+.tab {
+  color: #ffffff;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.tab.is-active {
+  border-bottom-color: var(--gold);
+  color: var(--gold);
+}
+
+.tab-count {
+  background: var(--orange);
+  color: var(--navy);
+}
+
+.content {
+  padding-top: 2rem;
+}
+
+/* --- Hero: the site's navy panel, gold label, serif figure --- */
+
+.hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(240, 211, 106, 0.16) 0%, rgba(240, 211, 106, 0) 45%),
+    linear-gradient(135deg, #092857 0%, #10336b 100%);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 10px 30px rgba(9, 40, 87, 0.22);
+}
+
+.hero-label {
+  color: var(--gold);
+}
+
+.hero-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 3.6rem;
+  color: #ffffff;
+}
+
+.hero-value.unavailable {
+  color: #c9d3e3;
+}
+
+.hero-split span,
+.hero-note {
+  color: #c9d3e3;
+}
+
+.hero-split strong {
+  color: #ffffff;
+}
+
+.hero-accounts {
+  border-left-color: rgba(255, 255, 255, 0.16);
+}
+
+.hero .account-list h3 {
+  color: var(--gold);
+}
+
+.hero .account-list li {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  color: #e8edf5;
+}
+
+.hero .num.unavailable {
+  color: #c9d3e3;
+}
+
+/* --- Tiles and cards --- */
+
+.kpi {
+  border-top: 3px solid var(--gold);
+}
+
+button.kpi-link:hover,
+button.kpi-link:focus-visible {
+  border-color: var(--navy);
+  border-top-color: var(--orange);
+}
+
+.kpi-value {
+  color: var(--navy);
+}
+
+.big-figure {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.tag {
+  color: var(--navy);
+  background: var(--navy-tint);
+}
+
+.tag-warn {
+  color: var(--orange-ink);
+  background: var(--warn-bg);
+}
+
+.card-total {
+  border-color: var(--navy);
+}
+
+.card-subtotal {
+  background: var(--navy-tint);
+}
+
+.amount {
+  color: var(--navy);
+}
+
+/* --- Funding bar: navy in the bank, gold awarded, a navy tint still to raise --- */
+
+.funding-bar {
+  background: var(--navy-tint);
+}
+
+.funding-cash,
+.swatch-cash {
+  background: var(--navy-2);
+}
+
+.funding-awarded,
+.swatch-awarded {
+  background: var(--gold);
+}
+
+.swatch-raise {
+  background: var(--navy-tint);
+  border-color: #c5cfdf;
+}
+
+/* --- Charts: brand blue for this year, brand orange for last --- */
+
+.series-actual {
+  --c: #1f4e96;
+}
+
+.series-last {
+  --c: #d68100;
+}
+
+.series-budget {
+  --c: #5d6470;
+}
+
+.chart {
+  border-radius: var(--radius);
+}
+
+/* --- Footer: a navy bookend to the header --- */
+
+.site-footer {
+  background: var(--navy);
+  border-top: none;
+}
+
+.site-footer p {
+  color: #c9d3e3;
+}
+
+.site-footer a {
+  color: var(--gold);
+}
+
+/* --- Passphrase screen: the first thing a board member sees --- */
+
+.gate-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(58, 108, 186, 0.55) 0%, rgba(58, 108, 186, 0) 65%),
+    var(--navy);
+}
+
+.gate {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  border: none;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.gate-logo {
+  height: 99px;
+  width: auto;
+  margin: 0 auto 0.8rem;
+  display: block;
+}
+
+.gate form {
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  .brand-logo {
+    height: 38px;
+  }
+  .org {
+    font-size: 1.05rem;
+  }
+  .hero-value {
+    font-size: 2.6rem;
+  }
+}
+
+/* Playfair defaults to old-style numerals, which dip below the line; money
+   reads better with lining figures of even height. */
+.hero-value,
+.big-figure {
+  font-variant-numeric: lining-nums tabular-nums;
 }

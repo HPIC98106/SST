@@ -38,6 +38,7 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Worker | https://hpic-sst.kyhuber-ft.workers.dev |
 | Dashboard | https://hpic98106.github.io/SST/ (path is case-sensitive) |
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
+| P&L grouping tool | `/admin/pl-accounts?k=<passphrase>` (income and expense account IDs, each account's group, and the budgets QuickBooks holds) |
 | Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
 | QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. `QBO_ACCOUNTS` set the same day (runbook §9 step 6 has the mapping). All six balances matched the Balance Sheet to the cent on 2026-10-30. |
 
@@ -110,6 +111,37 @@ HPIC's QuickBooks and LGL data.
   the gaps become arguable from HPIC's own records.
 - **Zero exceptions must mean "nothing is wrong", never "nothing was read".**
   `findExceptions` runs only when both reads succeeded.
+
+### Operations (income and spending against budget)
+
+`worker/src/operations.ts`. Decided 2026-10-30: accrual basis, no variance
+flagging threshold, groupings agreed by Kyle and set in `QBO_PL_GROUPS`.
+
+- **Every column covers the completed months only.** An October 30 read
+  reports through September 30. A month in progress is never compared with a
+  full month's budget.
+- **Budget to date comes from a budget entered by month, or not at all.**
+  Never divide a yearly budget by twelve: HPIC's money is seasonal (First
+  Fridays run May to October) and lumpy (insurance lands in one month), so an
+  even split misreads exactly the months the board asks about. A budget
+  entered any other way shows its full-year figure only. Two active budgets
+  for the same year are ambiguous and are not chosen between.
+- **Operating figures render only when every account with activity is
+  grouped or excluded.** An ungrouped account might be rebuild money; counted
+  as day-to-day income it overstates the year. This is the "total cash renders
+  only when every account reads" rule, for the profit and loss. Listing a
+  parent groups its sub-accounts, so only a new top-level account trips it.
+- **`exclude` keeps rebuild money out, visibly.** What was excluded, and how
+  much, is printed under the table.
+- **QuickBooks' own section totals are checked, month by month, in cents.**
+  A mismatch means the report layout is not what the parser expects, and the
+  tab goes unavailable rather than showing a misread.
+- **A projection is its own kind of figure**, neither `ok` nor `provisional`:
+  actual to date plus budget for the months left. Labelled on the card and the
+  column, never added to cash or to any funded figure.
+- **Dates come from QuickBooks.** The fiscal year from the report's period,
+  "today" from its `Header.Time`. In a fiscal year's first month, nothing has
+  completed, so the previous year is shown in full.
 
 ## Little Green Light: what the API actually exposes
 
@@ -434,16 +466,60 @@ future value cannot change what an existing test means.
   starts at money awarded rather than requested. Still to do: the campaign/fund
   restriction breakdown and the pledge detail list.
 - **Phase 3, phase readiness: shipped, resting on provisional Received.** The
-  panel measures cash against the Dry-in target, $1,628,933.86 from the Metis
-  control estimate dated 9/22/26 (no contingency; prices hold until
-  2026-10-22). Awards are never added to cash; the panel shows what is
+  panel measures cash against the Dry-in target: the grand total of the Metis
+  control estimate dated 9/22/26, including Metis's 6% contractor contingency
+  (the prudent figure, decided 2026-10-30), held only in the
+  `CURRENT_PHASE_TARGET_COST` secret (never write the figure
+  into this public repo). Its prices held to 2026-10-22, set in
+  `CURRENT_PHASE_PRICES_VALID_UNTIL`, and the panel says they have lapsed.
+  Awards are never added to cash; the panel shows what is
   *remaining* on reimbursable awards. Payment Terms is set on all six in-scope
   awards. What it still lacks is an authoritative Received: that needs the
   QuickBooks grant dimension (P3 below), and the figure inherits
   `provisional` until then. Percent-funded is not built: its denominator is
-  unsettled, waiting on Galen. The Metis estimate's prices lapsed 2026-10-22;
-  an updated quote arrived 2026-10-29. Never show Metis line items: the
+  unsettled, waiting on Galen. The spreadsheet received 2026-10-29 is
+  byte-identical to the 9/22/26 estimate, so no re-price has arrived yet. Metis's
+  own workbook taxes the contingency at 10.35% on its summary sheet and 10.55% on
+  its budget sheet. The target uses the budget sheet's figure, which taxes the
+  contingency at 10.55% like every other line, and is the higher of the two. Never show Metis line items: the
   estimate is for the client and project partners only.
+- **Phase 4, operations: built 2026-10-30, not yet read live.** An Operations
+  tab (seven-ish board lines, each expandable to its accounts, cumulative
+  charts against budget and last year, a month-by-month table) and a "This
+  year so far" panel on the Overview (net so far against budget, projected
+  year-end, months of operating cash). Tested against fixtures shaped from
+  Intuit's documented layouts only. **Four things are unverified against live
+  QuickBooks:** the ProfitAndLoss JSON layout (the section-total check will
+  catch a misread), `date_macro=This Fiscal Year`, the `Budget` query, and
+  `Active in (true, false)` on the Account query. Verify each on first deploy,
+  then check the tab's totals against QuickBooks' own P&L to the cent.
+- **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
+  board member who is curious rather than expert, and for a phone as well as
+  a projector. Six tabs, each in the URL hash so a link or reload keeps it:
+  - **Overview**, the page to show at a meeting: money available now (with
+    account balances), four tiles (net this year, months of operating cash,
+    members, people giving), what the next three months brought last year,
+    and a funding bar for the current phase. No to-do lists and no names.
+  - **Rebuild**: the funding bar, the readiness table, cash by account.
+  - **Operations**: Phase 4.
+  - **Community** (`worker/src/community.ts`, `/api/community`): members,
+    renewals, people giving, giving by campaign, this year against the same
+    days of last year, from one read of every LGL gift. **Counts only; names
+    stay in LGL** while the passphrase is shared.
+  - **Grants**: the funnel, and operating grants outside the rebuild with what
+    is still to arrive on each (provisional, from linked payments).
+  - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
+    how a grant moves through the systems. Its tab shows a count of blocking
+    records, so problems are one click away and never hidden.
+
+  Rules carried over: the funding bar never calls awarded money available (it
+  is a lighter step of the same hue, labelled "awarded, not yet received");
+  the next-three-months figure is a projection labelled with its basis (the
+  same months a year earlier), never added to cash; rebuild grants are shown
+  as $0 expected because they pay only after HPIC spends. The Community read
+  is cached in `TokenStore` for 15 minutes and warmed by the hourly cron,
+  since it is dozens of LGL requests; a walk that stops at its 50-page cap
+  reports nothing rather than an undercount.
 
 ### Build backlog (Claude)
 

@@ -47,6 +47,7 @@ export interface QboAccount {
   CurrentBalanceWithSubAccounts?: number;
   Active?: boolean;
   SubAccount?: boolean;
+  ParentRef?: { value: string };
   MetaData?: { LastUpdatedTime?: string };
 }
 
@@ -152,6 +153,57 @@ async function errorBody(response: Response): Promise<string> {
     return (await response.text()).slice(0, 300);
   } catch {
     return "";
+  }
+}
+
+export type QboGetResult<T> =
+  | { ok: true; body: T }
+  | { ok: false; kind: "unauthorized" | "error"; detail: string };
+
+/**
+ * GET one Accounting API path, e.g. `reports/ProfitAndLoss?...` or `query?...`.
+ *
+ * The only shape of call this module makes. Failures are logged the same way
+ * as account reads, and `minorversion` is appended here so no caller can
+ * forget it.
+ */
+export async function qboGet<T>(
+  env: Env,
+  accessToken: string,
+  pathAndQuery: string,
+  operation: string,
+): Promise<QboGetResult<T>> {
+  const separator = pathAndQuery.includes("?") ? "&" : "?";
+  const url =
+    `${baseUrl(env)}/v3/company/${env.QBO_REALM_ID}/${pathAndQuery}` +
+    `${separator}minorversion=${MINOR_VERSION}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+    });
+  } catch (error) {
+    logQboFailure(operation, { detail: `Could not reach QuickBooks: ${String(error)}` });
+    return { ok: false, kind: "error", detail: `Could not reach QuickBooks: ${String(error)}` };
+  }
+
+  const tid = response.headers.get("intuit_tid") ?? "none";
+  if (!response.ok) {
+    logQboFailure(operation, { status: response.status, intuitTid: tid, detail: await errorBody(response) });
+    return {
+      ok: false,
+      kind: response.status === 401 ? "unauthorized" : "error",
+      detail: `QuickBooks returned ${response.status} (intuit_tid: ${tid})`,
+    };
+  }
+
+  try {
+    return { ok: true, body: (await response.json()) as T };
+  } catch {
+    logQboFailure(operation, { status: response.status, intuitTid: tid, detail: "Response was not JSON" });
+    return { ok: false, kind: "error", detail: `QuickBooks returned an unreadable response (intuit_tid: ${tid})` };
   }
 }
 

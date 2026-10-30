@@ -6,13 +6,16 @@
  * financial data; everything it shows comes from here, and only after the
  * shared passphrase checks out. Someone who finds the Pages URL sees nothing.
  *
- * Two endpoints of substance: GET /api/funds (cash, from QuickBooks) and
- * GET /api/grants (the grant funnel, from Little Green Light).
+ * Three endpoints of substance: GET /api/funds (cash, from QuickBooks),
+ * GET /api/operations (the year's income and spending against budget, also
+ * QuickBooks) and GET /api/grants (the grant funnel, from Little Green Light).
  */
 
 import { AUTH_HEADER, authorize, checkPassphrase } from "./auth";
+import { getCommunity } from "./community";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
+import { getOperations, parseGroupConfig, readSetup, resolveGroup } from "./operations";
 import { PURPOSE_LABELS, getFunds, listAssetAccounts, parseAccountConfig } from "./qbo";
 import { TokenStore } from "./tokens";
 import type { Env } from "./types";
@@ -99,6 +102,22 @@ export default {
         return handleFunds(env);
       }
 
+      case "/api/operations": {
+        if (!authorize(request, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return handleOperations(env);
+      }
+
+      // Members, supporters and giving, from every gift in LGL. Counts only:
+      // no names leave the Worker, because the passphrase is shared.
+      case "/api/community": {
+        if (!authorize(request, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return handleCommunity(env);
+      }
+
       // Phase 2. Behind the same passphrase, and read-only like everything
       // else. No snapshot cache yet: grant records change on a human timescale
       // and the read is cheap, so caching would add a staleness question with
@@ -119,6 +138,16 @@ export default {
           return json({ error: "Not authorized" }, env, 401);
         }
         return handleAccountList(env);
+      }
+
+      // Setup tool, like /admin/accounts: lists income and expense accounts
+      // so they can be grouped onto the Operations tab's lines.
+      case "/admin/pl-accounts": {
+        const supplied = url.searchParams.get("k") ?? request.headers.get(AUTH_HEADER);
+        if (!checkPassphrase(supplied, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return handlePlAccountList(env);
       }
 
       // Diagnostic view: what the token machinery has actually been doing.
@@ -263,6 +292,96 @@ async function handleAccountList(env: Env): Promise<Response> {
 }
 
 /**
+ * Lists income and expense accounts with the group each one lands in, so
+ * `QBO_PL_GROUPS` can be written and checked. The IDs, like asset account IDs,
+ * appear nowhere in the QuickBooks UI.
+ */
+async function handlePlAccountList(env: Env): Promise<Response> {
+  const result = await readSetup(env, tokenStore(env));
+
+  const html = (body: string) =>
+    new Response(
+      `<!doctype html><meta charset="utf-8"><title>QuickBooks income and expense accounts</title>` +
+        `<style>body{font:15px/1.5 system-ui,sans-serif;max-width:64rem;margin:3rem auto;padding:0 1rem}` +
+        `table{border-collapse:collapse;width:100%;margin:1rem 0 2rem}th,td{text-align:left;padding:.35rem .6rem;border-bottom:1px solid #ddd}` +
+        `th{font-size:.8rem;text-transform:uppercase;color:#666}code{background:#f1f1f1;padding:.1em .35em;border-radius:3px}` +
+        `.grouped{background:#eef7ee}.excluded{background:#f4f1ea}.ungrouped{background:#fdecea}.inactive{color:#999}` +
+        `.inherited{color:#666}</style>${body}`,
+      { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
+    );
+
+  if (!result.ok) {
+    return html(`<h1>QuickBooks income and expense accounts</h1><p>${escapeHtml(result.detail)}</p>`);
+  }
+
+  const config = parseGroupConfig(env.QBO_PL_GROUPS);
+  const explicit = new Map<string, string>();
+  for (const g of config.groups) for (const id of g.ids) explicit.set(id, g.label);
+  for (const id of config.excluded) explicit.set(id, "exclude");
+  const parents = new Map(result.accounts.map((a) => [a.Id, a.ParentRef?.value]));
+
+  const rows = result.accounts
+    .filter((a) => a.Classification === "Revenue" || a.Classification === "Expense")
+    .sort((a, b) =>
+      (a.Classification ?? "").localeCompare(b.Classification ?? "") * -1 ||
+      (a.FullyQualifiedName ?? a.Name).localeCompare(b.FullyQualifiedName ?? b.Name),
+    )
+    .map((a) => {
+      const group = resolveGroup(a.Id, parents, explicit);
+      const inherited = group !== null && !explicit.has(a.Id);
+      const cls = [
+        group === null ? "ungrouped" : group === "exclude" ? "excluded" : "grouped",
+        a.Active === false ? "inactive" : "",
+      ].join(" ");
+      const label =
+        group === null
+          ? "not grouped"
+          : group === "exclude"
+            ? "kept out of operating figures"
+            : escapeHtml(group);
+      const depth = (a.FullyQualifiedName ?? a.Name).split(":").length - 1;
+      return (
+        `<tr class="${cls}"><td><code>${escapeHtml(a.Id)}</code></td>` +
+        `<td style="padding-left:${0.6 + depth * 1.4}rem">${escapeHtml(a.Name)}${a.Active === false ? " (inactive)" : ""}</td>` +
+        `<td>${a.Classification === "Revenue" ? "Income" : "Spending"}</td>` +
+        `<td${inherited ? ' class="inherited"' : ""}>${label}${inherited ? " (from its parent)" : ""}</td></tr>`
+      );
+    })
+    .join("");
+
+  const budgets =
+    result.budgets === null
+      ? `<p>The budgets could not be read: ${escapeHtml(result.budgetNote ?? "")}</p>`
+      : result.budgets.length === 0
+        ? "<p>No budgets in QuickBooks yet.</p>"
+        : `<table><tr><th>Budget</th><th>Period</th><th>Entered</th><th>Active</th></tr>${result.budgets
+            .map(
+              (b) =>
+                `<tr><td>${escapeHtml(b.Name ?? b.Id ?? "")}</td><td>${escapeHtml(b.StartDate ?? "?")} to ${escapeHtml(b.EndDate ?? "?")}</td>` +
+                `<td>${escapeHtml(b.BudgetEntryType ?? "not stated")}</td><td>${b.Active === false ? "no" : "yes"}</td></tr>`,
+            )
+            .join("")}</table>`;
+
+  return html(
+    `<h1>QuickBooks income and expense accounts</h1>` +
+      `<p>Each account lands on one board line on the Operations tab. List groups in display order, separated by ` +
+      `<code>;</code>, each a label and the account IDs it takes. A parent account brings its sub-accounts with it ` +
+      `unless one is listed elsewhere. A label can hold income and spending accounts both. ` +
+      `<code>exclude</code> keeps accounts out of operating figures altogether, for rebuild money. ` +
+      `Every account with activity has to land somewhere, or the Operations figures stay blank and name it.</p>` +
+      `<p><code>printf '%s' "Memberships=&lt;id&gt;;Events and programs=&lt;id&gt;,&lt;id&gt;;exclude=&lt;id&gt;" | npx wrangler secret put QBO_PL_GROUPS</code></p>` +
+      (config.invalid.length > 0
+        ? `<p><strong>Unreadable entries in QBO_PL_GROUPS:</strong> ${config.invalid.map(escapeHtml).join(" ")}</p>`
+        : "") +
+      `<table><tr><th>ID</th><th>Account</th><th>Side</th><th>Group</th></tr>${rows}</table>` +
+      `<h2>Budgets</h2>` +
+      `<p>The Operations tab uses the one active profit and loss budget that starts on the fiscal year's first day. ` +
+      `It must be entered by month for budget-to-date and the projection to show.</p>` +
+      budgets,
+  );
+}
+
+/**
  * Fetch a fresh snapshot on a schedule. Any token refresh happens as a side
  * effect of asking for an access token, which is the point.
  */
@@ -276,6 +395,54 @@ async function keepAlive(env: Env): Promise<void> {
     await store.putCachedSnapshot(snapshot);
   }
   await store.recordScheduledRun(snapshot.connection);
+
+  // After the run is recorded, so a failure here cannot hide whether the
+  // connection itself is healthy.
+  try {
+    const operations = await getOperations(env, store);
+    if (operations.connection === "ok" && operations.status === "ok") {
+      await store.putCachedOperations(operations, env.QBO_PL_GROUPS ?? "");
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ event: "operations_warm_failed", detail: String(error) }));
+  }
+
+  if (env.LGL_MODE === "live") {
+    try {
+      const community = await getCommunity(env);
+      if (community.status === "ok") await store.putCachedCommunity(community);
+    } catch (error) {
+      console.error(JSON.stringify({ event: "community_warm_failed", detail: String(error) }));
+    }
+  }
+}
+
+async function handleCommunity(env: Env): Promise<Response> {
+  const store = tokenStore(env);
+  if (env.LGL_MODE === "live") {
+    const cached = await store.getCachedCommunity(CACHE_TTL_MS);
+    if (cached) return json({ ...cached.snapshot, cached: true }, env);
+  }
+  const snapshot = await getCommunity(env);
+  if (snapshot.status === "ok" && snapshot.connection === "ok") await store.putCachedCommunity(snapshot);
+  return json(snapshot, env);
+}
+
+async function handleOperations(env: Env): Promise<Response> {
+  const store = tokenStore(env);
+  const configKey = env.QBO_PL_GROUPS ?? "";
+
+  const cached = await store.getCachedOperations(CACHE_TTL_MS, configKey);
+  if (cached) {
+    return json({ ...cached.snapshot, cached: true }, env);
+  }
+
+  const snapshot = await getOperations(env, store);
+  // Only a complete read is cached, for the same reason as the cash snapshot.
+  if (snapshot.connection === "ok" && snapshot.status === "ok") {
+    await store.putCachedOperations(snapshot, configKey);
+  }
+  return json(snapshot, env);
 }
 
 async function handleFunds(env: Env): Promise<Response> {

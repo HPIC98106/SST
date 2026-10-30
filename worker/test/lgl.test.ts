@@ -104,6 +104,9 @@ const NO_LGL_CONFIG = {
   CURRENT_PHASE_NAME: undefined,
   CURRENT_PHASE_TARGET_COST: undefined,
   CURRENT_PHASE_TARGET_SOURCE: undefined,
+  CURRENT_PHASE_PRICES_VALID_UNTIL: undefined,
+  LGL_MEMBERSHIP_CAMPAIGN_IDS: undefined,
+  LGL_ANNUAL_FUND_CAMPAIGN_IDS: undefined,
 } as const;
 
 /** Live mode with a key. Individual tests narrow this further. */
@@ -431,7 +434,23 @@ describe("reimbursable status", () => {
       name: "Dry-in",
       targetCost: 1_850_000,
       source: "Metis bid, 2026-09-15",
+      pricesValidUntil: null,
     });
+  });
+
+  it("carries how long the estimate's prices hold, and drops a date it cannot read", async () => {
+    const target = async (until: string | undefined, cost: string | undefined = "1850000") =>
+      (await getGrants(grantEnv({ CURRENT_PHASE_TARGET_COST: cost, CURRENT_PHASE_PRICES_VALID_UNTIL: until })))
+        .phaseTarget.pricesValidUntil;
+
+    expect(await target("2026-10-22")).toBe("2026-10-22");
+    expect(await target(" 2026-10-22 ")).toBe("2026-10-22");
+    // Never rolled into a different day, never guessed from a looser format.
+    for (const bad of ["2026-02-30", "10/22/2026", "2026-10", "soon", ""]) {
+      expect(await target(bad)).toBeNull();
+    }
+    // A price date with no target qualifies nothing.
+    expect(await target("2026-10-22", "")).toBeNull();
   });
 
   it("reads HPIC's three Payment Terms options, matching on the field name", async () => {

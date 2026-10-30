@@ -36,3 +36,43 @@ export function formatRetrievedAt(value: string | null): string {
 export function recordCountLabel(count: number): string {
   return `${count.toLocaleString("en-US")} ${count === 1 ? "record" : "records"} in LGL`;
 }
+
+/**
+ * "September 30, 2026" from "2026-09-30". Read as a calendar date, not an
+ * instant: parsed in the browser's zone it would show the day before for
+ * anyone west of UTC.
+ */
+export function formatDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/** "Sep" from "2026-09". */
+export function monthAbbrev(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "short" });
+}
+
+/** Axis ticks: $0, $5K, $1.2M. */
+export function compactUsd(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(n);
+}
+
+/** Whole dollars, for projections and community figures where cents are noise. */
+export const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+/** "+74" / "−12" / "no change", for a count against last year. */
+export function signed(n: number): string {
+  if (n === 0) return "no change";
+  return `${n > 0 ? "+" : "−"}${Math.abs(n).toLocaleString("en-US")}`;
+}
