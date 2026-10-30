@@ -123,14 +123,18 @@ secret, and every comparison then fails with no visible clue: the passphrase
 looks correct and returns 401 anyway. Type the value at the prompt, or pipe from
 Git Bash with `printf '%s' "$VALUE" | npx wrangler secret put NAME`.
 
-Three more values are secrets rather than `[vars]`, because this repository is
+Two more values are secrets rather than `[vars]`, because this repository is
 public and they name HPIC's actual QuickBooks company and accounts:
 
 ```bash
 printf '%s' "<value>" | npx wrangler secret put QBO_REALM_ID
-printf '%s' "<value>" | npx wrangler secret put QBO_OPERATING_ACCOUNT_ID
-printf '%s' "<value>" | npx wrangler secret put QBO_REBUILD_FUND_ACCOUNT_ID
+printf '%s' "rebuild:<id>,rebuild:<id>,programming:<id>" | npx wrangler secret put QBO_ACCOUNTS
 ```
+
+`QBO_ACCOUNTS` lists every account that counts as cash, each tagged with what
+the money is for. The IDs come from `/admin/accounts?k=<passphrase>`. An
+account left off the list is left out of every total, and an entry that cannot
+be parsed blanks every total rather than being skipped.
 
 **A name cannot be both a `[vars]` entry and a secret.** Cloudflare rejects the
 binding collision with `code: 10053`. To convert a var into a secret, delete it

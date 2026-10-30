@@ -58,7 +58,12 @@ HPIC's QuickBooks and LGL data.
 
 - **Total cash renders only when every configured account reads successfully.**
   A total that silently drops a failed account overstates available cash. This
-  is the specific failure the tool exists to prevent, not a nicety.
+  is the specific failure the tool exists to prevent, not a nicety. The same
+  rule holds per group: cash accounts are a list in `QBO_ACCOUNTS`, each tagged
+  `rebuild` or `programming` (decided 2026-10-29, because HPIC's rebuild money
+  sits in two accounts), and a group's subtotal renders only when all of its
+  accounts read. Readiness uses the rebuild subtotal. An unparseable entry
+  blanks every figure rather than being skipped.
 - **`retrievedAt` is QuickBooks' own `time` field**, never the browser or Worker
   clock. A dashboard always showing today's date is worse than showing none.
 - **Connection state is never reported as `ok` when QuickBooks is unreachable.**

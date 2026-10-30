@@ -126,6 +126,20 @@ button.link {
   border-color: var(--ink);
 }
 
+/* Accounts are grouped by what the money is for, each group with its subtotal. */
+.account-group h3 {
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0;
+}
+
+.account-group .cards {
+  margin-top: 0.6rem;
+}
+
+.card-subtotal {
+  background: #f1f3f2;
+}
+
 .amount {
   font-size: 1.9rem;
   font-variant-numeric: tabular-nums;

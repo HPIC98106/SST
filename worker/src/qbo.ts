@@ -13,7 +13,13 @@
  * https://developer.intuit.com/app/developer/qbo/docs/api/accounting/most-commonly-used/account
  */
 
-import type { AccountSnapshot, Env, FundsSnapshot } from "./types";
+import type {
+  AccountPurpose,
+  AccountSnapshot,
+  Env,
+  FundsSnapshot,
+  PurposeSubtotal,
+} from "./types";
 import { FIXTURE_RETRIEVED_AT, fixtureAccount } from "./fixtures";
 import type { TokenStore } from "./tokens";
 
@@ -54,13 +60,66 @@ export type AccountReadResult =
   | { ok: true; account: QboAccount; time: string }
   | { ok: false; kind: "unauthorized" | "not_found" | "error"; detail: string };
 
-interface AccountConfig {
-  key: AccountSnapshot["key"];
-  label: string;
-  id?: string;
+export interface AccountConfig {
+  id: string;
+  purpose: AccountPurpose;
 }
 
+/** A `QBO_ACCOUNTS` entry that could not be used, and why. */
+export interface InvalidAccountEntry {
+  raw: string;
+  reason: string;
+}
+
+/** Display order on the panel: rebuild first, since readiness is measured against it. */
+const PURPOSES: AccountPurpose[] = ["rebuild", "programming"];
+
+export const PURPOSE_LABELS: Record<AccountPurpose, string> = {
+  rebuild: "Rebuild",
+  programming: "Programming",
+};
+
+/** Used in fixture mode when no accounts are configured, so the UI has something to show. */
+const FIXTURE_ACCOUNTS = "rebuild:36,rebuild:37,programming:35";
+
 export const SOURCE_LABEL = "QuickBooks Online, book balance";
+
+/**
+ * Parse `QBO_ACCOUNTS`.
+ *
+ * A bad entry is returned rather than skipped. Skipping it would drop an
+ * account from every total without a word, and a typo'd rebuild account would
+ * show up as the rebuild being poorer than it is. A duplicate is rejected for
+ * the opposite reason: counted twice, it overstates cash.
+ */
+export function parseAccountConfig(raw: string | undefined): {
+  configs: AccountConfig[];
+  invalid: InvalidAccountEntry[];
+} {
+  const configs: AccountConfig[] = [];
+  const invalid: InvalidAccountEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of (raw ?? "").split(",").map((e) => e.trim()).filter(Boolean)) {
+    const match = /^(rebuild|programming):(\d+)$/.exec(entry);
+    if (!match) {
+      invalid.push({
+        raw: entry,
+        reason: `"${entry}" is not of the form rebuild:<id> or programming:<id>.`,
+      });
+      continue;
+    }
+    const [, purpose, id] = match;
+    if (seen.has(id)) {
+      invalid.push({ raw: entry, reason: `Account ${id} is listed more than once, so it would be counted twice.` });
+      continue;
+    }
+    seen.add(id);
+    configs.push({ id, purpose: purpose as AccountPurpose });
+  }
+
+  return { configs, invalid };
+}
 
 /** Anything but an explicit "production" is a sandbox — never guess upward. */
 export function qboEnvironment(env: Env): "sandbox" | "production" {
@@ -150,6 +209,13 @@ async function readAccount(
   return { ok: true, account: body.Account, time: body.time };
 }
 
+const usdFormat = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+/** Until QuickBooks has been read, the ID is all we know an account by. */
+function placeholderLabel(config: AccountConfig): string {
+  return `QuickBooks account ${config.id}`;
+}
+
 /**
  * Turn one account read into a display row.
  *
@@ -162,8 +228,9 @@ async function readAccount(
 function toSnapshot(config: AccountConfig, result: AccountReadResult): AccountSnapshot {
   if (!result.ok) {
     return {
-      key: config.key,
-      label: config.label,
+      key: config.id,
+      purpose: config.purpose,
+      label: placeholderLabel(config),
       status: "unavailable",
       balance: null,
       hasSubAccounts: false,
@@ -175,14 +242,16 @@ function toSnapshot(config: AccountConfig, result: AccountReadResult): AccountSn
   }
 
   const { account } = result;
+  const label = account.FullyQualifiedName ?? account.Name;
   const rollup = account.CurrentBalanceWithSubAccounts;
   const own = account.CurrentBalance;
   const balance = rollup ?? own;
 
   if (typeof balance !== "number") {
     return {
-      key: config.key,
-      label: config.label,
+      key: config.id,
+      purpose: config.purpose,
+      label,
       status: "unavailable",
       balance: null,
       hasSubAccounts: false,
@@ -193,38 +262,45 @@ function toSnapshot(config: AccountConfig, result: AccountReadResult): AccountSn
   const hasSubAccounts =
     typeof rollup === "number" && typeof own === "number" && rollup !== own;
 
+  const notes: string[] = [];
+  if (hasSubAccounts) notes.push(`Includes sub-accounts. This account alone is ${usdFormat(own!)}.`);
+  // Undeposited Funds is QuickBooks' holding account for payments recorded but
+  // not yet deposited. It counts as cash, but it is not in any bank, and a
+  // balance that sits there for long is usually a deposit never recorded.
+  if (account.AccountSubType === "UndepositedFunds") {
+    notes.push("Payments recorded in QuickBooks but not yet deposited to a bank.");
+  }
+
   return {
-    key: config.key,
-    label: config.label,
+    key: config.id,
+    purpose: config.purpose,
+    label,
     status: "ok",
     balance,
     hasSubAccounts,
-    note: hasSubAccounts
-      ? `Includes sub-accounts. This account alone is ${own!.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-        })}.`
-      : undefined,
+    note: notes.length > 0 ? notes.join(" ") : undefined,
   };
 }
 
-/** An account row for an ID that was never configured. */
-function notConfigured(config: AccountConfig): AccountSnapshot {
+/** A row for a `QBO_ACCOUNTS` entry that could not be parsed. */
+function invalidRow(entry: InvalidAccountEntry): AccountSnapshot {
   return {
-    key: config.key,
-    label: config.label,
-    status: "not_configured",
+    key: entry.raw,
+    purpose: null,
+    label: "Unreadable account configuration",
+    status: "unavailable",
     balance: null,
     hasSubAccounts: false,
-    note: "No QuickBooks account ID configured yet.",
+    note: `${entry.reason} Fix QBO_ACCOUNTS on the Worker.`,
   };
 }
 
 /** An account row for when we could not authenticate at all. */
 function connectionUnavailable(config: AccountConfig, detail: string): AccountSnapshot {
   return {
-    key: config.key,
-    label: config.label,
+    key: config.id,
+    purpose: config.purpose,
+    label: placeholderLabel(config),
     status: "unavailable",
     balance: null,
     hasSubAccounts: false,
@@ -233,44 +309,60 @@ function connectionUnavailable(config: AccountConfig, detail: string): AccountSn
 }
 
 /**
- * Total cash on hand.
+ * Sum a set of accounts, or refuse to.
  *
- * Returns null unless every configured account reported successfully. A total
- * that silently drops a failed account overstates available cash, which is the
- * specific kind of error this dashboard exists to prevent. Better to show
- * nothing and say why.
+ * Returns null unless every account reported successfully. A total that
+ * silently drops a failed account understates cash, and in the readiness panel
+ * a rebuild figure missing one account makes a phase look further off than it
+ * is. Better to show nothing and say why.
  */
-function totalOf(accounts: AccountSnapshot[]): { total: number | null; note?: string } {
-  const usable = accounts.filter((a) => a.status === "ok");
-  if (usable.length === 0) {
-    // "Could not be read" and "was never mapped" are different problems and
-    // send someone looking in different places.
-    const noneMapped = accounts.every((a) => a.status === "not_configured");
+function sumIfComplete(
+  accounts: AccountSnapshot[],
+  whenEmpty: string,
+): { total: number | null; note?: string } {
+  if (accounts.length === 0) return { total: null, note: whenEmpty };
+  const missing = accounts.filter((a) => a.status !== "ok");
+  if (missing.length === accounts.length) {
+    return { total: null, note: "No account balances could be read." };
+  }
+  if (missing.length > 0) {
     return {
       total: null,
-      note: noneMapped
-        ? "No QuickBooks accounts have been mapped yet."
-        : "No account balances could be read.",
+      note: `Not shown: ${missing.map((a) => a.label).join(", ")} could not be read, so any total would understate cash.`,
     };
   }
-  if (usable.length !== accounts.length) {
-    const missing = accounts
-      .filter((a) => a.status !== "ok")
-      .map((a) => a.label)
-      .join(", ");
-    return {
-      total: null,
-      note: `Not shown: ${missing} could not be read, so any total would understate cash on hand.`,
-    };
-  }
-  return { total: usable.reduce((sum, a) => sum + (a.balance ?? 0), 0) };
+  return { total: accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0) };
 }
 
-function accountConfigs(env: Env): AccountConfig[] {
-  return [
-    { key: "operating", label: "Operating account", id: env.QBO_OPERATING_ACCOUNT_ID },
-    { key: "rebuild_fund", label: "Rebuild fund", id: env.QBO_REBUILD_FUND_ACCOUNT_ID },
-  ];
+/**
+ * Total cash on hand, and the subtotal for each purpose.
+ *
+ * An unparseable config entry blocks every figure, not just the total: there
+ * is no telling which group the account it meant belongs to, and a rebuild
+ * subtotal quietly missing an account is the number readiness is built on.
+ */
+function totals(
+  accounts: AccountSnapshot[],
+  invalid: InvalidAccountEntry[],
+): Pick<FundsSnapshot, "subtotals" | "totalCash" | "totalCashNote"> {
+  if (invalid.length > 0) {
+    const note = "The account configuration has an entry that cannot be read, so an account may be missing from this figure.";
+    return {
+      subtotals: PURPOSES.map((purpose) => ({ purpose, label: PURPOSE_LABELS[purpose], total: null, note })),
+      totalCash: null,
+      totalCashNote: note,
+    };
+  }
+
+  const subtotals: PurposeSubtotal[] = PURPOSES.map((purpose) => {
+    const { total, note } = sumIfComplete(
+      accounts.filter((a) => a.purpose === purpose),
+      `No account is configured as ${PURPOSE_LABELS[purpose].toLowerCase()} cash.`,
+    );
+    return { purpose, label: PURPOSE_LABELS[purpose], total, note };
+  });
+  const { total, note } = sumIfComplete(accounts, "No QuickBooks accounts have been configured yet.");
+  return { subtotals, totalCash: total, totalCashNote: note };
 }
 
 export interface AccountListEntry {
@@ -355,11 +447,11 @@ export async function listAssetAccounts(
 
 /** Assemble the Phase 1 funds snapshot. */
 export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): Promise<FundsSnapshot> {
-  const configs = accountConfigs(env);
-
   if (env.QBO_MODE === "fixture") {
-    return fixtureSnapshot(configs, env);
+    return fixtureSnapshot(env);
   }
+
+  const { configs, invalid } = parseAccountConfig(env.QBO_ACCOUNTS);
 
   const token = await store.getAccessToken();
   if (!token.ok) {
@@ -367,15 +459,13 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
       token.reason === "needs_reauth"
         ? "QuickBooks needs to be reconnected. Visit /oauth/start to re-authorize."
         : token.detail ?? "QuickBooks has never been connected. Visit /oauth/start to authorize.";
-    // Every account is unavailable when we cannot authenticate, including ones
-    // with no ID configured — reporting "not configured" here would blame the
-    // wrong thing.
-    const accounts = configs.map((c) => connectionUnavailable(c, detail));
-    const { total, note } = totalOf(accounts);
+    const accounts = [
+      ...configs.map((c) => connectionUnavailable(c, detail)),
+      ...invalid.map(invalidRow),
+    ];
     return {
       accounts,
-      totalCash: total,
-      totalCashNote: note,
+      ...totals(accounts, invalid),
       retrievedAt: null,
       cached: false,
       source: SOURCE_LABEL,
@@ -387,11 +477,10 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
     };
   }
 
-  const configured = configs.filter((c) => c.id);
   let results = await Promise.all(
-    configured.map(async (c) => ({
+    configs.map(async (c) => ({
       config: c,
-      result: await readAccount(env, token.accessToken, c.id!),
+      result: await readAccount(env, token.accessToken, c.id),
     })),
   );
 
@@ -406,25 +495,24 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
           if (r.result.ok || r.result.kind !== "unauthorized") return r;
           return {
             config: r.config,
-            result: await readAccount(env, retryToken.accessToken, r.config.id!),
+            result: await readAccount(env, retryToken.accessToken, r.config.id),
           };
         }),
       );
     }
   }
 
-  const byKey = new Map(results.map((r) => [r.config.key, toSnapshot(r.config, r.result)]));
-  const accounts = configs.map((c) => byKey.get(c.key) ?? notConfigured(c));
+  const accounts = [
+    ...results.map((r) => toSnapshot(r.config, r.result)),
+    ...invalid.map(invalidRow),
+  ];
 
   const firstSuccess = results.find((r) => r.result.ok);
   const retrievedAt = firstSuccess?.result.ok ? firstSuccess.result.time : null;
 
-  const { total, note } = totalOf(accounts);
-
   return {
     accounts,
-    totalCash: total,
-    totalCashNote: note,
+    ...totals(accounts, invalid),
     retrievedAt,
     cached: false,
     source: SOURCE_LABEL,
@@ -434,13 +522,15 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
 }
 
 /** Fixture mode: exercises the whole UI before any credentials exist. */
-function fixtureSnapshot(configs: AccountConfig[], env: Env): FundsSnapshot {
-  const accounts = configs.map((c) => toSnapshot(c, fixtureAccount(c.key)));
-  const { total, note } = totalOf(accounts);
+function fixtureSnapshot(env: Env): FundsSnapshot {
+  const { configs, invalid } = parseAccountConfig(env.QBO_ACCOUNTS || FIXTURE_ACCOUNTS);
+  const accounts = [
+    ...configs.map((c) => toSnapshot(c, fixtureAccount(c.id))),
+    ...invalid.map(invalidRow),
+  ];
   return {
     accounts,
-    totalCash: total,
-    totalCashNote: note,
+    ...totals(accounts, invalid),
     retrievedAt: FIXTURE_RETRIEVED_AT,
     cached: false,
     source: `${SOURCE_LABEL} (fixture data)`,

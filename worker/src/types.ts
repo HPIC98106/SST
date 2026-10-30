@@ -19,10 +19,17 @@ export interface Env {
   QBO_REALM_ID: string;
   QBO_REDIRECT_URI: string;
 
-  // Account mapping. Unset is a valid state during the prototype: the panel
-  // renders "not configured" rather than failing.
-  QBO_OPERATING_ACCOUNT_ID?: string;
-  QBO_REBUILD_FUND_ACCOUNT_ID?: string;
+  /**
+   * Every QuickBooks account that counts as cash, each tagged with what the
+   * money is for: `rebuild:106,rebuild:185,programming:101`. A secret, like the
+   * realm ID, because the repository is public.
+   *
+   * A list rather than one slot per purpose because HPIC's rebuild money sits
+   * in two accounts. An account left out of this list is left out of every
+   * total, so the list is the whole of "cash on hand". Unset renders "not
+   * configured" rather than failing.
+   */
+  QBO_ACCOUNTS?: string;
 
   // --- Little Green Light (Phase 2) ---
 
@@ -93,8 +100,19 @@ export interface Env {
 /** Why an account has no number, when it has no number. */
 export type AccountStatus = "ok" | "unavailable" | "not_configured";
 
+/**
+ * What an account's money is for. Rebuild cash is what the readiness panel
+ * measures against a phase; programming cash is unrestricted and pays for
+ * everything else, so it is never counted toward construction.
+ */
+export type AccountPurpose = "rebuild" | "programming";
+
 export interface AccountSnapshot {
-  key: "operating" | "rebuild_fund";
+  /** The QuickBooks account ID, or the raw config entry if it could not be parsed. */
+  key: string;
+  /** Null only for a config entry that could not be parsed. */
+  purpose: AccountPurpose | null;
+  /** The account's name in QuickBooks, so the card matches what the books call it. */
   label: string;
   status: AccountStatus;
   /** QuickBooks book balance. Null unless status is "ok". */
@@ -105,8 +123,18 @@ export interface AccountSnapshot {
   note?: string;
 }
 
+/** Cash for one purpose, under the same completeness rule as the total. */
+export interface PurposeSubtotal {
+  purpose: AccountPurpose;
+  label: string;
+  /** Null unless every account with this purpose is "ok". */
+  total: number | null;
+  note?: string;
+}
+
 export interface FundsSnapshot {
   accounts: AccountSnapshot[];
+  subtotals: PurposeSubtotal[];
   /**
    * Null whenever any account is not "ok". A total that silently omits a
    * failed account overstates cash on hand, which is the exact failure this

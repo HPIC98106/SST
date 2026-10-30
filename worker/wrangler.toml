@@ -53,14 +53,13 @@ enabled = true
 # sandbox companies and production keys only reach production ones, so a
 # half-done switch fails as an unexplained 401 or "needs reauth". The ordered
 # procedure is docs/runbook-migration.md §9.
-QBO_ENV = "sandbox"
+QBO_ENV = "production"
 
 # "fixture" serves recorded data and never calls Intuit. Switch to "live" once
 # the developer app, sandbox company, and OAuth seeding are in place.
 QBO_MODE = "live"
 
-# NOTE: QBO_REALM_ID, QBO_OPERATING_ACCOUNT_ID, and QBO_REBUILD_FUND_ACCOUNT_ID
-# are deliberately NOT here. This repository is public, and those values name
+# NOTE: QBO_REALM_ID and QBO_ACCOUNTS are deliberately NOT here. This repository is public, and those values name
 # HPIC's actual QuickBooks company and accounts. They are set as secrets:
 #
 #   printf '%s' "<value>" | npx wrangler secret put QBO_REALM_ID
