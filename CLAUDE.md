@@ -277,6 +277,26 @@ Two more things that matter:
 The gift type ID for "Pledge" is resolved by name at runtime, not hardcoded: a
 wrong ID returns zero awards, which looks identical to HPIC having no grants.
 
+### Beyond grants: membership, giving and events, verified 2026-10-30
+
+Read while scoping a wider dashboard; nothing reads these yet.
+
+- **There is no global membership endpoint.** `/memberships` returns 404, and
+  `/membership_levels` has only names (Classic, Champion, Minor). Membership
+  revenue is gifts in campaign 846 "Memberships": 192 members in 2025, 266 so
+  far in 2026, 153 of them renewals. Dues cluster May to October and peak in
+  September.
+- **Its dues agree with QuickBooks.** LGL's Memberships campaign for Jan to Sept
+  2026 is $15,238; the QuickBooks figure in the 2027 draft budget's actuals
+  column is $15,280.
+- **The Annual Fund Drive lands in December** ($15,905 in Dec 2025) and is the
+  largest non-grant inflow of the year.
+- **`/events` is readable**, 21 events since 2025, with 117 cash gifts linked by
+  `event_id`. `financial_goal` is set on 5 events and `projected_amount` on none.
+- **The 2026 budget appears to live in QuickBooks.** The 2027 draft is an
+  export of a QuickBooks Budget vs. Actuals report (accrual basis, dated
+  2026-10-12), edited in Excel.
+
 ## Shell
 
 Windows, **Git Bash** (MINGW64), run from the repository root. Commands must be
