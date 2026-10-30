@@ -26,10 +26,10 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   Unblocks: the readiness panel, which still measures against the 9/22/26
   estimate whose prices lapsed on 2026-10-22.
 
-- **Verify the QuickBooks production cutover.** Everything is deployed and
-  mapped. Ask Claude to run runbook §9's verification: each balance against
-  QuickBooks' Balance Sheet to the cent, and a `rotated` token refresh in
-  `/admin/status`. Needs `.dev.vars` synced first (below).
+- **Check the dashboard's six balances against QuickBooks' Balance Sheet, to
+  the cent.** All six read on 2026-10-30; Claude has the figures but can't log
+  in to QuickBooks to compare. Then ask Claude to look for a `rotated` token
+  refresh in `/admin/status`, due by about 2026-10-31.
 
   Unblocks: real cash figures, and every QuickBooks item below.
 
@@ -80,11 +80,6 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   password manager or the org's Google Workspace. Today it exists only in your
   head, and Cloudflare secrets can't be read back. If you're unavailable, the
   board loses its dashboard. Runbook §7.
-
-- **Sync `worker/.dev.vars` with the passphrase rotated on 2026-09-06.** Local
-  dev only, but until it's done Claude can't check the live Worker's status
-  pages itself (confirmed mismatched 2026-10-29). Runbook §7 has a command that
-  verifies before it writes.
 
 - **Delete the stray Worker secret whose name looks like a passphrase.** It
   shows in `npx wrangler secret list`, does nothing, and if it's a real
