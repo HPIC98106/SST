@@ -1087,10 +1087,18 @@ function readPhaseTarget(env: Env): PhaseTarget {
   const parsed = raw ? Number(raw.replace(/[$,]/g, "")) : Number.NaN;
   const targetCost = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 
+  // A date that does not survive a round trip (2026-02-30) is dropped rather
+  // than rolled forward into a different day.
+  const until = env.CURRENT_PHASE_PRICES_VALID_UNTIL?.trim() ?? "";
+  const validDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(until) &&
+    new Date(`${until}T00:00:00Z`).toISOString().slice(0, 10) === until;
+
   return {
     name: env.CURRENT_PHASE_NAME?.trim() || null,
     targetCost,
     source: targetCost === null ? null : env.CURRENT_PHASE_TARGET_SOURCE?.trim() || "entered by hand",
+    pricesValidUntil: targetCost !== null && validDate ? until : null,
   };
 }
 

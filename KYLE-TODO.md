@@ -18,13 +18,25 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
-- **Set the Dry-in target from the updated Metis quote.** Give Claude the date,
-  scope, whether contingency is included, and how long prices hold. Claude
-  updates `CURRENT_PHASE_TARGET_SOURCE` and deploys. The grand total stays out
-  of the repo: set it yourself from `worker/` in Git Bash:
-  `printf '%s' "<grand total>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
-  Unblocks: the readiness panel, which still measures against the 9/22/26
-  estimate whose prices lapsed on 2026-10-22.
+- **Ask Metis to re-price the Dry-in estimate.** The spreadsheet received
+  2026-10-29 is byte-identical to the 9/22/26 estimate already on the
+  dashboard, whose prices held 30 days, to 2026-10-22. When the new one
+  arrives, give it to Claude, who updates the source and price date; then set
+  the grand total including contingency yourself from Git Bash:
+  `cd ~/Desktop/hpic/SST/worker && printf '%s' "<grand total incl. contingency>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  While asking, mention that their workbook taxes the 6% contingency at 10.35%
+  on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
+  readiness target; the panel says the old one has lapsed.
+
+- **Deploy the Worker once the Metis PR merges, then switch the target to
+  include contingency.** The deploy ships the new source text and price date:
+  `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`.
+  Straight after, set the grand total including Metis's 6% contingency (the
+  figure is in the 2026-10-30 Claude session, and on the budget sheet as
+  "Grand Total Including Contingency"):
+  `printf '%s' "<that figure>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
+  Back to back, so the panel never pairs the new wording with the old total.
+  One deploy covers this and the Operations PR if both are merged first.
 
 - **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
   token refresh.** The last open check on the production cutover; Intuit

@@ -105,6 +105,13 @@ export interface Env {
   CURRENT_PHASE_TARGET_COST?: string;
   /** Where the target cost came from, e.g. "Metis bid, 2026-09-15". */
   CURRENT_PHASE_TARGET_SOURCE?: string;
+  /**
+   * The last day the estimate's prices hold, as YYYY-MM-DD. Metis prices for
+   * 30 days from the estimate date. The panel prints it and says so plainly
+   * once it has passed: a lapsed estimate is still the best figure available,
+   * but re-pricing can move it, and a reader should not have to know that.
+   */
+  CURRENT_PHASE_PRICES_VALID_UNTIL?: string;
 
   // Origin of the GitHub Pages frontend, for CORS.
   ALLOWED_ORIGIN?: string;
@@ -366,6 +373,11 @@ export interface PhaseTarget {
    * the one that most needs to say where it came from.
    */
   source: string | null;
+  /**
+   * The last day the estimate's prices hold (YYYY-MM-DD). Null when unset,
+   * unparseable, or when there is no target to qualify.
+   */
+  pricesValidUntil: string | null;
 }
 
 export interface GrantSnapshot {
