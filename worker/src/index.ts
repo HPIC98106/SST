@@ -109,7 +109,7 @@ export default {
         return handleOperations(env);
       }
 
-      // Members, supporters and giving, from every gift in LGL. Counts only:
+      // Members, donors and giving, from LGL's records. Counts only:
       // no names leave the Worker, because the passphrase is shared.
       case "/api/community": {
         if (!authorize(request, env)) {

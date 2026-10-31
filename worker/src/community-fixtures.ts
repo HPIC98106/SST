@@ -1,5 +1,5 @@
 /**
- * Invented gift records for the Community tab in fixture mode.
+ * Invented gift and member records for the Membership tab in fixture mode.
  *
  * Generated rather than recorded, from a fixed seed so every run is the same.
  * The shape follows HPIC's pattern: membership dues from spring to autumn,
@@ -8,10 +8,28 @@
  * stay out of supporter counts. No figure here is HPIC's.
  */
 
+import type { LglMember } from "./community";
 import type { LglGift } from "./lgl";
 
 /** The fixture's "now": mid-October 2026, as LGL would stamp it. */
 export const COMMUNITY_FIXTURE_DATE = "Wed, 14 Oct 2026 16:00:00 GMT";
+
+/**
+ * Invented active members, in HPIC's shape: about twice as many as pay dues,
+ * because a household's other members are credited on the one payment.
+ */
+export function communityFixtureMembers(): LglMember[] {
+  const member = (id: number, level: string, start: string): LglMember => ({
+    id,
+    memberships: [{ membership_level_name: level, date_start: start, finish_date: `${Number(start.slice(0, 4)) + 1}${start.slice(4)}` }],
+  });
+  return [
+    ...Array.from({ length: 240 }, (_, i) => member(5000 + i, "Classic", "2025-06-01")),
+    ...Array.from({ length: 80 }, (_, i) => member(6000 + i, "Champion", "2025-09-01")),
+    ...Array.from({ length: 130 }, (_, i) => member(6500 + i, "Classic", "2026-05-01")),
+    ...Array.from({ length: 40 }, (_, i) => member(7000 + i, "Minor", "2026-05-01")),
+  ];
+}
 
 /** Small deterministic generator (mulberry32). */
 function random(seed: number) {
@@ -89,7 +107,7 @@ export function communityFixtureGifts(): LglGift[] {
   gift({ constituent_id: 8001, campaign_id: 887, campaign_name: "Pot Auction", received_amount: 4200, received_date: "2026-04-18" });
   gift({ constituent_id: 8002, campaign_id: 877, campaign_name: "Sponsorships", received_amount: 1000, received_date: "2026-05-02" });
 
-  // Grants: awards (pledges) and payments, which must not count as supporters.
+  // Grants: awards (pledges) and payments, which must not count as donors.
   const award = (campaign: [number, string], amount: number, received_date: string, payments: [number, string][]) => {
     const awardId = id;
     gift({ gift_type_name: "Pledge", gift_type_id: 7, gift_category_id: 6031, campaign_id: campaign[0], campaign_name: campaign[1], constituent_id: 9100 + awardId % 50, received_amount: amount, received_date });

@@ -111,6 +111,11 @@ HPIC's QuickBooks and LGL data.
   the gaps become arguable from HPIC's own records.
 - **Zero exceptions must mean "nothing is wrong", never "nothing was read".**
   `findExceptions` runs only when both reads succeeded.
+- **Members come from LGL's membership records, never from dues gifts.** Gifts
+  find about half of them: on 2026-10-31 LGL had 563 active members and 270
+  people who had paid dues that year, since one payment can cover a household.
+  Counting gifts shipped first and was caught because it disagreed with LGL's
+  own membership report.
 
 ### Operations (income and spending against budget)
 
@@ -311,13 +316,34 @@ wrong ID returns zero awards, which looks identical to HPIC having no grants.
 
 ### Beyond grants: membership, giving and events, verified 2026-10-30
 
-Read while scoping a wider dashboard; nothing reads these yet.
+Membership and giving are read by the Membership tab; events are not read yet.
 
-- **There is no global membership endpoint.** `/memberships` returns 404, and
-  `/membership_levels` has only names (Classic, Champion, Minor). Membership
-  revenue is gifts in campaign 846 "Memberships": 192 members in 2025, 266 so
-  far in 2026, 153 of them renewals. Dues cluster May to October and peak in
-  September.
+- **Membership records hang off constituents, and LGL can list who is active.**
+  `/memberships` returns 404 and `/membership_levels` has only names (Classic,
+  Champion, Minor), but `constituents/search` takes `q[]=membership_status=1`
+  (1 Active, 0 Lapsed) and `expand=memberships`, each record carrying
+  `membership_level_name`, `date_start` and `finish_date`. Verified 2026-10-31:
+  the 563 it returns are exactly the people with a record covering that day, so
+  its Active means an unexpired record. Nearly all records run 365 days. It also
+  listed 126 Lapsed.
+- **Why the members who paid no dues this year are members** (293 of 563 on
+  2026-10-31): 248 were soft-credited on someone else's Memberships gift in the
+  last 12 months, a household sharing one payment. Most of the other 45 joined
+  in November or December 2025, through dues then or through the Annual Fund
+  Drive, which issues memberships too: 13 of its 60 December 2025 gifts ($1,108)
+  are coded to a Membership category.
+- **Dues are gifts in campaign 846 "Memberships"**, and they cluster May to
+  October, peaking in September. Dues gifts count payers, not members.
+- **Donors exclude dues, grant payments and category 6134 "Merchandise"**, which
+  is how Pot Auction sales are coded (34 of 58 non-dues givers in 2026, 33 of
+  whom gave nothing else). Sponsors count. A member who also made a gift counts.
+  Live on 2026-10-31: 25, so most of a year's donors arrive with the December
+  drive (76 in all of 2025, 63 of them that December).
+- **"New" is a first membership record starting this year**: 203 on 2026-10-31.
+  Records go back to 2017, though only 157 people's first record predates 2025,
+  so someone long-standing but entered late can look new, less so each year.
+- **Gift history before 2025 is almost empty** (31 cash gifts), so a year-over-year
+  comparison only works from 2025 on.
 - **Its dues agree with QuickBooks.** LGL's Memberships campaign for Jan to Sept
   2026 is $15,238; the QuickBooks figure in the 2027 draft budget's actuals
   column is $15,280.
@@ -497,15 +523,22 @@ future value cannot change what an existing test means.
   board member who is curious rather than expert, and for a phone as well as
   a projector. Six tabs, each in the URL hash so a link or reload keeps it:
   - **Overview**, the page to show at a meeting: money available now (with
-    account balances), four tiles (net this year, months of operating cash,
-    members, people giving), what the next three months brought last year,
-    and a funding bar for the current phase. No to-do lists and no names.
+    account balances), five tiles (net this year, months of operating cash,
+    total members, new members, donors), what the next three months brought
+    last year, and a funding bar for the current phase. No to-do lists and no
+    names. An account under 1% of all cash rolls into "Smaller balances" here,
+    decided 2026-10-31: it stays in every total and is itemised on Rebuild, and
+    it is a share rather than a list of names so that Undeposited Funds comes
+    back on its own if deposits pile up. A failed read is never folded away.
   - **Rebuild**: the funding bar, the readiness table, cash by account.
   - **Operations**: Phase 4.
-  - **Community** (`worker/src/community.ts`, `/api/community`): members,
-    renewals, people giving, giving by campaign, this year against the same
-    days of last year, from one read of every LGL gift. **Counts only; names
-    stay in LGL** while the passphrase is shared.
+  - **Membership** (`worker/src/community.ts`, `/api/community`, renamed from
+    Community on 2026-10-31; the module kept its name since it also feeds
+    Grants and the Overview): total members, new members and donors with no
+    comparison to last year (Kyle found those confusing), then dues and giving
+    charts and giving by campaign. From LGL's active members and one read of
+    every gift. **Counts only; names stay in LGL** while the passphrase is
+    shared.
   - **Grants**: the funnel, and operating grants outside the rebuild with what
     is still to arrive on each (provisional, from linked payments).
   - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
@@ -516,10 +549,12 @@ future value cannot change what an existing test means.
   is a lighter step of the same hue, labelled "awarded, not yet received");
   the next-three-months figure is a projection labelled with its basis (the
   same months a year earlier), never added to cash; rebuild grants are shown
-  as $0 expected because they pay only after HPIC spends. The Community read
+  as $0 expected because they pay only after HPIC spends. The Membership read
   is cached in `TokenStore` for 15 minutes and warmed by the hourly cron,
-  since it is dozens of LGL requests; a walk that stops at its 50-page cap
-  reports nothing rather than an undercount.
+  since it is dozens of LGL requests (about 35 seconds cold, 33 of them the gift
+  walk); a walk that stops at its 50-page cap reports nothing rather than an
+  undercount. **Deploy the Worker before pushing the page** when the snapshot's
+  shape changes: the new page crashes on the old Worker's response.
 
 ### Build backlog (Claude)
 

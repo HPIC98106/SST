@@ -399,17 +399,18 @@ export class TokenStore extends DurableObject<Env> {
     await this.ctx.storage.put("operations", entry);
   }
 
-  // The Community tab reads every gift in LGL, dozens of requests, so it is
+  // The Membership tab reads every gift in LGL, dozens of requests, so it is
   // cached here too: this object is the application's only storage, and an
   // LGL snapshot has nothing to do with the QuickBooks tokens beside it.
+  // The version in the key keeps a snapshot of an older shape from being served.
 
   async getCachedCommunity(maxAgeMs: number): Promise<{ snapshot: CommunitySnapshot; cachedAt: number } | null> {
-    const cached = await this.ctx.storage.get<{ snapshot: CommunitySnapshot; cachedAt: number }>("community");
+    const cached = await this.ctx.storage.get<{ snapshot: CommunitySnapshot; cachedAt: number }>("community-v2");
     if (!cached || Date.now() - cached.cachedAt > maxAgeMs) return null;
     return cached;
   }
 
   async putCachedCommunity(snapshot: CommunitySnapshot): Promise<void> {
-    await this.ctx.storage.put("community", { snapshot, cachedAt: Date.now() });
+    await this.ctx.storage.put("community-v2", { snapshot, cachedAt: Date.now() });
   }
 }

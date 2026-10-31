@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<
     if (this.state.message === null) return this.props.children;
     return (
       <main className="dashboard">
-        <h1>Cash on hand</h1>
+        <h1>Board dashboard</h1>
         <p className="banner banner-error">
           The dashboard failed to render, so no figures below can be trusted. Reload the
           page; if it keeps happening, report this message: {this.state.message}

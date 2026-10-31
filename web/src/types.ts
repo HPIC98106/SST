@@ -209,7 +209,7 @@ export interface OperationsSnapshot {
   environment: "sandbox" | "production";
 }
 
-// --- Community: members, supporters and giving, from LGL ---
+// --- Membership tab: members, donors and giving, from LGL ---
 
 export interface CampaignGiving {
   campaign: string;
@@ -241,16 +241,16 @@ export interface CommunitySnapshot {
   year: number | null;
   through: string | null;
   members: {
-    thisYear: number;
-    lastYear: number;
-    renewed: number;
-    newThisYear: number;
-    dueToRenew: number;
-    dueToRenewAmount: number;
-    duesThisYear: number;
-    duesLastYearSamePeriod: number;
+    /** LGL's own count of active members, never derived from dues gifts. */
+    total: number;
+    /** First membership began this year. Null if a member has no dated record. */
+    newThisYear: number | null;
+    byLevel: { level: string; count: number }[];
+    /** Who paid dues this year: fewer than `total`, since a household shares one. */
+    dues: { payers: number; amount: number } | null;
   } | null;
-  supporters: { thisYear: number; lastYear: number; gaveLastYearNotYetThisYear: number } | null;
+  /** Distinct givers, leaving out dues, grant payments and purchases. */
+  donors: { thisYear: number } | null;
   monthly: {
     months: string[];
     dues: { thisYear: (number | null)[]; lastYear: number[] };

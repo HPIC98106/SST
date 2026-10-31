@@ -10,11 +10,37 @@
 
 import type { ReactNode } from "react";
 import { FundingBar } from "./FundingBar";
-import { formatRetrievedAt, monthAbbrev, signed, usd, usd0 } from "./format";
+import { formatRetrievedAt, monthAbbrev, usd, usd0 } from "./format";
 import { monthsOfCash } from "./YearSoFar";
-import type { CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+import type { AccountSnapshot, CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
-export type Tab = "overview" | "rebuild" | "operations" | "community" | "grants" | "housekeeping";
+export type Tab = "overview" | "rebuild" | "operations" | "membership" | "grants" | "housekeeping";
+
+/**
+ * A balance under this share of all cash does not earn its own line at a meeting.
+ * It is a share rather than a list of names so that a balance worth noticing, such
+ * as deposits piling up unrecorded in Undeposited Funds, comes back on its own.
+ */
+const SMALL_BALANCE_SHARE = 0.01;
+
+/**
+ * Split a group's accounts into those shown by name and a roll-up of the small
+ * ones. The small ones stay in every total, and the Rebuild tab itemises them.
+ * Without a total there is nothing to measure against, and an account that could
+ * not be read is never folded away, so both cases list every account.
+ */
+function namedAndSmall(accounts: AccountSnapshot[], totalCash: number | null) {
+  const small =
+    totalCash === null
+      ? []
+      : accounts.filter((a) => a.status === "ok" && Math.abs(a.balance ?? 0) < totalCash * SMALL_BALANCE_SHARE);
+  if (small.length < 2) return { named: accounts, small: [], smallTotal: 0 };
+  return {
+    named: accounts.filter((a) => !small.includes(a)),
+    small,
+    smallTotal: small.reduce((sum, a) => sum + (a.balance ?? 0), 0),
+  };
+}
 
 /** One headline figure. `tone` marks a figure that is not a plain record. */
 export function Kpi({
@@ -45,6 +71,48 @@ export function Kpi({
     </button>
   ) : (
     <div className={`kpi${tone ? ` kpi-${tone}` : ""}`}>{body}</div>
+  );
+}
+
+/** Total members, new members and donors: the same three here and on Membership. */
+export function MemberKpis({
+  members,
+  donors,
+  year,
+  note,
+  onOpen,
+}: {
+  members: CommunitySnapshot["members"];
+  donors: CommunitySnapshot["donors"];
+  year: number | null;
+  note?: string;
+  onOpen?: () => void;
+}) {
+  const isNew = members?.newThisYear ?? null;
+  return (
+    <>
+      <Kpi
+        label="Total members"
+        value={members ? members.total.toLocaleString("en-US") : "Not shown"}
+        tone={members ? undefined : "unavailable"}
+        detail={members ? "Active in LGL today" : note}
+        onOpen={onOpen}
+      />
+      <Kpi
+        label={year ? `New members in ${year}` : "New members"}
+        value={isNew !== null ? isNew.toLocaleString("en-US") : "Not shown"}
+        tone={isNew !== null ? undefined : "unavailable"}
+        detail={isNew !== null ? "First membership began this year" : undefined}
+        onOpen={onOpen}
+      />
+      <Kpi
+        label={year ? `Donors in ${year}` : "Donors"}
+        value={donors ? donors.thisYear.toLocaleString("en-US") : "Not shown"}
+        tone={donors ? undefined : "unavailable"}
+        detail={donors ? "Gifts beyond dues, grants and auction buys. Most come with the December drive." : undefined}
+        onOpen={onOpen}
+      />
+    </>
   );
 }
 
@@ -82,13 +150,16 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
       </div>
 
       <div className="hero-accounts">
-        {groups.map((g) => (
-          <div key={g.purpose} className="account-list">
-            <h3>{g.label}</h3>
-            <ul>
-              {funds.accounts
-                .filter((a) => a.purpose === g.purpose)
-                .map((a) => (
+        {groups.map((g) => {
+          const { named, small, smallTotal } = namedAndSmall(
+            funds.accounts.filter((a) => a.purpose === g.purpose),
+            funds.totalCash,
+          );
+          return (
+            <div key={g.purpose} className="account-list">
+              <h3>{g.label}</h3>
+              <ul>
+                {named.map((a) => (
                   <li key={a.key}>
                     <span>{a.label}</span>
                     <span className={a.status === "ok" ? "num" : "num unavailable"}>
@@ -96,9 +167,16 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
                     </span>
                   </li>
                 ))}
-            </ul>
-          </div>
-        ))}
+                {small.length > 0 ? (
+                  <li title={small.map((a) => a.label).join(", ")}>
+                    <span>Smaller balances</span>
+                    <span className="num">{usd.format(smallTotal)}</span>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -189,13 +267,14 @@ export function OverviewView({
   const through = operations?.period ? monthAbbrev(operations.period.through.slice(0, 7)) : null;
   const cash = operations ? monthsOfCash(funds, operations) : null;
   const members = community?.status === "ok" ? community.members : null;
-  const supporters = community?.status === "ok" ? community.supporters : null;
+  const donors = community?.status === "ok" ? community.donors : null;
+  const year = community?.year ?? null;
 
   return (
     <div className="stack">
       <Hero funds={funds} />
 
-      <div className="kpis">
+      <div className="kpis kpis-5">
         <Kpi
           label={through ? `Net this year, to ${through}` : "Net this year"}
           value={net ? usd0.format(net.actual) : "Not shown"}
@@ -218,20 +297,7 @@ export function OverviewView({
           detail={cash?.value ? "Programming cash at the last year's rate of spending" : "Needs this year's figures"}
           onOpen={() => open("operations")}
         />
-        <Kpi
-          label={community?.year ? `Members in ${community.year}` : "Members"}
-          value={members ? members.thisYear.toLocaleString("en-US") : "Not shown"}
-          tone={members ? undefined : "unavailable"}
-          detail={members ? `${signed(members.thisYear - members.lastYear)} on last year's ${members.lastYear}` : community?.note}
-          onOpen={() => open("community")}
-        />
-        <Kpi
-          label="People giving"
-          value={supporters ? supporters.thisYear.toLocaleString("en-US") : "Not shown"}
-          tone={supporters ? undefined : "unavailable"}
-          detail={supporters ? `${signed(supporters.thisYear - supporters.lastYear)} on last year's ${supporters.lastYear}` : undefined}
-          onOpen={() => open("community")}
-        />
+        <MemberKpis members={members} donors={donors} year={year} note={community?.note} onOpen={() => open("membership")} />
       </div>
 
       <div className="grid-2">

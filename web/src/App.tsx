@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrants, fetchOperations } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
-import { CommunityView } from "./Community";
 import { formatRetrievedAt, usd0 } from "./format";
 import { FundingBar } from "./FundingBar";
 import { FundsSnapshotView } from "./FundsSnapshot";
 import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
+import { MembershipView } from "./Membership";
 import { OperationsProblems, OperationsView } from "./Operations";
 import { OverviewView, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
@@ -20,7 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "rebuild", label: "Rebuild" },
   { key: "operations", label: "Operations" },
-  { key: "community", label: "Community" },
+  { key: "membership", label: "Membership" },
   { key: "grants", label: "Grants" },
   { key: "housekeeping", label: "Housekeeping" },
 ];
@@ -178,7 +178,7 @@ export function App() {
               <FundingBar funds={funds.data} grants={grants.data} />
             </section>
             <PhaseReadinessView funds={funds.data} grants={grants.data} />
-            {funds.data ? <FundsSnapshotView snapshot={funds.data} /> : <PanelError title="Cash on hand" detail={funds.error} />}
+            {funds.data ? <FundsSnapshotView snapshot={funds.data} /> : <PanelError title="Cash by account" detail={funds.error} />}
           </div>
         ) : tab === "operations" ? (
           operations.data ? (
@@ -189,11 +189,11 @@ export function App() {
           ) : (
             <PanelError title="Income and spending" detail={operations.error} />
           )
-        ) : tab === "community" ? (
+        ) : tab === "membership" ? (
           community.data ? (
-            <CommunityView snapshot={community.data} />
+            <MembershipView snapshot={community.data} />
           ) : (
-            <PanelError title="Community" detail={community.error} />
+            <PanelError title="Membership" detail={community.error} />
           )
         ) : tab === "grants" ? (
           <div className="stack">
@@ -302,8 +302,8 @@ function Skeleton() {
   return (
     <div className="stack" aria-busy="true" aria-label="Loading">
       <div className="skeleton skeleton-hero" />
-      <div className="kpis">
-        {[0, 1, 2, 3].map((i) => (
+      <div className="kpis kpis-5">
+        {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="skeleton skeleton-kpi" />
         ))}
       </div>

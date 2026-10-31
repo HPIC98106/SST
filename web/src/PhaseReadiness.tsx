@@ -184,8 +184,8 @@ export function PhaseReadinessView({
               {gap === null
                 ? "Needs both a target cost and a readable cash balance. One of them is missing."
                 : gap > 0
-                  ? "Target cost minus cash on hand. Awarded money is excluded until its terms are known and it has actually arrived."
-                  : "Cash on hand covers the estimated cost of this phase."}
+                  ? "Target cost minus rebuild cash. Awarded money is excluded until its terms are known and it has actually arrived."
+                  : "Rebuild cash covers the estimated cost of this phase."}
             </td>
           </tr>
         </tfoot>

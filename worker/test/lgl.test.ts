@@ -107,6 +107,7 @@ const NO_LGL_CONFIG = {
   CURRENT_PHASE_PRICES_VALID_UNTIL: undefined,
   LGL_MEMBERSHIP_CAMPAIGN_IDS: undefined,
   LGL_ANNUAL_FUND_CAMPAIGN_IDS: undefined,
+  LGL_NON_DONATION_CATEGORY_IDS: undefined,
 } as const;
 
 /** Live mode with a key. Individual tests narrow this further. */

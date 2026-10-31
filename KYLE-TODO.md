@@ -28,37 +28,25 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
   readiness target; the panel says the old one has lapsed.
 
-- **Merge the board dashboard PR, deploy, and finish its setup.** It carries
-  the Operations, Community and Metis changes, so one merge and one deploy
-  cover all of them. In order, from Git Bash:
-  1. `cd ~/Desktop/hpic/SST && git pull && cd worker && npx wrangler deploy`
-  2. Straight after, set the Dry-in target including Metis's 6% contingency
-     (the figure is in the 2026-10-30 Claude session, and on the budget sheet
-     as "Grand Total Including Contingency"):
-     `printf '%s' "<that figure>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
-  3. Group the QuickBooks accounts (next item).
-
 - **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
   token refresh.** The last open check on the production cutover; Intuit
   rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
-- **Group the QuickBooks accounts for the Operations tab.** After the deploy,
-  open `/admin/pl-accounts?k=<passphrase>`, agree the board lines, and set
-  `QBO_PL_GROUPS` with the command on that page. Put rebuild income and any
-  construction spending under `exclude`. Then ask Claude to check the tab
-  against QuickBooks' own Profit and Loss to the cent. Unblocks: the Operations
-  tab and the Overview's "This year so far" panel, which read "not configured"
-  until the groups are set.
+- **Group the QuickBooks accounts for the Operations tab.** Set `QBO_PL_GROUPS`
+  with the command in runbook §10, which has the proposed board lines, then
+  check the Grants line for rebuild money as it says. Then ask Claude to check
+  the tab against QuickBooks' own Profit and Loss to the cent. Unblocks: the
+  Operations tab and the Overview's net and operating-cash tiles, which read
+  "not shown" until the groups are set.
 
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
   the approved figures, keeping each amount in the month the money actually
   moves. Keep one active budget per year. Reconcile two things in the draft
   spreadsheet first: the net in its notes disagrees with the sheet's total, and
-  the Licenses and Permits subtotal does not equal its lines. Also check how
-  the 2026 budget was entered (`/admin/pl-accounts` lists it): if not by month,
-  2026's budget-to-date and projection stay blank. Unblocks: budget to date and
-  projected year-end.
+  the Licenses and Permits subtotal does not equal its lines. Unblocks: budget
+  to date and projected year-end for 2027. (2026 is already entered by month as
+  `Budget_FY26_P&L`.)
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can

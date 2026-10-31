@@ -90,11 +90,13 @@ export interface Env {
 
   /**
    * Which LGL campaigns hold membership dues, and which the Annual Fund Drive,
-   * for the Community tab. Not secrets: campaign IDs name nothing outside LGL.
+   * for the Membership tab. Not secrets: campaign IDs name nothing outside LGL.
    * Unset leaves that line out rather than guessing at it by name.
    */
   LGL_MEMBERSHIP_CAMPAIGN_IDS?: string;
   LGL_ANNUAL_FUND_CAMPAIGN_IDS?: string;
+  /** Gift categories that are purchases, not gifts, so buyers are not donors. */
+  LGL_NON_DONATION_CATEGORY_IDS?: string;
 
   /**
    * The construction phase the readiness panel is measured against, and what
@@ -570,7 +572,7 @@ export type AccessTokenResult =
   | { ok: true; accessToken: string }
   | { ok: false; reason: "needs_reauth" | "not_seeded"; detail?: string };
 
-// --- Community: members, supporters and giving, from Little Green Light ---
+// --- Membership tab: members, donors and giving, from Little Green Light ---
 
 /** One campaign's giving, this year to date against the same days last year. */
 export interface CampaignGiving {
@@ -613,19 +615,16 @@ export interface CommunitySnapshot {
   /** The last day counted this year: LGL's own clock, as a Seattle date. */
   through: string | null;
   members: {
-    thisYear: number;
-    lastYear: number;
-    /** Members this year who were also members last year. */
-    renewed: number;
-    newThisYear: number;
-    /** Last year's members who have not yet renewed, and what they paid. */
-    dueToRenew: number;
-    dueToRenewAmount: number;
-    duesThisYear: number;
-    duesLastYearSamePeriod: number;
+    /** LGL's own count of active members, never derived from dues gifts. */
+    total: number;
+    /** First membership began this year. Null if a member has no dated record. */
+    newThisYear: number | null;
+    byLevel: { level: string; count: number }[];
+    /** Who paid dues this year: fewer than `total`, since a household shares one. */
+    dues: { payers: number; amount: number } | null;
   } | null;
-  /** Distinct people and organisations giving, grant payments excluded. */
-  supporters: { thisYear: number; lastYear: number; gaveLastYearNotYetThisYear: number } | null;
+  /** Distinct givers, leaving out dues, grant payments and purchases. */
+  donors: { thisYear: number } | null;
   /** Monthly, for the charts. This year's months after `through` are null. */
   monthly: {
     months: string[];

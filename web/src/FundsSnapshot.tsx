@@ -34,7 +34,7 @@ function AccountCard({ account }: { account: AccountSnapshot }) {
 export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
   return (
     <section className="panel">
-      <h1>Cash on hand</h1>
+      <h1>Cash by account</h1>
 
       {/*
         A sandbox company returns real balances for a business that does not
@@ -102,7 +102,7 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
           ))}
 
         <section className="card card-total">
-          <h2>Total cash on hand</h2>
+          <h2>Total cash</h2>
           {snapshot.totalCash === null ? (
             <p className="amount unavailable">Not shown</p>
           ) : (

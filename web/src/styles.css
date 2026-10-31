@@ -1202,6 +1202,14 @@ button.ops-toggle span {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.kpis-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kpis-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .kpi {
   display: grid;
   align-content: start;
@@ -1397,6 +1405,11 @@ button.kpi-link:focus-visible {
 @media (max-width: 900px) {
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* An odd row closes on one wide card rather than leaving a hole. */
+  .kpis-3 > :last-child,
+  .kpis-5 > :last-child {
+    grid-column: 1 / -1;
   }
   .grid-2,
   .charts {

@@ -1,11 +1,16 @@
 /**
- * Community: members, supporters and giving, from Little Green Light.
+ * The Membership tab: members, donors and giving, from Little Green Light.
  *
- * One read of every gift, then everything is counted from it. Only cash gift
- * types count (Gift, Installment, Matching): a pledge is a promise, a soft
- * credit is a second record of a gift already counted, and in-kind is not
- * money. Grant payments are left out of supporters and campaign giving because
- * grants have their own tab and would swamp everything else.
+ * Two reads. Members come from LGL's own membership records, using its Active
+ * filter, so the count agrees with a membership report run in LGL. It is never
+ * counted from dues gifts: only one person in a household pays, and the others
+ * are soft-credited, so gifts find about half the members.
+ *
+ * Everything else comes from one read of every gift. Only cash gift types count
+ * (Gift, Installment, Matching): a pledge is a promise, a soft credit is a second
+ * record of a gift already counted, and in-kind is not money. Grant payments are
+ * left out of donors and campaign giving because grants have their own tab and
+ * would swamp everything else.
  *
  * The rule from the grant funnel holds here too: a walk that stops at its page
  * cap reports nothing, because a partial walk undercounts members and giving
@@ -16,10 +21,10 @@
  */
 
 import { getAll, isFixtureMode, parseIds, type LglGift } from "./lgl";
-import { communityFixtureGifts, COMMUNITY_FIXTURE_DATE } from "./community-fixtures";
+import { communityFixtureGifts, communityFixtureMembers, COMMUNITY_FIXTURE_DATE } from "./community-fixtures";
 import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, OperatingAward } from "./types";
 
-export const COMMUNITY_SOURCE = "LGL gift records";
+export const COMMUNITY_SOURCE = "LGL membership and gift records";
 
 /** 50 pages of 100: room for several times HPIC's gift history today. */
 const COMMUNITY_MAX_PAGES = 50;
@@ -29,12 +34,26 @@ const CASH_TYPES = new Set(["Gift", "Installment", "Matching"]);
 /** Gifts as this module reads them: the shared shape plus the type's name. */
 export type CommunityGift = LglGift;
 
+/** One membership on a constituent, from `expand=memberships`. */
+export interface LglMembership {
+  membership_level_name?: string | null;
+  date_start?: string | null;
+  finish_date?: string | null;
+}
+
+/** An active member. Names come back on this record and are never read. */
+export interface LglMember {
+  id: number;
+  memberships?: LglMembership[] | null;
+}
+
 export interface CommunityConfig {
   membershipCampaigns: number[];
   annualFundCampaigns: number[];
   grantCampaigns: number[];
   awardCategories: number[];
   paymentCategories: number[];
+  nonDonationCategories: number[];
   uiBaseUrl: string | null;
 }
 
@@ -45,6 +64,7 @@ export function communityConfig(env: Env): CommunityConfig {
     grantCampaigns: parseIds(env.LGL_GRANT_CAMPAIGN_IDS),
     awardCategories: parseIds(env.LGL_GRANT_GIFT_CATEGORY_IDS),
     paymentCategories: parseIds(env.LGL_GRANT_PAYMENT_CATEGORY_IDS),
+    nonDonationCategories: parseIds(env.LGL_NON_DONATION_CATEGORY_IDS),
     uiBaseUrl: env.LGL_UI_BASE_URL?.replace(/\/+$/, "") || null,
   };
 }
@@ -71,13 +91,47 @@ function monthKey(year: number, month0: number, offset = 0): string {
 }
 
 /**
- * Everything on the Community tab, from one list of gifts.
+ * Who is a member today, from LGL's list of active members.
+ *
+ * New means a first membership that began this year, so someone returning after
+ * a lapse is not new. A member with no dated record cannot be judged either way,
+ * which blanks the count rather than quietly leaving them out of it.
+ */
+function countMembers(
+  active: LglMember[],
+  year: number,
+): Pick<NonNullable<CommunitySnapshot["members"]>, "total" | "newThisYear" | "byLevel"> {
+  const levels = new Map<string, number>();
+  let newThisYear: number | null = 0;
+
+  for (const member of active) {
+    const records = member.memberships ?? [];
+    const starts = records.map((r) => r.date_start).filter((d): d is string => Boolean(d)).sort();
+    if (starts.length === 0) newThisYear = null;
+    else if (newThisYear !== null && starts[0].startsWith(`${year}-`)) newThisYear += 1;
+
+    // The record running latest is the level they hold now.
+    const current = [...records].sort((a, b) => (b.finish_date ?? "").localeCompare(a.finish_date ?? ""))[0];
+    const level = current?.membership_level_name?.trim() || "No level";
+    levels.set(level, (levels.get(level) ?? 0) + 1);
+  }
+
+  return {
+    total: active.length,
+    newThisYear,
+    byLevel: [...levels.entries()].map(([level, count]) => ({ level, count })).sort((a, b) => b.count - a.count),
+  };
+}
+
+/**
+ * Everything on the Membership tab, from the active members and every gift.
  *
  * Exported for tests: the arithmetic is where this tab can be wrong, and it
  * is easier to pin against a handful of hand-built gifts than a live walk.
  */
 export function assembleCommunity(
   gifts: LglGift[],
+  activeMembers: LglMember[],
   today: string,
   config: CommunityConfig,
   base: Pick<CommunitySnapshot, "retrievedAt" | "connection">,
@@ -97,36 +151,26 @@ export function assembleCommunity(
   const people = (list: LglGift[]) => new Set(list.map((g) => g.constituent_id).filter((id) => id != null));
 
   const giving = cash.filter((g) => !isGrantPayment(g));
+  const haveDues = config.membershipCampaigns.length > 0;
+  const isDuesGift = inCampaigns(config.membershipCampaigns);
 
-  // Members: anyone with a membership gift in the year.
-  let members: CommunitySnapshot["members"] = null;
-  if (config.membershipCampaigns.length > 0) {
-    const dues = giving.filter(inCampaigns(config.membershipCampaigns));
-    const now = people(dues.filter(inYear(year)));
-    const before = people(dues.filter(inYear(lastYear)));
-    const renewed = [...now].filter((id) => before.has(id)).length;
-    const lapsed = [...before].filter((id) => !now.has(id));
-    const lapsedSet = new Set(lapsed);
-    members = {
-      thisYear: now.size,
-      lastYear: before.size,
-      renewed,
-      newThisYear: now.size - renewed,
-      dueToRenew: lapsed.length,
-      dueToRenewAmount: dollars(sum(dues.filter((g) => inYear(lastYear)(g) && lapsedSet.has(g.constituent_id!)))),
-      duesThisYear: dollars(sum(dues.filter(inYear(year)))),
-      duesLastYearSamePeriod: dollars(sum(dues.filter((g) => inYear(lastYear)(g) && g.received_date! <= sameDayLastYear))),
-    };
-  }
-
-  // Supporters: distinct givers of any kind but grant payments.
-  const givers = people(giving.filter(inYear(year)));
-  const giversBefore = people(giving.filter(inYear(lastYear)));
-  const supporters = {
-    thisYear: givers.size,
-    lastYear: giversBefore.size,
-    gaveLastYearNotYetThisYear: [...giversBefore].filter((id) => !givers.has(id)).length,
+  const duesThisYear = giving.filter((g) => isDuesGift(g) && inYear(year)(g));
+  const members: CommunitySnapshot["members"] = {
+    ...countMembers(activeMembers, year),
+    dues: haveDues ? { payers: people(duesThisYear).size, amount: dollars(sum(duesThisYear)) } : null,
   };
+
+  // Donors: people who gave a gift, as distinct from paying dues or buying
+  // something. Without the dues campaigns the two cannot be told apart.
+  const donors: CommunitySnapshot["donors"] = haveDues
+    ? {
+        thisYear: people(
+          giving.filter(
+            (g) => inYear(year)(g) && !isDuesGift(g) && !config.nonDonationCategories.includes(g.gift_category_id ?? -1),
+          ),
+        ).size,
+      }
+    : null;
 
   // Monthly series for the charts.
   const months = Array.from({ length: 12 }, (_, i) => monthKey(year, i));
@@ -141,7 +185,7 @@ export function assembleCommunity(
   });
   const monthly = {
     months,
-    dues: series(config.membershipCampaigns.length > 0 ? giving.filter(inCampaigns(config.membershipCampaigns)) : []),
+    dues: series(haveDues ? giving.filter(isDuesGift) : []),
     giving: series(giving),
   };
 
@@ -175,19 +219,18 @@ export function assembleCommunity(
   const nextMonths = [1, 2, 3].map((n) => monthKey(year, thisMonth, n));
   const yearEarlier = new Set(nextMonths.map((m) => `${Number(m.slice(0, 4)) - 1}${m.slice(4)}`));
   const inWindow = giving.filter((g) => yearEarlier.has(g.received_date!.slice(0, 7)));
-  const isDues = inCampaigns(config.membershipCampaigns);
   const isFund = inCampaigns(config.annualFundCampaigns);
   const items: ExpectedInflow[] = [];
   if (config.annualFundCampaigns.length > 0) {
     items.push({ key: "annual_fund", label: "Annual Fund Drive", amount: dollars(sum(inWindow.filter(isFund))) });
   }
-  if (config.membershipCampaigns.length > 0) {
-    items.push({ key: "memberships", label: "Membership dues", amount: dollars(sum(inWindow.filter(isDues))) });
+  if (haveDues) {
+    items.push({ key: "memberships", label: "Membership dues", amount: dollars(sum(inWindow.filter(isDuesGift))) });
   }
   items.push({
     key: "other_giving",
     label: "Other giving",
-    amount: dollars(sum(inWindow.filter((g) => !isDues(g) && !isFund(g)))),
+    amount: dollars(sum(inWindow.filter((g) => !isDuesGift(g) && !isFund(g)))),
   });
 
   // Grant awards outside the rebuild, and what is still to arrive on each.
@@ -229,7 +272,7 @@ export function assembleCommunity(
     year,
     through: today,
     members,
-    supporters,
+    donors,
     monthly,
     byCampaign,
     nextQuarter: { months: nextMonths, items },
@@ -252,7 +295,7 @@ function empty(
     year: null,
     through: null,
     members: null,
-    supporters: null,
+    donors: null,
     monthly: null,
     byCampaign: [],
     nextQuarter: null,
@@ -270,7 +313,7 @@ export async function getCommunity(env: Env): Promise<CommunitySnapshot> {
 
   if (isFixtureMode(env)) {
     return {
-      ...assembleCommunity(communityFixtureGifts(), seattleDate(COMMUNITY_FIXTURE_DATE)!, config, {
+      ...assembleCommunity(communityFixtureGifts(), communityFixtureMembers(), seattleDate(COMMUNITY_FIXTURE_DATE)!, config, {
         retrievedAt: COMMUNITY_FIXTURE_DATE,
         connection: "fixture",
       }),
@@ -297,5 +340,20 @@ export async function getCommunity(env: Env): Promise<CommunitySnapshot> {
     return empty("unavailable", "ok", "LGL did not say what time it was, so this year cannot be told from last.");
   }
 
-  return assembleCommunity(read.items, today, config, { retrievedAt: read.date, connection: "ok" });
+  const active = await getAll<LglMember>(
+    env,
+    "constituents/search",
+    [["q[]", "membership_status=1"], ["expand", "memberships"]],
+    COMMUNITY_MAX_PAGES,
+  );
+  if (!active.ok) return empty("unavailable", "unavailable", active.detail);
+  if (!active.complete) {
+    return empty(
+      "unavailable",
+      "ok",
+      `LGL holds more active members than one read allows (${COMMUNITY_MAX_PAGES * 100}), so any count would be short. Nothing is shown.`,
+    );
+  }
+
+  return assembleCommunity(read.items, active.items, today, config, { retrievedAt: read.date, connection: "ok" });
 }
