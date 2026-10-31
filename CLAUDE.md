@@ -633,11 +633,12 @@ future value cannot change what an existing test means.
   **The draft budget does not get a tab** (decided 2026-10-31). Operations already
   shows actuals against the budget in QuickBooks, and a spreadsheet tab would add a
   hand-maintained source of numbers while the draft is still moving. Enter the
-  approved budget in QuickBooks by month and Operations picks it up. Note that
-  most of `Budget_FY26_P&L` appears to be even twelfths (dues sit at exactly 9/12
-  by September), though the money is seasonal, so the tab says when most lines were
-  entered evenly: dues read far over budget, and the projection allows $1,875 of
-  individual giving for October to December against a December 2025 drive of $15,905.
+  approved budget in QuickBooks by month and Operations picks it up. Note that 11
+  of the 23 operating lines in `Budget_FY26_P&L` are the same amount every month,
+  dues and individual giving among them, though that money is seasonal. So the tab
+  says so when a quarter or more of the lines are even: dues read far over budget,
+  and the projection allows $1,875 of individual giving for October to December
+  against a December 2025 drive of $15,905.
 
 ### Build backlog (Claude)
 

@@ -212,8 +212,8 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
     lastYear: [`Actual${through}`, "Last year, same months", "Up or down on last year"],
   };
   const even = snapshot.budget.evenLines;
-  // Below half, an evenly split line or two is not what the comparison turns on.
-  const mostlyEven = even !== undefined && even.even * 2 >= even.total;
+  // An evenly split line or two is not what the comparison turns on; a quarter of them is.
+  const manyEven = even !== undefined && even.even * 4 >= even.total;
 
   return (
     <section className="panel">
@@ -282,12 +282,12 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
             </p>
           ) : null}
 
-          {lens !== "lastYear" && mostlyEven ? (
+          {lens !== "lastYear" && manyEven ? (
             <p className="note">
               <strong>Read the budget comparison with care.</strong> {even.even} of {even.total} budget lines were
-              entered as the same amount every month, though the money is seasonal. A line such as dues can look far
-              over budget partway through the year for that reason alone, and the projection may miss money that arrives
-              late, such as the December drive.
+              entered as the same amount every month, and much of HPIC's money is seasonal. A line such as dues can look
+              far over budget partway through the year for that reason alone, and the projection may miss money that
+              arrives late, such as the December drive.
             </p>
           ) : null}
 
