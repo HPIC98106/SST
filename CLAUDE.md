@@ -509,8 +509,8 @@ future value cannot change what an existing test means.
   its budget sheet. The target uses the budget sheet's figure, which taxes the
   contingency at 10.55% like every other line, and is the higher of the two. Never show Metis line items: the
   estimate is for the client and project partners only.
-- **Phase 4, operations: built 2026-10-30, read live 2026-10-31, figures not
-  yet showing.** An Operations
+- **Phase 4, operations: live since 2026-10-31, spending not yet confirmed.**
+  An Operations
   tab (seven-ish board lines, each expandable to its accounts, cumulative
   charts against budget and last year, a month-by-month table) and a "This
   year so far" panel on the Overview (net so far against budget, projected
@@ -522,10 +522,15 @@ future value cannot change what an existing test means.
   account on its section's `Header.ColData`: the first read failed the
   section-total check on Expenses for March 2026, reading that header made it
   pass with nothing else changed, and the error now shows both figures if it
-  recurs. **Still blocked:** one deleted income account with activity has no
-  group, so the tab correctly shows no figures. The amount is not visible until
-  it is grouped. After that, check the tab's totals against QuickBooks' own P&L
-  to the cent, which has not been done.
+  recurs. **Income is confirmed for January to September 2026.** Every income
+  line matches the actuals column of the 2027 draft budget to the cent, except
+  a $0.93 difference on one line where the draft holds a whole-dollar figure.
+  The Grants line equals LGL's three non-rebuild grant payments to the cent, so
+  no rebuild money is in it, and income kept out as rebuild equals LGL's three
+  rebuild payments to the cent. **Spending is not confirmed.** Several of the
+  draft's spending lines are round figures that were edited in Excel, so that
+  column cannot settle it. Only the section-total check covers it until someone
+  compares the tab with QuickBooks' own P&L.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Six tabs, each in the URL hash so a link or reload keeps it:
