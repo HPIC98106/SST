@@ -1,6 +1,8 @@
 /**
- * The Overview's summary of the year: three numbers a board member can read
- * at a glance, with the detail one click away on the Operations tab.
+ * The year in three numbers a board member can read at a glance, at the top of
+ * the Operations tab. "Net operating income" is income less spending on day-to-day
+ * accounts: rebuild accounts are out, and QuickBooks' Other Income is in, so it is
+ * not quite the line QuickBooks prints under that name.
  *
  * Months of operating cash is computed here rather than in the Worker because
  * it joins two reads: programming cash from the cash panel, and operating
@@ -8,7 +10,7 @@
  * rule every total on this dashboard follows.
  */
 
-import { usd } from "./format";
+import { monthAbbrev, usd } from "./format";
 import { OperationsProblems, periodLabel } from "./Operations";
 import type { FundsSnapshot, OperationsSnapshot } from "./types";
 
@@ -53,6 +55,10 @@ export function YearSoFarView({
   const { period, totals } = operations;
   const net = totals?.net ?? null;
   const cash = monthsOfCash(funds, operations);
+  const span = period
+    ? `, ${monthAbbrev(period.fiscalYearStart.slice(0, 7))} to ${monthAbbrev(period.through.slice(0, 7))} ${period.through.slice(0, 4)}`
+    : "";
+  const fullYear = period ? `, full year ${period.fiscalYearEnd.slice(0, 4)}` : "";
 
   return (
     <section className="panel">
@@ -64,10 +70,11 @@ export function YearSoFarView({
       {operations.status === "ok" && net && totals ? (
         <div className="cards">
           <section className="card">
-            <h2>Net so far</h2>
+            <h2>Net operating income{span}</h2>
             <p className="amount">{usd.format(net.actual)}</p>
             <p className="note">
-              {usd.format(totals.income.actual)} income less {usd.format(totals.spending.actual)} spending.{" "}
+              {usd.format(totals.income.actual)} income less {usd.format(totals.spending.actual)} spending, with rebuild
+              money left out.{" "}
               {net.budgetToDate !== null
                 ? `The budget for the same months was ${usd.format(net.budgetToDate)}.`
                 : operations.budget.note ?? "No budget comparison is available."}
@@ -75,7 +82,7 @@ export function YearSoFarView({
           </section>
 
           <section className="card status-projection">
-            <h2>Projected year-end</h2>
+            <h2>Projected net operating income{fullYear}</h2>
             {net.projectedYearEnd !== null ? (
               <p className="amount">{usd.format(net.projectedYearEnd)}</p>
             ) : (

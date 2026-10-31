@@ -141,6 +141,13 @@ LGL_ANNUAL_FUND_CAMPAIGN_IDS = "872"
 # as a donor. 6134 = "Merchandise", which is what Pot Auction sales are coded as.
 LGL_NON_DONATION_CATEGORY_IDS = "6134"
 
+# Gift categories that hold dues: 6081 "Membership" is paid by hand, 6096
+# "Membership-Recurring" renews automatically. A member's latest gift in either
+# says how they renew. Verified 2026-10-31: all 395 cash gifts in 6096 are by card
+# with an external ID, and all 125 repeat payments fall about a year apart.
+LGL_MEMBERSHIP_CATEGORY_IDS = "6081"
+LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS = "6096"
+
 # The construction phase the readiness panel measures against.
 #
 # This is the one figure on the dashboard that no system holds: it arrives from

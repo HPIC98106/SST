@@ -198,7 +198,13 @@ export interface OperationsSnapshot {
   groups: OperationsGroup[];
   totals: { income: OperationsLine; spending: OperationsLine; net: OperationsLine } | null;
   excluded: { income: number; spending: number; accounts: string[] } | null;
-  budget: { status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable"; name: string | null; note?: string };
+  budget: {
+    status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable";
+    name: string | null;
+    note?: string;
+    /** Operating accounts budgeted the same every month, of those budgeted at all. */
+    evenLines?: { even: number; total: number };
+  };
   lastYear: { status: "ok" | "unavailable"; note?: string };
   monthly: { months: string[]; income: MonthlySide; spending: MonthlySide } | null;
   trailingTwelveMonthSpending: number | null;
@@ -214,9 +220,31 @@ export interface OperationsSnapshot {
 export interface CampaignGiving {
   campaign: string;
   thisYear: number;
-  lastYearSamePeriod: number;
   lastYearTotal: number;
   gifts: number;
+  thisYearUrl: string | null;
+  lastYearUrl: string | null;
+}
+
+export interface MemberLevel {
+  level: string;
+  count: number;
+  /** Null when LGL's relationships did not come back with the members. */
+  inHousehold: number | null;
+  individual: number | null;
+  url: string | null;
+}
+
+/** Members whose membership ends in one month, by how it renews. Counts people. */
+export interface RenewalRow {
+  /** "2026-11". Null for the row holding everything past the last month listed. */
+  month: string | null;
+  total: number;
+  autoRenew: number;
+  manual: number;
+  noDues: number;
+  url: string | null;
+  autoRenewUrl: string | null;
 }
 
 /** What the same three months brought in a year earlier: a projection. */
@@ -245,18 +273,25 @@ export interface CommunitySnapshot {
     total: number;
     /** First membership began this year. Null if a member has no dated record. */
     newThisYear: number | null;
-    byLevel: { level: string; count: number }[];
+    byLevel: MemberLevel[];
+    /** Households of two or more active members. Null like `MemberLevel.inHousehold`. */
+    households: number | null;
     /** Who paid dues this year: fewer than `total`, since a household shares one. */
-    dues: { payers: number; amount: number } | null;
+    dues: { payers: number; amount: number; url: string | null } | null;
+    url: string | null;
+    newUrl: string | null;
   } | null;
+  /** Null when the dues categories are not configured. */
+  renewals: { rows: RenewalRow[]; autoRenew: number; manual: number; noDues: number; undated: number } | null;
   /** Distinct givers, leaving out dues, grant payments and purchases. */
-  donors: { thisYear: number } | null;
+  donors: { thisYear: number; gifts: number; giftsUrl: string | null } | null;
   monthly: {
     months: string[];
     dues: { thisYear: (number | null)[]; lastYear: number[] };
     giving: { thisYear: (number | null)[]; lastYear: number[] };
   } | null;
   byCampaign: CampaignGiving[];
+  purchasesThisYear: number;
   nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
   /** Provisional: from LGL payment records linked to their award. */
   operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;

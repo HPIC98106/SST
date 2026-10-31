@@ -19,15 +19,39 @@ export const COMMUNITY_FIXTURE_DATE = "Wed, 14 Oct 2026 16:00:00 GMT";
  * because a household's other members are credited on the one payment.
  */
 export function communityFixtureMembers(): LglMember[] {
-  const member = (id: number, level: string, start: string): LglMember => ({
-    id,
-    memberships: [{ membership_level_name: level, date_start: start, finish_date: `${Number(start.slice(0, 4)) + 1}${start.slice(4)}` }],
+  const LEVEL_IDS: Record<string, number> = { Classic: 396, Champion: 401, Minor: 421 };
+  const record = (level: string, start: string) => ({
+    membership_level_id: LEVEL_IDS[level],
+    membership_level_name: level,
+    date_start: start,
+    finish_date: `${Number(start.slice(0, 4)) + 1}${start.slice(4)}`,
   });
+  // Renewal dates spread across the year, weighted like the dues themselves.
+  const SEASON = ["2025-11", "2025-12", "2026-03", "2026-04", "2026-05", "2026-05", "2026-06", "2026-06", "2026-07", "2026-08", "2026-09", "2026-09", "2026-09", "2026-10"];
+  const renewing = (id: number, level: string, firstYear: number): LglMember => {
+    const month = SEASON[id % SEASON.length];
+    const start = `${month}-05`;
+    return {
+      id,
+      memberships: [record(level, `${firstYear}${start.slice(4)}`), record(level, start)],
+      relationships: householdOf(id),
+    };
+  };
+  const joining = (id: number, level: string): LglMember => ({
+    id,
+    memberships: [record(level, `${SEASON[2 + (id % (SEASON.length - 2))]}-05`)],
+    relationships: householdOf(id),
+  });
+  // Two in three share a household, paired with the next member along.
+  const householdOf = (id: number) =>
+    id % 3 === 2
+      ? []
+      : [{ name: "Household", related_constituent_id: id % 3 === 0 ? id + 1 : id - 1 }];
   return [
-    ...Array.from({ length: 240 }, (_, i) => member(5000 + i, "Classic", "2025-06-01")),
-    ...Array.from({ length: 80 }, (_, i) => member(6000 + i, "Champion", "2025-09-01")),
-    ...Array.from({ length: 130 }, (_, i) => member(6500 + i, "Classic", "2026-05-01")),
-    ...Array.from({ length: 40 }, (_, i) => member(7000 + i, "Minor", "2026-05-01")),
+    ...Array.from({ length: 240 }, (_, i) => renewing(5000 + i, "Classic", 2024)),
+    ...Array.from({ length: 80 }, (_, i) => renewing(6000 + i, "Champion", 2024)),
+    ...Array.from({ length: 130 }, (_, i) => joining(6500 + i, "Classic")),
+    ...Array.from({ length: 40 }, (_, i) => joining(7000 + i, "Minor")),
   ];
 }
 
@@ -77,6 +101,8 @@ export function communityFixtureGifts(): LglGift[] {
       constituent_id: person,
       campaign_id: 846,
       campaign_name: "Memberships",
+      // Most renew automatically; the ones who pay by hand are the ones to chase.
+      gift_category_id: person % 9 === 0 ? 6081 : 6096,
       received_amount: pick(DUES),
       received_date: date(2026, month, month === 9 ? 13 : 28),
     });
@@ -104,7 +130,7 @@ export function communityFixtureGifts(): LglGift[] {
       });
     }
   }
-  gift({ constituent_id: 8001, campaign_id: 887, campaign_name: "Pot Auction", received_amount: 4200, received_date: "2026-04-18" });
+  gift({ constituent_id: 8001, campaign_id: 887, campaign_name: "Pot Auction", gift_category_id: 6134, received_amount: 4200, received_date: "2026-04-18" });
   gift({ constituent_id: 8002, campaign_id: 877, campaign_name: "Sponsorships", received_amount: 1000, received_date: "2026-05-02" });
 
   // Grants: awards (pledges) and payments, which must not count as donors.

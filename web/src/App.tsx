@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrants, fetchOperations } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
-import { formatRetrievedAt, usd0 } from "./format";
+import { formatRetrievedAt, usd } from "./format";
 import { FundingBar } from "./FundingBar";
 import { FundsSnapshotView } from "./FundsSnapshot";
+import { GivingView } from "./Giving";
 import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
@@ -21,6 +22,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "rebuild", label: "Rebuild" },
   { key: "operations", label: "Operations" },
   { key: "membership", label: "Membership" },
+  { key: "giving", label: "Giving" },
   { key: "grants", label: "Grants" },
   { key: "housekeeping", label: "Housekeeping" },
 ];
@@ -224,12 +226,23 @@ export function App() {
           pending.community ? (
             <section className="panel">
               <h1>Membership</h1>
-              <Reading what="membership and giving from LGL" slow />
+              <Reading what="membership from LGL" slow />
             </section>
           ) : community.data ? (
             <MembershipView snapshot={community.data} />
           ) : (
             <PanelError title="Membership" detail={community.error} />
+          )
+        ) : tab === "giving" ? (
+          pending.community ? (
+            <section className="panel">
+              <h1>Giving</h1>
+              <Reading what="giving from LGL" slow />
+            </section>
+          ) : community.data ? (
+            <GivingView snapshot={community.data} />
+          ) : (
+            <PanelError title="Giving" detail={community.error} />
           )
         ) : tab === "grants" ? (
           <div className="stack">
@@ -289,8 +302,9 @@ export function App() {
 
       <footer className="site-footer">
         <p>
-          Read-only. Figures come from QuickBooks and Little Green Light; nothing here changes either. Questions or
-          problems? <a href="mailto:finance@hpic1919.org">finance@hpic1919.org</a>
+          Read-only. Figures come from QuickBooks and Little Green Light; nothing here changes either. Dollars are
+          rounded to the nearest dollar for display and totals use the exact amounts, so a column can differ from its
+          total by a dollar. Questions or problems? <a href="mailto:finance@hpic1919.org">finance@hpic1919.org</a>
         </p>
       </footer>
     </div>
@@ -305,8 +319,8 @@ function OperatingGrants({ community }: { community: CommunitySnapshot | null })
     <section className="panel">
       <h1>Operating grants</h1>
       <p className="muted">
-        Awards outside the rebuild, for programs and operations. {usd0.format(grants.awarded)} awarded,{" "}
-        {usd0.format(grants.received)} received. <span className="tag tag-warn">Provisional</span>
+        Awards outside the rebuild, for programs and operations. {usd.format(grants.awarded)} awarded,{" "}
+        {usd.format(grants.received)} received. <span className="tag tag-warn">Provisional</span>
       </p>
       {grants.awards.length === 0 ? (
         <p className="note">Nothing is still to arrive on any operating award.</p>
@@ -328,9 +342,9 @@ function OperatingGrants({ community }: { community: CommunitySnapshot | null })
                     {a.url ? <a href={a.url} target="_blank" rel="noreferrer">LGL gift {a.id}</a> : `LGL gift ${a.id}`}
                     {a.date ? <span className="muted small"> · {a.date}</span> : null}
                   </th>
-                  <td className="num">{usd0.format(a.amount)}</td>
-                  <td className="num">{usd0.format(a.received)}</td>
-                  <td className="num">{usd0.format(a.remaining)}</td>
+                  <td className="num">{usd.format(a.amount)}</td>
+                  <td className="num">{usd.format(a.received)}</td>
+                  <td className="num">{usd.format(a.remaining)}</td>
                 </tr>
               ))}
             </tbody>

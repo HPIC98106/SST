@@ -8,7 +8,7 @@
  * invoices. The bar shows funding progress; it never says "available".
  */
 
-import { usd0 } from "./format";
+import { usd } from "./format";
 import type { FundsSnapshot, GrantSnapshot } from "./types";
 
 /** "October 22, 2026" from "2026-10-22", read as a calendar date. */
@@ -91,7 +91,7 @@ export function FundingBar({
     <div className="funding">
       <p className="funding-head">
         <span>
-          {name} estimate <strong>{usd0.format(target)}</strong>
+          {name} estimate <strong>{usd.format(target)}</strong>
         </span>
         <span className="muted">
           {cash !== null ? `${Math.round(cashPct)}% in the bank` : "Cash unavailable"}
@@ -116,12 +116,13 @@ export function FundingBar({
               {r.label}
               {compact ? null : <small>{r.detail}</small>}
             </span>
-            <strong>{r.value === null ? "Unavailable" : usd0.format(r.value)}</strong>
+            <strong>{r.value === null ? "Unavailable" : usd.format(r.value)}</strong>
           </li>
         ))}
       </ul>
 
-      {lapsed && phase?.pricesValidUntil ? (
+      {/* Compact only: on the Rebuild tab the readiness panel beneath carries the full warning. */}
+      {compact && lapsed && phase?.pricesValidUntil ? (
         <p className="note warn-text">
           The estimate's prices lapsed on {calendarDate(phase.pricesValidUntil)}; re-pricing could move this target.
         </p>

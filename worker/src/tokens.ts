@@ -405,12 +405,12 @@ export class TokenStore extends DurableObject<Env> {
   // The version in the key keeps a snapshot of an older shape from being served.
 
   async getCachedCommunity(maxAgeMs: number): Promise<{ snapshot: CommunitySnapshot; cachedAt: number } | null> {
-    const cached = await this.ctx.storage.get<{ snapshot: CommunitySnapshot; cachedAt: number }>("community-v2");
+    const cached = await this.ctx.storage.get<{ snapshot: CommunitySnapshot; cachedAt: number }>("community-v3");
     if (!cached || Date.now() - cached.cachedAt > maxAgeMs) return null;
     return cached;
   }
 
   async putCachedCommunity(snapshot: CommunitySnapshot): Promise<void> {
-    await this.ctx.storage.put("community-v2", { snapshot, cachedAt: Date.now() });
+    await this.ctx.storage.put("community-v3", { snapshot, cachedAt: Date.now() });
   }
 }

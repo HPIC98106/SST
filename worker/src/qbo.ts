@@ -261,7 +261,8 @@ async function readAccount(
   return { ok: true, account: body.Account, time: body.time };
 }
 
-const usdFormat = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+/** Whole dollars, like every other figure on the page. */
+const usdFormat = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 /** Until QuickBooks has been read, the ID is all we know an account by. */
 function placeholderLabel(config: AccountConfig): string {

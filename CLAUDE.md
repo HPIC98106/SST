@@ -116,11 +116,33 @@ HPIC's QuickBooks and LGL data.
   people who had paid dues that year, since one payment can cover a household.
   Counting gifts shipped first and was caught because it disagreed with LGL's
   own membership report.
+- **Giving means gifts, on one definition across the Giving tab.** Dues, grant
+  payments and purchases (Pot Auction sales, category 6134) are in none of the
+  donor count, the chart or the table. They are on Membership, Grants and
+  Operations. Mixing them in made "Gifts in 2026" read 273 for what were dues
+  payments.
+- **A number links into LGL only if the search lands on the same count.** Each
+  pattern was run on 2026-10-31 and is pinned in `test/community.test.ts`.
+  Where no search matches, the number stays plain: the closest LGL search for
+  donors returns 27 people against the dashboard's 25, so that card links to the
+  gifts and says "their 65 gifts" instead. "Not auto-renew" has no link for the
+  same reason.
+- **Figures are exact and only their display is rounded.** `usd` shows whole
+  dollars everywhere (decided 2026-10-31). The Worker keeps cents and totals use
+  them, so a column can differ from its printed total by a dollar; the page
+  footer says so.
 
 ### Operations (income and spending against budget)
 
 `worker/src/operations.ts`. Decided 2026-10-30: accrual basis, no variance
-flagging threshold, groupings agreed by Kyle and set in `QBO_PL_GROUPS`.
+flagging threshold, groupings agreed by Kyle and set in `QBO_PL_GROUPS`. Decided
+2026-10-31: differences are coloured by whether they are favorable, every one of
+them because there is no threshold, and always say over or under in words.
+
+"Net operating income" here means income less spending on day-to-day accounts:
+rebuild accounts are out and QuickBooks' Other Income is in, so it is not exactly
+the line QuickBooks prints under that name. The 2027 draft budget calls it Net
+Operating Revenue.
 
 - **Every column covers the completed months only.** An October 30 read
   reports through September 30. A month in progress is never compared with a
@@ -316,7 +338,34 @@ wrong ID returns zero awards, which looks identical to HPIC having no grants.
 
 ### Beyond grants: membership, giving and events, verified 2026-10-30
 
-Membership and giving are read by the Membership tab; events are not read yet.
+Membership and giving are read by the Membership and Giving tabs; events are not
+read yet.
+
+- **Auto-renew is the `Membership-Recurring` gift category (6096).** It is not a
+  field on the membership. Verified 2026-10-31: all 395 cash gifts in it are by
+  card with an external ID, all 125 repeat payments fall about a year apart, a
+  member's current record starts the same day as their latest dues gift for 544 of
+  555, and 508 active members have one, matching HPIC's own saved search "Members-
+  Recurring Billing" exactly. A household member's latest dues gift is their soft
+  credit on the shared payment, so they renew the way it does. Of 125 lapsed
+  members only 11 were on it. The dashboard reads the latest gift and LGL's search
+  asks about any gift ever, so someone who left auto-renew would differ; nobody
+  active does today.
+- **Household is a relationship, not a level.** `expand=relationships` on
+  `constituents/search` returns them without a request per member (an empty array
+  when there are none). Decided 2026-10-31: in a household means linked as
+  Household or Spouse/Partner to another active member, followed through people.
+  570 members were 438 in 173 households and 132 individuals. The dues tiers ($20
+  individual, $40 household; $100 and $200 for Champion, plus 3% when the payer
+  covers the fee) agree for all but 16 of the 555 with a dues gift.
+- **LGL's own search URLs are not documented, but they are stable paths.** Gifts:
+  `/fundraising/search/gt/gift/phase/1,12/campaign/846/ni-category/6076,6134/from/2026-01-01/to/2026-12-31`;
+  asking for `phase/13` also lists the pledges above those installments.
+  Constituents: `/constituents/search/comb/and:and/members/1`, plus `member_type/396`,
+  or `md_fl/latest/md_type/end/me_from/…/me_to/…/memberd/1` (the `memberd/1` is what
+  makes the dates apply; leave it off and they are silently ignored), or
+  `in-gct/6096/in-gifts_type/1,7,8,9,12`. Constituent results load after the page,
+  so a `fetch` sees no count; open the page to check one.
 
 - **Membership records hang off constituents, and LGL can list who is active.**
   `/memberships` returns 404 and `/membership_levels` has only names (Classic,
@@ -533,24 +582,29 @@ future value cannot change what an existing test means.
   compares the tab with QuickBooks' own P&L.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
-  a projector. Six tabs, each in the URL hash so a link or reload keeps it:
+  a projector. Seven tabs, each in the URL hash so a link or reload keeps it:
   - **Overview**, the page to show at a meeting: money available now (with
-    account balances), five tiles (net this year, months of operating cash,
+    account balances), five tiles (net operating income, months of operating cash,
     total members, new members, donors), what the next three months brought
     last year, and a funding bar for the current phase. No to-do lists and no
     names. An account under 1% of all cash rolls into "Smaller balances" here,
-    decided 2026-10-31: it stays in every total and is itemised on Rebuild, and
+    decided 2026-10-31: it stays in every total and opens in place to itemise, and
     it is a share rather than a list of names so that Undeposited Funds comes
     back on its own if deposits pile up. A failed read is never folded away.
-  - **Rebuild**: the funding bar, the readiness table, cash by account.
-  - **Operations**: Phase 4.
+  - **Rebuild**: the funding bar, the readiness table, cash in the rebuild accounts.
+    Programming balances and total cash are on the Overview only (2026-10-31).
+  - **Operations**: Phase 4. The table answers one question at a time, so income
+    and spending fit a phone: so far against budget, the full year, or against
+    last year, three columns each.
   - **Membership** (`worker/src/community.ts`, `/api/community`, renamed from
     Community on 2026-10-31; the module kept its name since it also feeds
-    Grants and the Overview): total members, new members and donors with no
-    comparison to last year (Kyle found those confusing), then dues and giving
-    charts and giving by campaign. From LGL's active members and one read of
-    every gift. **Counts only; names stay in LGL** while the passphrase is
-    shared.
+    Grants and the Overview): total and new members with no comparison to last
+    year (Kyle found those confusing), level by household, renewals for the next
+    twelve months by auto-renew or not, and the dues chart. From LGL's active
+    members and one read of every gift. **Counts only; names stay in LGL** while
+    the passphrase is shared, and a linked number opens behind LGL's own login.
+  - **Giving** (same module and read, split out 2026-10-31): donors, the giving
+    chart and giving by campaign, gifts only.
   - **Grants**: the funnel, and operating grants outside the rebuild with what
     is still to arrive on each (provisional, from linked payments).
   - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
@@ -575,6 +629,15 @@ future value cannot change what an existing test means.
   being read says "Reading…", never "unavailable". **Deploy the Worker before
   pushing the page** when the snapshot's shape changes: the new page crashes on
   the old Worker's response.
+
+  **The draft budget does not get a tab** (decided 2026-10-31). Operations already
+  shows actuals against the budget in QuickBooks, and a spreadsheet tab would add a
+  hand-maintained source of numbers while the draft is still moving. Enter the
+  approved budget in QuickBooks by month and Operations picks it up. Note that
+  most of `Budget_FY26_P&L` appears to be even twelfths (dues sit at exactly 9/12
+  by September), though the money is seasonal, so the tab says when most lines were
+  entered evenly: dues read far over budget, and the projection allows $1,875 of
+  individual giving for October to December against a December 2025 drive of $15,905.
 
 ### Build backlog (Claude)
 

@@ -10,11 +10,11 @@
 
 import type { ReactNode } from "react";
 import { FundingBar } from "./FundingBar";
-import { formatRetrievedAt, monthAbbrev, usd, usd0 } from "./format";
+import { formatRetrievedAt, monthAbbrev, usd } from "./format";
 import { monthsOfCash } from "./YearSoFar";
 import type { AccountSnapshot, CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
-export type Tab = "overview" | "rebuild" | "operations" | "membership" | "grants" | "housekeeping";
+export type Tab = "overview" | "rebuild" | "operations" | "membership" | "giving" | "grants" | "housekeeping";
 
 /**
  * A balance under this share of all cash does not earn its own line at a meeting.
@@ -25,7 +25,7 @@ const SMALL_BALANCE_SHARE = 0.01;
 
 /**
  * Split a group's accounts into those shown by name and a roll-up of the small
- * ones. The small ones stay in every total, and the Rebuild tab itemises them.
+ * ones. The small ones stay in every total, and the roll-up opens to itemise them.
  * Without a total there is nothing to measure against, and an account that could
  * not be read is never folded away, so both cases list every account.
  */
@@ -59,19 +59,24 @@ export function Reading({ what, slow = false }: { what: string; slow?: boolean }
   );
 }
 
-/** One headline figure. `tone` marks a figure that is not a plain record. */
+/**
+ * One headline figure. `tone` marks a figure that is not a plain record. `onOpen`
+ * goes to a tab here; `href` opens the records behind it in LGL.
+ */
 export function Kpi({
   label,
   value,
   detail,
   tone,
   onOpen,
+  href,
 }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
   tone?: "projection" | "provisional" | "unavailable" | "reading";
   onOpen?: () => void;
+  href?: string | null;
 }) {
   const body = (
     <>
@@ -82,6 +87,20 @@ export function Kpi({
       {tone === "provisional" ? <span className="tag tag-warn">Provisional</span> : null}
     </>
   );
+  if (href) {
+    return (
+      <a
+        className={`kpi kpi-link kpi-external${tone ? ` kpi-${tone}` : ""}`}
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        title="Open in LGL (needs an LGL login)"
+      >
+        {body}
+        <span className="kpi-open">Open in LGL ↗</span>
+      </a>
+    );
+  }
   return onOpen ? (
     <button type="button" className={`kpi kpi-link${tone ? ` kpi-${tone}` : ""}`} onClick={onOpen}>
       {body}
@@ -91,28 +110,37 @@ export function Kpi({
   );
 }
 
-/** Total members, new members and donors: the same three here and on Membership. */
-export function MemberKpis({
+/** Total members, new members and donors, each opening the tab it comes from. */
+function MemberKpis({
   members,
   donors,
   year,
   note,
   reading = false,
   onOpen,
+  onOpenDonors,
 }: {
   members: CommunitySnapshot["members"];
   donors: CommunitySnapshot["donors"];
   year: number | null;
   note?: string;
   reading?: boolean;
-  onOpen?: () => void;
+  onOpen: () => void;
+  onOpenDonors: () => void;
 }) {
   const isNew = members?.newThisYear ?? null;
   if (reading) {
     return (
       <>
         {["Total members", "New members", "Donors"].map((label) => (
-          <Kpi key={label} label={label} value="Reading…" tone="reading" detail="From LGL. This can take half a minute." onOpen={onOpen} />
+          <Kpi
+            key={label}
+            label={label}
+            value="Reading…"
+            tone="reading"
+            detail="From LGL. This can take half a minute."
+            onOpen={label === "Donors" ? onOpenDonors : onOpen}
+          />
         ))}
       </>
     );
@@ -138,7 +166,7 @@ export function MemberKpis({
         value={donors ? donors.thisYear.toLocaleString("en-US") : "Not shown"}
         tone={donors ? undefined : "unavailable"}
         detail={donors ? "Gifts beyond dues, grants and auction buys. Most come with the December drive." : undefined}
-        onOpen={onOpen}
+        onOpen={onOpenDonors}
       />
     </>
   );
@@ -196,9 +224,21 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
                   </li>
                 ))}
                 {small.length > 0 ? (
-                  <li title={small.map((a) => a.label).join(", ")}>
-                    <span>Smaller balances</span>
-                    <span className="num">{usd.format(smallTotal)}</span>
+                  <li>
+                    <details className="small-balances">
+                      <summary>
+                        <span>Smaller balances</span>
+                        <span className="num">{usd.format(smallTotal)}</span>
+                      </summary>
+                      <ul>
+                        {small.map((a) => (
+                          <li key={a.key}>
+                            <span>{a.label}</span>
+                            <span className="num">{usd.format(a.balance ?? 0)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   </li>
                 ) : null}
               </ul>
@@ -235,13 +275,13 @@ function NextQuarter({
       </div>
       {quarter ? (
         <>
-          <p className="big-figure">{usd0.format(giving!)}</p>
+          <p className="big-figure">{usd.format(giving!)}</p>
           <p className="muted small">From giving, if this season goes the way the same months did last year.</p>
           <ul className="line-list">
             {quarter.items.map((item) => (
               <li key={item.key}>
                 <span>{item.label}</span>
-                <span className="num">{usd0.format(item.amount)}</span>
+                <span className="num">{usd.format(item.amount)}</span>
               </li>
             ))}
           </ul>
@@ -262,7 +302,7 @@ function NextQuarter({
                 Provisional.
               </small>
             </span>
-            <span className="num">{usd0.format(operating.remaining)}</span>
+            <span className="num">{usd.format(operating.remaining)}</span>
           </li>
         ) : null}
         {rebuild !== null ? (
@@ -270,7 +310,7 @@ function NextQuarter({
             <span>
               Rebuild grants
               <small>
-                {usd0.format(rebuild)} awarded, but it arrives only after HPIC spends and invoices, so nothing is
+                {usd.format(rebuild)} awarded, but it arrives only after HPIC spends and invoices, so nothing is
                 expected until construction starts.
               </small>
             </span>
@@ -310,16 +350,16 @@ export function OverviewView({
 
       <div className="kpis kpis-5">
         {pending.operations ? (
-          <Kpi label="Net this year" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
+          <Kpi label="Net operating income" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
         ) : (
           <Kpi
-            label={through ? `Net this year, to ${through}` : "Net this year"}
-            value={net ? usd0.format(net.actual) : "Not shown"}
+            label={through ? `Net operating income, to ${through}` : "Net operating income"}
+            value={net ? usd.format(net.actual) : "Not shown"}
             tone={net ? undefined : "unavailable"}
             detail={
               net
                 ? net.budgetToDate !== null
-                  ? `Budget for the same months: ${usd0.format(net.budgetToDate)}`
+                  ? `Budget for the same months: ${usd.format(net.budgetToDate)}`
                   : "No monthly budget to compare with yet"
                 : operations?.status === "not_configured"
                   ? "Account groups not set up yet"
@@ -346,6 +386,7 @@ export function OverviewView({
           note={community?.note}
           reading={pending.community}
           onOpen={() => open("membership")}
+          onOpenDonors={() => open("giving")}
         />
       </div>
 

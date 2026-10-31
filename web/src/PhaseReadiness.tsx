@@ -169,7 +169,7 @@ export function PhaseReadinessView({
                 ? "Awaiting the figure from Metis. No placeholder is shown, because a made-up target would make every number above look like an answer."
                 : `Entered by hand. Source: ${phase?.source ?? "unstated"}.${
                     validUntil
-                      ? ` Prices ${lapsed ? "held" : "hold"} until ${calendarDate(validUntil)}${lapsed ? ", and have lapsed" : ""}.`
+                      ? ` Prices ${lapsed ? "held" : "hold"} until ${calendarDate(validUntil)}.`
                       : ""
                   }`
             }

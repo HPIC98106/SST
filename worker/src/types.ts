@@ -97,6 +97,12 @@ export interface Env {
   LGL_ANNUAL_FUND_CAMPAIGN_IDS?: string;
   /** Gift categories that are purchases, not gifts, so buyers are not donors. */
   LGL_NON_DONATION_CATEGORY_IDS?: string;
+  /**
+   * Gift categories that hold dues: paid by hand, and paid by automatic renewal.
+   * Unset leaves the renewals table off the tab rather than calling everyone manual.
+   */
+  LGL_MEMBERSHIP_CATEGORY_IDS?: string;
+  LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS?: string;
 
   /**
    * The construction phase the readiness panel is measured against, and what
@@ -494,6 +500,12 @@ export interface BudgetState {
   /** The QuickBooks budget's name, when one was used. */
   name: string | null;
   note?: string;
+  /**
+   * Operating accounts budgeted with the same amount every month, of those
+   * budgeted at all. An even split is how a seasonal line comes to look far over
+   * or under budget partway through a year, so the page says how much of it there is.
+   */
+  evenLines?: { even: number; total: number };
 }
 
 /** An account with activity that no group claims. */
@@ -578,10 +590,42 @@ export type AccessTokenResult =
 export interface CampaignGiving {
   campaign: string;
   thisYear: number;
-  lastYearSamePeriod: number;
   lastYearTotal: number;
   /** Gifts this year, so a total can be read against how many people gave. */
   gifts: number;
+  /** The same gifts in LGL. Null with no campaign to search on, or no LGL_UI_BASE_URL. */
+  thisYearUrl: string | null;
+  lastYearUrl: string | null;
+}
+
+/** One membership level, split by whether the member shares a household. */
+export interface MemberLevel {
+  level: string;
+  count: number;
+  /** Null when LGL's relationships did not come back with the members. */
+  inHousehold: number | null;
+  individual: number | null;
+  /** Null when LGL_UI_BASE_URL is unset. */
+  url: string | null;
+}
+
+/**
+ * Active members whose membership runs out in one month, by how it renews. Counts
+ * people, so the rows add up to total members; a household renews on one payment.
+ */
+export interface RenewalRow {
+  /** "2026-11". Null for the row holding everything past the last month listed. */
+  month: string | null;
+  total: number;
+  /** Their latest dues gift is in a recurring category. */
+  autoRenew: number;
+  /** Their latest dues gift was paid by hand. */
+  manual: number;
+  /** No dues gift on record, so nothing says how they renew. Never counted as either. */
+  noDues: number;
+  /** Null when LGL_UI_BASE_URL is unset, and for the row past the last month. */
+  url: string | null;
+  autoRenewUrl: string | null;
 }
 
 /**
@@ -619,20 +663,41 @@ export interface CommunitySnapshot {
     total: number;
     /** First membership began this year. Null if a member has no dated record. */
     newThisYear: number | null;
-    byLevel: { level: string; count: number }[];
+    byLevel: MemberLevel[];
+    /** Households of two or more active members. Null like `MemberLevel.inHousehold`. */
+    households: number | null;
     /** Who paid dues this year: fewer than `total`, since a household shares one. */
-    dues: { payers: number; amount: number } | null;
+    dues: { payers: number; amount: number; url: string | null } | null;
+    /** These searches in LGL. Null when LGL_UI_BASE_URL is unset. */
+    url: string | null;
+    newUrl: string | null;
   } | null;
-  /** Distinct givers, leaving out dues, grant payments and purchases. */
-  donors: { thisYear: number } | null;
+  /** Null when the dues categories are not configured. */
+  renewals: {
+    rows: RenewalRow[];
+    autoRenew: number;
+    manual: number;
+    noDues: number;
+    /** Members whose record has no end date, so they fall in no month. */
+    undated: number;
+  } | null;
+  /**
+   * Distinct givers, leaving out dues, grant payments and purchases. LGL can list
+   * the gifts behind this but not these people: its closest constituent search
+   * returned 27 for 25, so the link goes to the gifts and says so.
+   */
+  donors: { thisYear: number; gifts: number; giftsUrl: string | null } | null;
   /** Monthly, for the charts. This year's months after `through` are null. */
   monthly: {
     months: string[];
     dues: { thisYear: (number | null)[]; lastYear: number[] };
+    /** Gifts by the same definition as `donors`: no dues, grants or purchases. */
     giving: { thisYear: (number | null)[]; lastYear: number[] };
   } | null;
-  /** Grant payments excluded: grants have their own tab. */
+  /** Gifts only: dues, grant payments and purchases each have their own place. */
   byCampaign: CampaignGiving[];
+  /** Sales left out of giving this year, so the page can say how much and where it went. */
+  purchasesThisYear: number;
   nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
   /**
    * Provisional, like every LGL payment figure: computed from payment records

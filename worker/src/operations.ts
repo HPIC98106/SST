@@ -708,8 +708,18 @@ export function assembleOperations(
         ? sum(spendingThisYear, 0, completed) + sum(spendingLastYear, completed)
         : null;
 
+  // How much of the budget was entered as twelve equal months, within a dollar of
+  // each other since QuickBooks rounds. The comparison can only be as seasonal as
+  // the budget it reads, so the page says when it is not.
+  const budgeted = operating.filter((f) => f.budget?.some((c) => c !== 0));
+  const even = budgeted.filter((f) => Math.max(...f.budget!) - Math.min(...f.budget!) <= 100);
+
   return snapshot({
     status: "ok",
+    budget:
+      budgeted.length > 0
+        ? { ...budgetFigures.state, evenLines: { even: even.length, total: budgeted.length } }
+        : budgetFigures.state,
     groups,
     totals: { income, spending, net },
     excluded:

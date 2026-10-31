@@ -733,8 +733,14 @@ button.ops-toggle {
   text-align: left;
 }
 
+/* Flex so a label that wraps on a phone stays beside its arrow. */
+button.ops-toggle {
+  display: inline-flex;
+  align-items: baseline;
+}
+
 button.ops-toggle span {
-  display: inline-block;
+  flex: none;
   width: 1rem;
   color: var(--muted);
 }
@@ -765,6 +771,134 @@ button.ops-toggle span {
   font-weight: 700;
   border-top: 2px solid var(--ink);
   border-bottom: none;
+}
+
+/*
+ * A difference says over or under in words and takes its colour from whether that
+ * is good, so nothing depends on telling red from green. Text only, not a filled
+ * cell: a table with every row shaded would have nowhere left for the eye to rest.
+ */
+.ops-table td.diff-good {
+  color: var(--good);
+}
+
+.ops-table td.diff-bad {
+  color: var(--error);
+}
+
+.ops-table td.diff-level {
+  color: var(--muted);
+}
+
+.diff-percent {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+/* The three questions the table can answer. */
+.lens {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 1rem;
+  padding: 2px;
+  background: var(--navy-tint);
+  border-radius: 8px;
+}
+
+button.lens-option {
+  background: none;
+  border: none;
+  color: var(--navy);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+button.lens-option[aria-pressed="true"] {
+  background: var(--surface);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(9, 40, 87, 0.15);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- Membership and Giving --- */
+
+.membership-cards {
+  margin-top: 1.25rem;
+}
+
+/* One chart is a chart, not half a pair. */
+.charts-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.giving-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr);
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+/* A number that opens its records in LGL: quiet until it is reached for. */
+a.lgl-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--faint);
+  text-underline-offset: 3px;
+}
+
+a.lgl-link:hover,
+a.lgl-link:focus-visible {
+  color: var(--navy-2);
+  text-decoration-color: currentColor;
+}
+
+/* Rolled-up balances open in place, in the hero's colours. */
+.small-balances {
+  width: 100%;
+}
+
+.small-balances summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.small-balances summary::-webkit-details-marker {
+  display: none;
+}
+
+.small-balances summary > span:first-child::after {
+  content: " ▸";
+  opacity: 0.7;
+}
+
+.small-balances[open] summary > span:first-child::after {
+  content: " ▾";
+}
+
+.account-list .small-balances ul {
+  margin-top: 0.3rem;
+  padding-left: 0.8rem;
+}
+
+.account-list .small-balances li {
+  padding: 0.2rem 0;
+  border-bottom: none;
+  font-size: 0.82rem;
 }
 
 .ops-list {
@@ -1237,6 +1371,24 @@ button.kpi-link:focus-visible {
   border-color: var(--accent);
 }
 
+a.kpi-external {
+  text-decoration: none;
+  transition: border-color 120ms ease;
+}
+
+a.kpi-external:hover,
+a.kpi-external:focus-visible {
+  border-color: var(--navy);
+  border-top-color: var(--orange);
+}
+
+.kpi-open {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--navy-2);
+  margin-top: 0.2rem;
+}
+
 .kpi-label {
   font-size: 0.78rem;
   font-weight: 600;
@@ -1416,7 +1568,8 @@ button.kpi-link:focus-visible {
     grid-column: 1 / -1;
   }
   .grid-2,
-  .charts {
+  .charts,
+  .giving-top {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -1451,6 +1604,40 @@ button.kpi-link:focus-visible {
   }
   .kpi-value {
     font-size: 1.4rem;
+  }
+  /* Tables fit a phone where they can: headers and long labels wrap, a difference
+     stacks its percent under the amount, and a nested card gives back its padding. */
+  .breakdown thead th.num {
+    white-space: normal;
+  }
+  .breakdown th,
+  .breakdown td {
+    padding: 0.45rem 0.3rem;
+    font-size: 0.82rem;
+  }
+  .breakdown thead th {
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
+    vertical-align: bottom;
+  }
+  .ops-table tbody th[scope="row"],
+  .ops-table tfoot th[scope="row"] {
+    white-space: normal;
+  }
+  .ops-account th[scope="row"] {
+    padding-left: 1rem;
+  }
+  .ops-table td[class*="diff-"] {
+    white-space: normal;
+  }
+  .diff-percent {
+    display: block;
+  }
+  .diff-dot {
+    display: none;
+  }
+  .membership-cards .card-pad {
+    padding: 0.9rem 0.5rem;
   }
   /* The readiness table's explanations stack under each row on a phone. */
   .pr-table tr {

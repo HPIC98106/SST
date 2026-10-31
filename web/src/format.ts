@@ -4,7 +4,13 @@
  * together.
  */
 
-export const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+/**
+ * Whole dollars everywhere on the page (decided 2026-10-31): cents made balances
+ * longer without helping anyone read them. This rounds what is shown and nothing
+ * else. Every figure stays exact in the Worker and totals are computed from the
+ * exact amounts, so a column can differ from its printed total by a dollar.
+ */
+export const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 /**
  * Formats the timestamp the source system reported for the data itself.
@@ -67,6 +73,3 @@ export function compactUsd(n: number): string {
     maximumFractionDigits: 1,
   }).format(n);
 }
-
-/** Whole dollars, for projections and giving figures where cents are noise. */
-export const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });

@@ -1,16 +1,130 @@
 /**
- * Membership: who is a member today, who is new, who has given, and giving by
- * campaign.
+ * Membership: who is a member today, how the membership is made up, when it comes
+ * up for renewal, and what dues have brought in.
  *
  * Counts only. Names stay in LGL: the dashboard has one shared passphrase, and
- * who has not renewed is a list for the membership committee, not a figure
- * for every board member's phone.
+ * who has not renewed is a list for the membership committee, not a figure for
+ * every board member's phone. A linked number opens the same list in LGL, behind
+ * LGL's own login, and each search was checked to land on the same count.
  */
 
 import { CumulativeChart } from "./CumulativeChart";
-import { formatDate, formatRetrievedAt, usd0 } from "./format";
-import { MemberKpis } from "./Overview";
-import type { CommunitySnapshot } from "./types";
+import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { LglLink } from "./LglLink";
+import { Kpi } from "./Overview";
+import type { CommunitySnapshot, RenewalRow } from "./types";
+
+const count = (n: number) => n.toLocaleString("en-US");
+
+/** "Nov 2026" from "2026-11"; everything past the listed months is one row. */
+function renewalLabel(row: RenewalRow): string {
+  return row.month ? `${monthAbbrev(row.month)} ${row.month.slice(0, 4)}` : "Later";
+}
+
+function Levels({ members }: { members: NonNullable<CommunitySnapshot["members"]> }) {
+  const known = members.households !== null;
+  const add = (pick: (l: (typeof members.byLevel)[number]) => number | null) =>
+    members.byLevel.reduce((sum, l) => sum + (pick(l) ?? 0), 0);
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>Members by level</h2>
+      </div>
+      <div className="table-scroll">
+        <table className="breakdown">
+          <thead>
+            <tr>
+              <th scope="col">Level</th>
+              <th scope="col" className="num">Members</th>
+              <th scope="col" className="num">In a household</th>
+              <th scope="col" className="num">Individual</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.byLevel.map((l) => (
+              <tr key={l.level}>
+                <th scope="row">{l.level}</th>
+                <td className="num">
+                  <LglLink url={l.url}>{count(l.count)}</LglLink>
+                </td>
+                <td className="num">{l.inHousehold === null ? "—" : count(l.inHousehold)}</td>
+                <td className="num">{l.individual === null ? "—" : count(l.individual)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="ops-total">
+              <th scope="row">Total</th>
+              <td className="num">
+                <LglLink url={members.url}>{count(members.total)}</LglLink>
+              </td>
+              <td className="num">{known ? count(add((l) => l.inHousehold)) : "—"}</td>
+              <td className="num">{known ? count(add((l) => l.individual)) : "—"}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="note">
+        {known
+          ? `${count(members.households!)} households have two or more members. A member is in a household when LGL links them to another active member as household or spouse/partner.`
+          : "LGL's relationships could not be read, so households are not shown."}
+      </p>
+    </section>
+  );
+}
+
+function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renewals"]> }) {
+  const total = renewals.autoRenew + renewals.manual + renewals.noDues;
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>Coming up for renewal</h2>
+      </div>
+      <div className="table-scroll">
+        <table className="breakdown">
+          <thead>
+            <tr>
+              <th scope="col">Membership ends</th>
+              <th scope="col" className="num">Members</th>
+              <th scope="col" className="num">Auto-renew</th>
+              <th scope="col" className="num">Not auto-renew</th>
+              <th scope="col" className="num">No dues on record</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renewals.rows.map((r) => (
+              <tr key={r.month ?? "later"}>
+                <th scope="row">{renewalLabel(r)}</th>
+                <td className="num">
+                  <LglLink url={r.url}>{count(r.total)}</LglLink>
+                </td>
+                <td className="num">
+                  <LglLink url={r.autoRenewUrl}>{count(r.autoRenew)}</LglLink>
+                </td>
+                <td className="num">{count(r.manual)}</td>
+                <td className="num">{count(r.noDues)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="ops-total">
+              <th scope="row">Total</th>
+              <td className="num">{count(total)}</td>
+              <td className="num">{count(renewals.autoRenew)}</td>
+              <td className="num">{count(renewals.manual)}</td>
+              <td className="num">{count(renewals.noDues)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="note">
+        Counts people, so a household renewing on one payment counts once per member. Auto-renew means their latest dues
+        payment is coded Membership-Recurring in LGL, including a household member credited on someone else's payment.
+        {renewals.undated > 0 ? ` ${count(renewals.undated)} with no end date in LGL are not in any month.` : ""}
+      </p>
+    </section>
+  );
+}
 
 export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
   if (snapshot.status !== "ok") {
@@ -24,7 +138,8 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
     );
   }
 
-  const { members, donors, monthly, year } = snapshot;
+  const { members, monthly, year } = snapshot;
+  const isNew = members?.newThisYear ?? null;
 
   return (
     <section className="panel">
@@ -34,23 +149,31 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
         {snapshot.connection === "fixture" ? " Fixture data." : ""}
       </p>
 
-      <div className="kpis kpis-3">
-        <MemberKpis members={members} donors={donors} year={year} />
+      <div className="kpis kpis-2">
+        <Kpi
+          label="Total members"
+          value={members ? count(members.total) : "Not shown"}
+          tone={members ? undefined : "unavailable"}
+          detail={members ? "Active in LGL today" : undefined}
+          href={members?.url}
+        />
+        <Kpi
+          label={`New members in ${year}`}
+          value={isNew !== null ? count(isNew) : "Not shown"}
+          tone={isNew !== null ? undefined : "unavailable"}
+          detail={isNew !== null ? "First membership began this year" : undefined}
+          href={isNew !== null ? members?.newUrl : null}
+        />
       </div>
 
-      {members ? (
-        <p className="note">
-          By level: {members.byLevel.map((l) => `${l.count.toLocaleString("en-US")} ${l.level}`).join(", ")}.
-          {members.dues
-            ? ` ${members.dues.payers.toLocaleString("en-US")} people paid ${usd0.format(members.dues.amount)} in dues this year. Members outnumber them because one payment can cover a household, and some paid before January or through the December drive.`
-            : ""}{" "}
-          Names are in LGL, not here.
-        </p>
-      ) : null}
+      <div className="stack membership-cards">
+        {members ? <Levels members={members} /> : null}
+        {snapshot.renewals ? <Renewals renewals={snapshot.renewals} /> : null}
+      </div>
 
-      {monthly ? (
-        <div className="charts">
-          {members?.dues ? (
+      {monthly && members?.dues ? (
+        <>
+          <div className="charts charts-single">
             <CumulativeChart
               title="Membership dues, cumulative"
               months={monthly.months}
@@ -59,48 +182,21 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
                 { key: "last", label: String(year! - 1), values: monthly.dues.lastYear, className: "series-last" },
               ]}
             />
-          ) : null}
-          <CumulativeChart
-            title="All giving except grants, cumulative"
-            months={monthly.months}
-            series={[
-              { key: "this", label: String(year), values: monthly.giving.thisYear, className: "series-actual" },
-              { key: "last", label: String(year! - 1), values: monthly.giving.lastYear, className: "series-last" },
-            ]}
-          />
-        </div>
+          </div>
+          <p className="note">
+            <LglLink url={members.dues.url}>
+              {count(members.dues.payers)} people paid {usd.format(members.dues.amount)}
+            </LglLink>{" "}
+            in dues this year. Members outnumber them because one payment can cover a household, and some paid before
+            January or through the December drive.
+          </p>
+        </>
       ) : null}
-
-      <h2 className="section-title">Giving by campaign</h2>
-      <div className="table-scroll">
-        <table className="breakdown">
-          <thead>
-            <tr>
-              <th scope="col">Campaign</th>
-              <th scope="col" className="num">{year} so far</th>
-              <th scope="col" className="num">Same days of {year! - 1}</th>
-              <th scope="col" className="num">All of {year! - 1}</th>
-              <th scope="col" className="num">Gifts in {year}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {snapshot.byCampaign.map((c) => (
-              <tr key={c.campaign}>
-                <th scope="row">{c.campaign}</th>
-                <td className="num">{usd0.format(c.thisYear)}</td>
-                <td className="num">{usd0.format(c.lastYearSamePeriod)}</td>
-                <td className="num">{usd0.format(c.lastYearTotal)}</td>
-                <td className="num">{c.gifts}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
 
       <div className="panel-footer">
         <p>
-          <strong>Source:</strong> {snapshot.source}, {snapshot.giftCount.toLocaleString("en-US")} cash gifts read. LGL
-          holds only what has been entered in it.
+          <strong>Source:</strong> {snapshot.source}. Linked numbers open in LGL, which needs its own login. Names are in
+          LGL, not here.
         </p>
         <p>
           <strong>Data retrieved from LGL:</strong> {formatRetrievedAt(snapshot.retrievedAt)}

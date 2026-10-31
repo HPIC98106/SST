@@ -31,10 +31,20 @@ function AccountCard({ account }: { account: AccountSnapshot }) {
   );
 }
 
+/**
+ * The rebuild accounts, for the Rebuild tab. Programming balances and total cash
+ * are on the Overview (decided 2026-10-31): this tab is about the rebuild, and
+ * programming cash is deliberately not part of what it can afford.
+ */
 export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
+  const rebuild = snapshot.subtotals?.find((s) => s.purpose === "rebuild");
+  // With no purposes configured there is no rebuild group to show, so every
+  // account is listed rather than the panel coming up empty.
+  const accounts = snapshot.subtotals ? snapshot.accounts.filter((a) => a.purpose === "rebuild") : snapshot.accounts;
+
   return (
     <section className="panel">
-      <h1>Cash by account</h1>
+      <h1>Rebuild cash by account</h1>
 
       {/*
         A sandbox company returns real balances for a business that does not
@@ -75,41 +85,14 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
       ) : null}
 
       {/*
-        One group per purpose, every account on its own card. The point is that
-        an imbalance between accounts is visible on the page rather than
-        averaged into a single figure.
+        Every account on its own card. The point is that an imbalance between
+        accounts is visible on the page rather than averaged into a single figure.
       */}
-      {(snapshot.subtotals ?? []).map((subtotal) => {
-        const accounts = snapshot.accounts.filter((a) => a.purpose === subtotal.purpose);
-        return (
-          <section key={subtotal.purpose} className="account-group">
-            <h3>{subtotal.label}</h3>
-            <div className="cards">
-              {accounts.map((account) => (
-                <AccountCard key={account.key} account={account} />
-              ))}
-              <SubtotalCard subtotal={subtotal} />
-            </div>
-          </section>
-        );
-      })}
-
       <div className="cards">
-        {snapshot.accounts
-          .filter((a) => a.purpose === null || !snapshot.subtotals)
-          .map((account) => (
-            <AccountCard key={account.key} account={account} />
-          ))}
-
-        <section className="card card-total">
-          <h2>Total cash</h2>
-          {snapshot.totalCash === null ? (
-            <p className="amount unavailable">Not shown</p>
-          ) : (
-            <p className="amount">{usd.format(snapshot.totalCash)}</p>
-          )}
-          {snapshot.totalCashNote ? <p className="note">{snapshot.totalCashNote}</p> : null}
-        </section>
+        {accounts.map((account) => (
+          <AccountCard key={account.key} account={account} />
+        ))}
+        {rebuild ? <SubtotalCard subtotal={rebuild} /> : null}
       </div>
 
       <div className="panel-footer">

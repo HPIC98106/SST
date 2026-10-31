@@ -200,6 +200,18 @@ describe("budgets the comparison cannot use", () => {
     expect(group(snapshot, "Memberships")?.budgetToDate).toBeNull();
   });
 
+  it("says how many operating lines were budgeted evenly, within QuickBooks' rounding", () => {
+    const budget = buildBudget({
+      name: "FY2026 even",
+      start: "2026-01-01",
+      lines: [
+        { accountId: "301", months: [83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.33, 83.37] },
+        { accountId: "401", months: [0, 0, 0, 0, 900, 900, 900, 900, 900, 900, 0, 0] },
+      ],
+    });
+    expect(assemble({ budgets: [budget] }).budget.evenLines).toEqual({ even: 1, total: 2 });
+  });
+
   it("ignores an inactive budget", () => {
     const old = buildBudget({ name: "Old", start: "2026-01-01", active: false, lines: [{ accountId: "301", months: [1] }] });
     const snapshot = assemble({ budgets: [old, ...fixtureQbo().budgets] });

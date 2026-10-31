@@ -42,11 +42,16 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
   the approved figures, keeping each amount in the month the money actually
-  moves. Keep one active budget per year. Reconcile two things in the draft
-  spreadsheet first: the net in its notes disagrees with the sheet's total, and
-  the Licenses and Permits subtotal does not equal its lines. Unblocks: budget
-  to date and projected year-end for 2027. (2026 is already entered by month as
-  `Budget_FY26_P&L`.)
+  moves, which `Budget_FY26_P&L` mostly did not do. Keep one active budget per
+  year. Settle these in the draft spreadsheet first, with whoever owns it: the net
+  in its notes disagrees with the sheet's total; the Licenses and Permits subtotal
+  does not equal its lines; its January to September spending is below QuickBooks',
+  mostly on Supplies; its whole-year 2027 spending is less than was spent by
+  September this year; several 2027 lines are nine-month actuals carried as a full
+  year (SPU, internet); Online Auction and Sponsorship are budgeted at nothing
+  though both brought money in this year, and the First Fridays tab assumes
+  sponsorship; and Interest is far above this year's. Unblocks: budget to date and
+  projected year-end for 2027.
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can
