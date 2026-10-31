@@ -156,28 +156,30 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
             <p className="banner banner-warn">{snapshot.lastYear.note}</p>
           ) : null}
 
-          <table className="breakdown ops-table">
-            <thead>
-              <tr>
-                <th scope="col">Line</th>
-                <th scope="col" className="num">
-                  Actual{throughMonth ? `, through ${throughMonth}` : ""}
-                </th>
-                <th scope="col" className="num">Budget, same months</th>
-                <th scope="col" className="num">Full-year budget</th>
-                <th scope="col" className="num">Projected year-end</th>
-                <th scope="col" className="num">Last year, same months</th>
-              </tr>
-            </thead>
-            <Side side="income" snapshot={snapshot} open={open} toggle={toggle} />
-            <Side side="spending" snapshot={snapshot} open={open} toggle={toggle} />
-            <tfoot>
-              <tr className="ops-net">
-                <th scope="row">Net (income less spending)</th>
-                <Cells line={totals.net} />
-              </tr>
-            </tfoot>
-          </table>
+          <div className="table-scroll">
+            <table className="breakdown ops-table">
+              <thead>
+                <tr>
+                  <th scope="col">Line</th>
+                  <th scope="col" className="num">
+                    Actual{throughMonth ? `, through ${throughMonth}` : ""}
+                  </th>
+                  <th scope="col" className="num">Budget, same months</th>
+                  <th scope="col" className="num">Full-year budget</th>
+                  <th scope="col" className="num">Projected year-end</th>
+                  <th scope="col" className="num">Last year, same months</th>
+                </tr>
+              </thead>
+              <Side side="income" snapshot={snapshot} open={open} toggle={toggle} />
+              <Side side="spending" snapshot={snapshot} open={open} toggle={toggle} />
+              <tfoot>
+                <tr className="ops-net">
+                  <th scope="row">Net (income less spending)</th>
+                  <Cells line={totals.net} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
           <p className="note">
             <strong>Projected year-end</strong> is a projection, not a record: the actual figure so far plus the
@@ -214,32 +216,34 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
 
               <details className="ops-monthly">
                 <summary>Month by month</summary>
-                <table className="breakdown">
-                  <thead>
-                    <tr>
-                      <th scope="col">Month</th>
-                      <th scope="col" className="num">Income</th>
-                      <th scope="col" className="num">Budget</th>
-                      <th scope="col" className="num">Last year</th>
-                      <th scope="col" className="num">Spending</th>
-                      <th scope="col" className="num">Budget</th>
-                      <th scope="col" className="num">Last year</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthly.months.map((m, i) => (
-                      <tr key={m}>
-                        <th scope="row">{monthAbbrev(m)}</th>
-                        <td className="num">{money(monthly.income.actual[i])}</td>
-                        <td className="num">{money(monthly.income.budget?.[i] ?? null)}</td>
-                        <td className="num">{money(monthly.income.lastYear?.[i] ?? null)}</td>
-                        <td className="num">{money(monthly.spending.actual[i])}</td>
-                        <td className="num">{money(monthly.spending.budget?.[i] ?? null)}</td>
-                        <td className="num">{money(monthly.spending.lastYear?.[i] ?? null)}</td>
+                <div className="table-scroll">
+                  <table className="breakdown">
+                    <thead>
+                      <tr>
+                        <th scope="col">Month</th>
+                        <th scope="col" className="num">Income</th>
+                        <th scope="col" className="num">Budget</th>
+                        <th scope="col" className="num">Last year</th>
+                        <th scope="col" className="num">Spending</th>
+                        <th scope="col" className="num">Budget</th>
+                        <th scope="col" className="num">Last year</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {monthly.months.map((m, i) => (
+                        <tr key={m}>
+                          <th scope="row">{monthAbbrev(m)}</th>
+                          <td className="num">{money(monthly.income.actual[i])}</td>
+                          <td className="num">{money(monthly.income.budget?.[i] ?? null)}</td>
+                          <td className="num">{money(monthly.income.lastYear?.[i] ?? null)}</td>
+                          <td className="num">{money(monthly.spending.actual[i])}</td>
+                          <td className="num">{money(monthly.spending.budget?.[i] ?? null)}</td>
+                          <td className="num">{money(monthly.spending.lastYear?.[i] ?? null)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </details>
             </>
           ) : null}

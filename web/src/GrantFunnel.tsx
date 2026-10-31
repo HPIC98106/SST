@@ -305,24 +305,26 @@ export function GrantFunnelView({
             available to start a construction phase; it changes who ultimately bears the
             cost, not whether work can begin.
           </p>
-          <table className="breakdown">
-            <thead>
-              <tr>
-                <th scope="col">Status</th>
-                <th scope="col" className="num">
-                  Awarded
-                </th>
-                <th scope="col" className="num">
-                  Records
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.awardsByReimbursable.map((bucket) => (
-                <ReimbursableRow key={bucket.status} bucket={bucket} />
-              ))}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="breakdown">
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="num">
+                    Awarded
+                  </th>
+                  <th scope="col" className="num">
+                    Records
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {snapshot.awardsByReimbursable.map((bucket) => (
+                  <ReimbursableRow key={bucket.status} bucket={bucket} />
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="note">
             This comes from the <strong>Payment Terms</strong> field on the award in LGL. “Payment in full” and “Distribution payments” both count as not
             reimbursable; the only distinction that changes a number here is whether HPIC

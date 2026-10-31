@@ -694,6 +694,7 @@ code {
 
 /* Headers wrap so the line labels, which carry the meaning, stay on one line. */
 .ops-table thead th.num {
+  white-space: normal;
   max-width: 7.5rem;
   vertical-align: bottom;
 }
@@ -1020,8 +1021,10 @@ button.ops-toggle span {
   padding-bottom: 2.5rem;
 }
 
+/* minmax(0, ...) so a wide table scrolls in its wrapper rather than widening the page. */
 .stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
 }
 
