@@ -32,12 +32,13 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   token refresh.** The last open check on the production cutover; Intuit
   rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
-- **Group the QuickBooks accounts for the Operations tab.** Set `QBO_PL_GROUPS`
-  with the command in runbook §10, which has the proposed board lines, then
-  check the Grants line for rebuild money as it says. Then ask Claude to check
-  the tab against QuickBooks' own Profit and Loss to the cent. Unblocks: the
-  Operations tab and the Overview's net and operating-cash tiles, which read
-  "not shown" until the groups are set.
+- **Decide where the last ungrouped QuickBooks account goes.** The Housekeeping
+  tab names one deleted income account with activity. Add its ID to a line in
+  the `QBO_PL_GROUPS` command in runbook §10, or to `exclude` if it is rebuild
+  money, and re-run the whole command. Then check the Grants line for rebuild
+  money as the runbook says, and ask Claude to check the tab against QuickBooks'
+  own Profit and Loss to the cent. Unblocks: the Operations tab and the
+  Overview's net and operating-cash tiles, which read "not shown" until then.
 
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to

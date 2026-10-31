@@ -509,22 +509,23 @@ future value cannot change what an existing test means.
   its budget sheet. The target uses the budget sheet's figure, which taxes the
   contingency at 10.55% like every other line, and is the higher of the two. Never show Metis line items: the
   estimate is for the client and project partners only.
-- **Phase 4, operations: built 2026-10-30, not yet read live.** An Operations
+- **Phase 4, operations: built 2026-10-30, read live 2026-10-31, figures not
+  yet showing.** An Operations
   tab (seven-ish board lines, each expandable to its accounts, cumulative
   charts against budget and last year, a month-by-month table) and a "This
   year so far" panel on the Overview (net so far against budget, projected
-  year-end, months of operating cash). Tested against fixtures shaped from
-  Intuit's documented layouts only. **Four things are unverified against live
-  QuickBooks:** the ProfitAndLoss JSON layout (the section-total check will
-  catch a misread), `date_macro=This Fiscal Year`, the `Budget` query, and
-  `Active in (true, false)` on the Account query. Verify each on first deploy,
-  then check the tab's totals against QuickBooks' own P&L to the cent. The first
-  live read (2026-10-31) tripped the section-total check on Expenses for March
-  2026. The suspected cause is money posted directly to a parent account, printed
-  on its section's `Header.ColData`, which the parser skipped and now reads. **Not
-  yet confirmed live**: the raw report is unreachable outside the Worker, and
-  public sources do not settle where QuickBooks prints it. The error now shows
-  both figures if it recurs.
+  year-end, months of operating cash). Built from Intuit's documented layouts.
+  Confirmed by the live read on 2026-10-31: the ProfitAndLoss layout,
+  `date_macro=This Fiscal Year` (fiscal year 2026, through September 30), the
+  `Budget` query (`Budget_FY26_P&L`), and `Active in (true, false)`, which does
+  return deleted accounts. QuickBooks prints money posted directly to a parent
+  account on its section's `Header.ColData`: the first read failed the
+  section-total check on Expenses for March 2026, reading that header made it
+  pass with nothing else changed, and the error now shows both figures if it
+  recurs. **Still blocked:** one deleted income account with activity has no
+  group, so the tab correctly shows no figures. The amount is not visible until
+  it is grouped. After that, check the tab's totals against QuickBooks' own P&L
+  to the cent, which has not been done.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Six tabs, each in the URL hash so a link or reload keeps it:
