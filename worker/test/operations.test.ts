@@ -281,6 +281,61 @@ describe("the profit and loss parser", () => {
     expect(parsed.accounts.get("300")?.cents.get("2026-01")).toBe(5000);
     expect(parsed.accounts.get("301")?.cents.get("2026-01")).toBe(10000);
   });
+
+  type QboReportRow = NonNullable<NonNullable<QboReport["Rows"]>["Row"]>[number];
+
+  /** The same parent and child, with the parent's own money on the section header. */
+  function parentPostingOnHeader(): { report: QboReport; section: QboReportRow } {
+    const report = buildProfitAndLoss({
+      start: "2026-01-01",
+      time: "2026-10-14T09:00:00-07:00",
+      income: [],
+      spending: [
+        { id: "400", name: "Club events", months: [50] },
+        { id: "401", name: "Supplies", parentId: "400", months: [100] },
+      ],
+    });
+    const section = report.Rows!.Row!.find((r) => r.group === "Expenses")!.Rows!.Row![0] as QboReportRow;
+    const own = section.Rows!.Row!.shift()!;
+    section.Header = { ColData: own.ColData };
+    return { report, section };
+  }
+
+  it("reads a parent account's own postings from its section header", () => {
+    const parsed = parse(parentPostingOnHeader().report);
+    expect(parsed.accounts.get("400")?.cents.get("2026-01")).toBe(5000);
+    expect(parsed.accounts.get("401")?.cents.get("2026-01")).toBe(10000);
+  });
+
+  it("does not count a parent's money twice if it were printed in both places", () => {
+    const { report, section } = parentPostingOnHeader();
+    section.Rows!.Row!.unshift({ ColData: section.Header!.ColData, type: "Data" });
+    const parsed = parseProfitAndLoss(report);
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.detail).toContain("does not match");
+  });
+
+  it("does not make a parent look active when its header only names it", () => {
+    const report = buildProfitAndLoss({
+      start: "2026-01-01",
+      time: "2026-10-14T09:00:00-07:00",
+      income: [],
+      spending: [
+        { id: "400", name: "Club events", months: [] },
+        { id: "401", name: "Supplies", parentId: "400", months: [100] },
+      ],
+    });
+    const parsed = parse(report);
+    expect(parsed.accounts.has("400")).toBe(false);
+    expect(parsed.accounts.has("401")).toBe(true);
+  });
+
+  it("says how far apart the figures are when a total does not match", () => {
+    const report = fixtureQbo().thisYear;
+    report.Rows!.Row![0].Summary!.ColData![3] = { value: "999999.00" };
+    const parsed = parseProfitAndLoss(report);
+    expect(!parsed.ok && parsed.detail).toMatch(/\(999999\.00\) does not match the sum of its lines \(\d+\.\d\d\)/);
+  });
 });
 
 // --- The live read path, with QuickBooks stubbed ---

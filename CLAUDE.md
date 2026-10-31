@@ -518,7 +518,13 @@ future value cannot change what an existing test means.
   QuickBooks:** the ProfitAndLoss JSON layout (the section-total check will
   catch a misread), `date_macro=This Fiscal Year`, the `Budget` query, and
   `Active in (true, false)` on the Account query. Verify each on first deploy,
-  then check the tab's totals against QuickBooks' own P&L to the cent.
+  then check the tab's totals against QuickBooks' own P&L to the cent. The first
+  live read (2026-10-31) tripped the section-total check on Expenses for March
+  2026. The suspected cause is money posted directly to a parent account, printed
+  on its section's `Header.ColData`, which the parser skipped and now reads. **Not
+  yet confirmed live**: the raw report is unreachable outside the Worker, and
+  public sources do not settle where QuickBooks prints it. The error now shows
+  both figures if it recurs.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Six tabs, each in the URL hash so a link or reload keeps it:

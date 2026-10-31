@@ -273,11 +273,16 @@ export function parseProfitAndLoss(report: QboReport): ParseResult {
 
   /** Sum every account line under a row into `totals`, recording each account. */
   const walk = (row: QboRow, side: PlSide, totals: Map<string, number>) => {
-    if (row.ColData) {
-      const first = row.ColData[0];
+    // A parent account with sub-accounts is a section, and money posted directly
+    // to the parent can sit on that section's header. A header with no amounts
+    // only names the section, and must not make its account look active: a parent
+    // whose children are all grouped elsewhere would then read as ungrouped.
+    const line = row.ColData ?? row.Header?.ColData;
+    if (line) {
+      const first = line[0];
       const lineCents = new Map<string, number>();
       for (const [index, month] of monthAt) {
-        const cents = toCents(row.ColData[index]?.value);
+        const cents = toCents(line[index]?.value);
         if (cents === null) {
           problem = `QuickBooks printed an unreadable amount on "${first?.value ?? "a line"}".`;
           return;
@@ -287,7 +292,7 @@ export function parseProfitAndLoss(report: QboReport): ParseResult {
       for (const [month, cents] of lineCents) add(totals, month, cents);
       if (!first?.id) {
         if (lineCents.size > 0) unidentified.push({ name: first?.value ?? "(unnamed line)", side });
-      } else {
+      } else if (row.ColData || lineCents.size > 0) {
         const existing = accounts.get(first.id);
         if (existing) {
           for (const [month, cents] of lineCents) add(existing.cents, month, cents);
@@ -320,10 +325,11 @@ export function parseProfitAndLoss(report: QboReport): ParseResult {
     if (printed) {
       for (const [index, month] of monthAt) {
         const expected = toCents(printed[index]?.value);
-        if (expected === null || expected !== (sectionTotals.get(month) ?? 0)) {
+        const read = sectionTotals.get(month) ?? 0;
+        if (expected === null || expected !== read) {
           return fail(
-            `QuickBooks' ${group} total for ${month} does not match the sum of its lines, ` +
-              "so the report's layout is not what this dashboard expects.",
+            `QuickBooks' ${group} total for ${month} (${printed[index]?.value ?? "blank"}) does not match the sum of ` +
+              `its lines (${(read / 100).toFixed(2)}), so the report's layout is not what this dashboard expects.`,
           );
         }
       }
