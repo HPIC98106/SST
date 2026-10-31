@@ -42,6 +42,23 @@ function namedAndSmall(accounts: AccountSnapshot[], totalCash: number | null) {
   };
 }
 
+/** Which reads have not answered yet, so a figure can say so rather than "unavailable". */
+export interface Pending {
+  funds: boolean;
+  grants: boolean;
+  operations: boolean;
+  community: boolean;
+}
+
+/** In place of a figure whose read is still under way. */
+export function Reading({ what, slow = false }: { what: string; slow?: boolean }) {
+  return (
+    <p className="muted reading" aria-busy="true">
+      Reading {what}…{slow ? " This can take half a minute." : ""}
+    </p>
+  );
+}
+
 /** One headline figure. `tone` marks a figure that is not a plain record. */
 export function Kpi({
   label,
@@ -53,13 +70,13 @@ export function Kpi({
   label: string;
   value: ReactNode;
   detail?: ReactNode;
-  tone?: "projection" | "provisional" | "unavailable";
+  tone?: "projection" | "provisional" | "unavailable" | "reading";
   onOpen?: () => void;
 }) {
   const body = (
     <>
       <span className="kpi-label">{label}</span>
-      <span className={tone === "unavailable" ? "kpi-value unavailable" : "kpi-value"}>{value}</span>
+      <span className={tone === "unavailable" || tone === "reading" ? `kpi-value ${tone}` : "kpi-value"}>{value}</span>
       {detail ? <span className="kpi-detail">{detail}</span> : null}
       {tone === "projection" ? <span className="tag">Projection</span> : null}
       {tone === "provisional" ? <span className="tag tag-warn">Provisional</span> : null}
@@ -80,15 +97,26 @@ export function MemberKpis({
   donors,
   year,
   note,
+  reading = false,
   onOpen,
 }: {
   members: CommunitySnapshot["members"];
   donors: CommunitySnapshot["donors"];
   year: number | null;
   note?: string;
+  reading?: boolean;
   onOpen?: () => void;
 }) {
   const isNew = members?.newThisYear ?? null;
+  if (reading) {
+    return (
+      <>
+        {["Total members", "New members", "Donors"].map((label) => (
+          <Kpi key={label} label={label} value="Reading…" tone="reading" detail="From LGL. This can take half a minute." onOpen={onOpen} />
+        ))}
+      </>
+    );
+  }
   return (
     <>
       <Kpi
@@ -185,9 +213,11 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
 function NextQuarter({
   community,
   grants,
+  reading,
 }: {
   community: CommunitySnapshot | null;
   grants: GrantSnapshot | null;
+  reading: boolean;
 }) {
   const quarter = community?.status === "ok" ? community.nextQuarter : null;
   const span = quarter
@@ -216,6 +246,8 @@ function NextQuarter({
             ))}
           </ul>
         </>
+      ) : reading ? (
+        <Reading what="giving history from LGL" slow />
       ) : (
         <p className="muted">{community?.note ?? "Giving history could not be read from LGL."}</p>
       )}
@@ -255,12 +287,14 @@ export function OverviewView({
   grants,
   operations,
   community,
+  pending,
   open,
 }: {
   funds: FundsSnapshot | null;
   grants: GrantSnapshot | null;
   operations: OperationsSnapshot | null;
   community: CommunitySnapshot | null;
+  pending: Pending;
   open: (tab: Tab) => void;
 }) {
   const net = operations?.status === "ok" ? operations.totals?.net ?? null : null;
@@ -272,36 +306,51 @@ export function OverviewView({
 
   return (
     <div className="stack">
-      <Hero funds={funds} />
+      {pending.funds ? <div className="skeleton skeleton-hero" aria-busy="true" aria-label="Loading" /> : <Hero funds={funds} />}
 
       <div className="kpis kpis-5">
-        <Kpi
-          label={through ? `Net this year, to ${through}` : "Net this year"}
-          value={net ? usd0.format(net.actual) : "Not shown"}
-          tone={net ? undefined : "unavailable"}
-          detail={
-            net
-              ? net.budgetToDate !== null
-                ? `Budget for the same months: ${usd0.format(net.budgetToDate)}`
-                : "No monthly budget to compare with yet"
-              : operations?.status === "not_configured"
-                ? "Account groups not set up yet"
-                : "Could not be read"
-          }
-          onOpen={() => open("operations")}
+        {pending.operations ? (
+          <Kpi label="Net this year" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
+        ) : (
+          <Kpi
+            label={through ? `Net this year, to ${through}` : "Net this year"}
+            value={net ? usd0.format(net.actual) : "Not shown"}
+            tone={net ? undefined : "unavailable"}
+            detail={
+              net
+                ? net.budgetToDate !== null
+                  ? `Budget for the same months: ${usd0.format(net.budgetToDate)}`
+                  : "No monthly budget to compare with yet"
+                : operations?.status === "not_configured"
+                  ? "Account groups not set up yet"
+                  : "Could not be read"
+            }
+            onOpen={() => open("operations")}
+          />
+        )}
+        {pending.operations || pending.funds ? (
+          <Kpi label="Operating cash" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
+        ) : (
+          <Kpi
+            label="Operating cash"
+            value={cash?.value ?? "Not shown"}
+            tone={cash?.value ? undefined : "unavailable"}
+            detail={cash?.value ? "Programming cash at the last year's rate of spending" : "Needs this year's figures"}
+            onOpen={() => open("operations")}
+          />
+        )}
+        <MemberKpis
+          members={members}
+          donors={donors}
+          year={year}
+          note={community?.note}
+          reading={pending.community}
+          onOpen={() => open("membership")}
         />
-        <Kpi
-          label="Operating cash"
-          value={cash?.value ?? "Not shown"}
-          tone={cash?.value ? undefined : "unavailable"}
-          detail={cash?.value ? "Programming cash at the last year's rate of spending" : "Needs this year's figures"}
-          onOpen={() => open("operations")}
-        />
-        <MemberKpis members={members} donors={donors} year={year} note={community?.note} onOpen={() => open("membership")} />
       </div>
 
       <div className="grid-2">
-        <NextQuarter community={community} grants={grants} />
+        <NextQuarter community={community} grants={grants} reading={pending.community} />
         <section className="card card-pad">
           <div className="card-head">
             <h2>The rebuild</h2>
@@ -309,7 +358,11 @@ export function OverviewView({
               Details
             </button>
           </div>
-          <FundingBar funds={funds} grants={grants} compact />
+          {pending.funds || pending.grants ? (
+            <Reading what="cash and awards" />
+          ) : (
+            <FundingBar funds={funds} grants={grants} compact />
+          )}
         </section>
       </div>
     </div>

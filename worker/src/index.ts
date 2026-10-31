@@ -29,6 +29,15 @@ export { TokenStore };
  */
 const CACHE_TTL_MS = 15 * 60_000;
 
+/**
+ * Membership and giving take about 35 seconds to read and change on a human
+ * timescale, so this snapshot is served for longer. It has to outlast the
+ * hourly cron that rewrites it, or most of each hour would read cold. Two
+ * hours rides out one failed run; a second one lets the snapshot expire and
+ * the next page load reads LGL itself. The page prints the retrieval time.
+ */
+const COMMUNITY_CACHE_TTL_MS = 2 * 60 * 60_000;
+
 /** The single Durable Object instance that owns the QuickBooks tokens. */
 function tokenStore(env: Env) {
   return env.TOKEN_STORE.get(env.TOKEN_STORE.idFromName("qbo"));
@@ -420,7 +429,7 @@ async function keepAlive(env: Env): Promise<void> {
 async function handleCommunity(env: Env): Promise<Response> {
   const store = tokenStore(env);
   if (env.LGL_MODE === "live") {
-    const cached = await store.getCachedCommunity(CACHE_TTL_MS);
+    const cached = await store.getCachedCommunity(COMMUNITY_CACHE_TTL_MS);
     if (cached) return json({ ...cached.snapshot, cached: true }, env);
   }
   const snapshot = await getCommunity(env);

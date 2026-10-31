@@ -550,11 +550,19 @@ future value cannot change what an existing test means.
   the next-three-months figure is a projection labelled with its basis (the
   same months a year earlier), never added to cash; rebuild grants are shown
   as $0 expected because they pay only after HPIC spends. The Membership read
-  is cached in `TokenStore` for 15 minutes and warmed by the hourly cron,
-  since it is dozens of LGL requests (about 35 seconds cold, 33 of them the gift
-  walk); a walk that stops at its 50-page cap reports nothing rather than an
-  undercount. **Deploy the Worker before pushing the page** when the snapshot's
-  shape changes: the new page crashes on the old Worker's response.
+  is dozens of LGL requests (about 35 seconds cold, 33 of them the gift walk),
+  so `TokenStore` serves it for two hours and the hourly cron rewrites it, which
+  rides out one failed run (decided 2026-10-31: at 15 minutes it was cold for
+  45 minutes of every hour). So LGL edits take up to an hour to reach Membership,
+  the Expected card and operating grants; the Membership tab and operating grants
+  print their retrieval time. It cannot read only recent gifts: operating
+  awards and their payments go back years. A walk that stops at its 50-page cap
+  reports nothing rather than an undercount, and is not cached, so the last
+  complete read stays up until it expires. The page renders each panel as its own
+  read lands, so a cold Membership read never holds up cash, and a figure still
+  being read says "Reading…", never "unavailable". **Deploy the Worker before
+  pushing the page** when the snapshot's shape changes: the new page crashes on
+  the old Worker's response.
 
 ### Build backlog (Claude)
 

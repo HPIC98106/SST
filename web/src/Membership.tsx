@@ -104,7 +104,7 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
         </p>
         <p>
           <strong>Data retrieved from LGL:</strong> {formatRetrievedAt(snapshot.retrievedAt)}
-          {snapshot.cached ? " (cached, refreshed at least every 15 minutes)" : ""}
+          {snapshot.cached ? " (cached, refreshed about once an hour)" : ""}
         </p>
       </div>
     </section>

@@ -1247,10 +1247,15 @@ button.kpi-link:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.kpi-value.unavailable {
+.kpi-value.unavailable,
+.kpi-value.reading {
   font-size: 1.15rem;
   font-weight: 500;
   padding: 0.35rem 0;
+}
+
+.kpi-value.reading {
+  color: var(--muted);
 }
 
 .kpi-detail {
@@ -1375,10 +1380,6 @@ button.kpi-link:focus-visible {
 
 .skeleton-hero {
   height: 13rem;
-}
-
-.skeleton-kpi {
-  height: 6.5rem;
 }
 
 .skeleton-card {

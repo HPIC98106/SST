@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrants, fetchOperations } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
 import { formatRetrievedAt, usd0 } from "./format";
@@ -8,7 +8,7 @@ import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
 import { OperationsProblems, OperationsView } from "./Operations";
-import { OverviewView, type Tab } from "./Overview";
+import { OverviewView, Reading, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
 import { PhaseReadinessView } from "./PhaseReadiness";
 import { YearSoFarView } from "./YearSoFar";
@@ -43,6 +43,14 @@ interface Panel<T> {
   error?: string;
 }
 
+/**
+ * No answer yet. Different from a failure: while a read is under way a figure
+ * says it is being read, never that it could not be.
+ */
+function isPending(panel: Panel<unknown>): boolean {
+  return panel.data === null && panel.error === undefined;
+}
+
 export function App() {
   const [passphrase, setPassphrase] = useState<string | null>(() => sessionStorage.getItem(STORAGE_KEY));
   const [funds, setFunds] = useState<Panel<FundsSnapshot>>({ data: null });
@@ -51,8 +59,8 @@ export function App() {
   const [community, setCommunity] = useState<Panel<CommunitySnapshot>>({ data: null });
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [gateError, setGateError] = useState<string | undefined>();
+  const latestLoad = useRef(0);
 
   useEffect(() => {
     const onHash = () => {
@@ -70,32 +78,38 @@ export function App() {
   }, []);
 
   const load = useCallback(async (secret: string) => {
+    const thisLoad = ++latestLoad.current;
     setLoading(true);
-    const results = await Promise.allSettled([
-      fetchFunds(secret),
-      fetchGrants(secret),
-      fetchOperations(secret),
-      fetchCommunity(secret),
+
+    // Each panel lands as soon as its own read does. Membership can take half
+    // a minute when it is not cached, and cash must not wait for it.
+    const settle = async <T,>(read: Promise<T>, show: (panel: Panel<T>) => void) => {
+      try {
+        const data = await read;
+        if (thisLoad === latestLoad.current) show({ data });
+      } catch (reason) {
+        if (thisLoad !== latestLoad.current) return;
+        // A wrong passphrase is a page-level problem: every request carries
+        // the same secret, so the rest of this load is abandoned with it.
+        if (reason instanceof NotAuthorizedError) {
+          latestLoad.current += 1;
+          sessionStorage.removeItem(STORAGE_KEY);
+          setPassphrase(null);
+          setGateError(reason.message);
+          setLoading(false);
+          return;
+        }
+        show({ data: null, error: reason instanceof Error ? reason.message : String(reason) });
+      }
+    };
+
+    await Promise.all([
+      settle(fetchFunds(secret), setFunds),
+      settle(fetchGrants(secret), setGrants),
+      settle(fetchOperations(secret), setOperations),
+      settle(fetchCommunity(secret), setCommunity),
     ]);
-
-    // A wrong passphrase is a page-level problem: every request carries the
-    // same secret, so all of them will have failed the same way.
-    const unauthorized = results.find((r) => r.status === "rejected" && r.reason instanceof NotAuthorizedError);
-    if (unauthorized && unauthorized.status === "rejected") {
-      sessionStorage.removeItem(STORAGE_KEY);
-      setPassphrase(null);
-      setGateError((unauthorized.reason as Error).message);
-      setLoading(false);
-      return;
-    }
-
-    const [f, g, o, c] = results;
-    setFunds(toPanel(f as PromiseSettledResult<FundsSnapshot>));
-    setGrants(toPanel(g as PromiseSettledResult<GrantSnapshot>));
-    setOperations(toPanel(o as PromiseSettledResult<OperationsSnapshot>));
-    setCommunity(toPanel(c as PromiseSettledResult<CommunitySnapshot>));
-    setLoading(false);
-    setLoaded(true);
+    if (thisLoad === latestLoad.current) setLoading(false);
   }, []);
 
   // Data loads on page load. Nobody runs a script or exports a file.
@@ -118,6 +132,12 @@ export function App() {
 
   const exceptions = grants.data?.exceptions ?? [];
   const blocking = exceptions.filter((e) => e.severity === "blocking").length;
+  const pending = {
+    funds: isPending(funds),
+    grants: isPending(grants),
+    operations: isPending(operations),
+    community: isPending(community),
+  };
 
   return (
     <div className="app">
@@ -159,29 +179,40 @@ export function App() {
       </header>
 
       <main className="content">
-        {!loaded ? (
-          <Skeleton />
-        ) : tab === "overview" ? (
+        {tab === "overview" ? (
           <OverviewView
             funds={funds.data}
             grants={grants.data}
             operations={operations.data}
             community={community.data}
+            pending={pending}
             open={open}
           />
         ) : tab === "rebuild" ? (
           <div className="stack">
-            <section className="card card-pad">
-              <div className="card-head">
-                <h2>How far {grants.data?.phaseTarget.name ?? "the next phase"} is funded</h2>
-              </div>
-              <FundingBar funds={funds.data} grants={grants.data} />
-            </section>
-            <PhaseReadinessView funds={funds.data} grants={grants.data} />
-            {funds.data ? <FundsSnapshotView snapshot={funds.data} /> : <PanelError title="Cash by account" detail={funds.error} />}
+            {pending.funds || pending.grants ? (
+              <PanelLoading />
+            ) : (
+              <>
+                <section className="card card-pad">
+                  <div className="card-head">
+                    <h2>How far {grants.data?.phaseTarget.name ?? "the next phase"} is funded</h2>
+                  </div>
+                  <FundingBar funds={funds.data} grants={grants.data} />
+                </section>
+                <PhaseReadinessView funds={funds.data} grants={grants.data} />
+              </>
+            )}
+            {pending.funds ? null : funds.data ? (
+              <FundsSnapshotView snapshot={funds.data} />
+            ) : (
+              <PanelError title="Cash by account" detail={funds.error} />
+            )}
           </div>
         ) : tab === "operations" ? (
-          operations.data ? (
+          pending.operations || pending.funds ? (
+            <PanelLoading />
+          ) : operations.data ? (
             <div className="stack">
               <YearSoFarView operations={operations.data} funds={funds.data} />
               <OperationsView snapshot={operations.data} />
@@ -190,19 +221,33 @@ export function App() {
             <PanelError title="Income and spending" detail={operations.error} />
           )
         ) : tab === "membership" ? (
-          community.data ? (
+          pending.community ? (
+            <section className="panel">
+              <h1>Membership</h1>
+              <Reading what="membership and giving from LGL" slow />
+            </section>
+          ) : community.data ? (
             <MembershipView snapshot={community.data} />
           ) : (
             <PanelError title="Membership" detail={community.error} />
           )
         ) : tab === "grants" ? (
           <div className="stack">
-            {grants.data ? (
+            {pending.grants ? (
+              <PanelLoading />
+            ) : grants.data ? (
               <GrantFunnelView snapshot={grants.data} showExceptions={false} />
             ) : (
               <PanelError title="Grant funnel" detail={grants.error} />
             )}
-            <OperatingGrants community={community.data} />
+            {pending.community ? (
+              <section className="panel">
+                <h1>Operating grants</h1>
+                <Reading what="operating grants from LGL" slow />
+              </section>
+            ) : (
+              <OperatingGrants community={community.data} />
+            )}
           </div>
         ) : (
           <div className="stack">
@@ -212,7 +257,9 @@ export function App() {
                 Records that break a rule, and how the systems fit together. Fixing a record here fixes a number
                 elsewhere on the dashboard.
               </p>
-              {grants.data ? (
+              {pending.grants ? (
+                <Reading what="LGL's grant records" />
+              ) : grants.data ? (
                 exceptions.length > 0 ? (
                   <DataQualityPanel exceptions={exceptions} />
                 ) : (
@@ -252,8 +299,8 @@ export function App() {
 
 /** Grant awards outside the rebuild, with what is still to arrive on each. */
 function OperatingGrants({ community }: { community: CommunitySnapshot | null }) {
-  const grants = community?.status === "ok" ? community.operatingGrants : null;
-  if (!grants) return null;
+  if (community?.status !== "ok" || !community.operatingGrants) return null;
+  const grants = community.operatingGrants;
   return (
     <section className="panel">
       <h1>Operating grants</h1>
@@ -292,33 +339,15 @@ function OperatingGrants({ community }: { community: CommunitySnapshot | null })
       )}
       <p className="note">
         Computed from LGL payment records linked to each award; a payment not linked to its award makes "still to
-        arrive" too high.
+        arrive" too high. Read from LGL {formatRetrievedAt(community.retrievedAt)}.
       </p>
     </section>
   );
 }
 
-function Skeleton() {
-  return (
-    <div className="stack" aria-busy="true" aria-label="Loading">
-      <div className="skeleton skeleton-hero" />
-      <div className="kpis kpis-5">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton skeleton-kpi" />
-        ))}
-      </div>
-      <div className="grid-2">
-        <div className="skeleton skeleton-card" />
-        <div className="skeleton skeleton-card" />
-      </div>
-    </div>
-  );
-}
-
-function toPanel<T>(result: PromiseSettledResult<T>): Panel<T> {
-  if (result.status === "fulfilled") return { data: result.value };
-  const reason = result.reason;
-  return { data: null, error: reason instanceof Error ? reason.message : String(reason) };
+/** Holds a panel's place while its read is under way. */
+function PanelLoading() {
+  return <div className="skeleton skeleton-card" aria-busy="true" aria-label="Loading" />;
 }
 
 /** Inline unavailable state for a panel whose request never returned. */

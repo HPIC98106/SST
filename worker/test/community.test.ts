@@ -6,15 +6,16 @@
  * means a first membership this year; only cash gift types count; dues, grant
  * payments and purchases do not make a donor; "same period last year" stops at
  * the same day; the next quarter wraps into the new year correctly; operating
- * awards report what is still to arrive; and a page walk that stops early reports
- * nothing at all.
+ * awards report what is still to arrive; a page walk that stops early reports
+ * nothing at all; and the cached snapshot outlasts the cron that rewrites it.
  */
 
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { assembleCommunity, communityConfig, getCommunity, seattleDate, type LglMember } from "../src/community";
+import worker from "../src/index";
 import type { LglGift } from "../src/lgl";
-import type { Env } from "../src/types";
+import type { CommunitySnapshot, Env } from "../src/types";
 
 const CONFIG = communityConfig({
   LGL_MEMBERSHIP_CAMPAIGN_IDS: "846",
@@ -234,6 +235,46 @@ describe("reading LGL", () => {
     expect(snapshot.status).toBe("ok");
     expect(snapshot.members!.total).toBeGreaterThan(snapshot.members!.dues!.payers);
     expect(snapshot.monthly!.dues.thisYear[11]).toBeNull();
+  });
+});
+
+describe("the cached snapshot", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const live = { ...env, LGL_MODE: "live", LGL_API_KEY: "test", ACCESS_PASSPHRASE: "test" } as Env;
+  const minutes = 60_000;
+
+  /** Seeds a snapshot of the given age, then asks the Worker for it. */
+  async function readAged(age: number) {
+    const stub = env.TOKEN_STORE.get(env.TOKEN_STORE.idFromName("qbo"));
+    const snapshot = assemble([dues(1, "2026-05-01")]);
+    await runInDurableObject(stub, (_instance, state) =>
+      state.storage.put("community-v2", { snapshot, cachedAt: Date.now() - age }),
+    );
+    const lgl = vi.fn(async () =>
+      new Response(JSON.stringify({ items: [], total_items: 0 }), {
+        status: 200,
+        headers: { "content-type": "application/json", date: "Fri, 30 Oct 2026 17:00:00 GMT" },
+      }),
+    );
+    vi.stubGlobal("fetch", lgl);
+    const response = await worker.fetch(
+      new Request("https://worker.test/api/community", { headers: { "X-HPIC-Auth": "test" } }),
+      live,
+    );
+    return { body: (await response.json()) as CommunitySnapshot, lgl };
+  }
+
+  it("outlasts the hourly cron, including one run that failed", async () => {
+    const { body, lgl } = await readAged(119 * minutes);
+    expect(body.cached).toBe(true);
+    expect(lgl).not.toHaveBeenCalled();
+  });
+
+  it("reads LGL again once two runs have been missed", async () => {
+    const { body, lgl } = await readAged(121 * minutes);
+    expect(body.cached).toBe(false);
+    expect(lgl).toHaveBeenCalled();
   });
 });
 
