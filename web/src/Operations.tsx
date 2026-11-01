@@ -20,6 +20,7 @@
 import { Fragment, useState } from "react";
 import { CumulativeChart } from "./CumulativeChart";
 import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { QboLink } from "./LglLink";
 import type { OperationsLine, OperationsSnapshot, PlSide } from "./types";
 
 const money = (n: number | null) => (n === null ? "—" : usd.format(n));
@@ -85,15 +86,21 @@ function Cells({ line, lens, direction }: { line: OperationsLine; lens: Lens; di
   if (lens === "lastYear") {
     return (
       <>
-        <td className="num">{money(line.actual)}</td>
-        <td className="num">{money(line.lastYearToDate)}</td>
+        <td className="num">
+          <QboLink url={line.url}>{money(line.actual)}</QboLink>
+        </td>
+        <td className="num">
+          <QboLink url={line.lastYearUrl}>{money(line.lastYearToDate)}</QboLink>
+        </td>
         <Difference value={line.actual} against={line.lastYearToDate} direction={direction} words={["up", "down"]} />
       </>
     );
   }
   return (
     <>
-      <td className="num">{money(line.actual)}</td>
+      <td className="num">
+        <QboLink url={line.url}>{money(line.actual)}</QboLink>
+      </td>
       <td className="num">{money(line.budgetToDate)}</td>
       <Difference value={line.actual} against={line.budgetToDate} direction={direction} words={["over", "under"]} />
     </>
@@ -272,7 +279,12 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
           <p className="note">
             Green is favorable and red is not: income over or spending under, and the reverse. Net operating income is
             income less spending on day-to-day accounts, with rebuild money left out.
-            {snapshot.budget.name ? ` Budget: "${snapshot.budget.name}" in QuickBooks.` : ""}
+            {snapshot.budget.name ? (
+              <>
+                {" "}
+                Budget: <QboLink url={snapshot.budget.url}>"{snapshot.budget.name}"</QboLink> in QuickBooks.
+              </>
+            ) : null}
           </p>
 
           {lens === "fullYear" ? (
@@ -294,9 +306,17 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
           {snapshot.excluded ? (
             <p className="note">
               <strong>Kept out of these figures:</strong> {snapshot.excluded.accounts.join(", ")}
-              {snapshot.excluded.income !== 0 ? `, ${usd.format(snapshot.excluded.income)} of income` : ""}
-              {snapshot.excluded.spending !== 0 ? `, ${usd.format(snapshot.excluded.spending)} of spending` : ""} over
-              the same months. Rebuild money is reported on the Overview and Rebuild tabs, not as day-to-day income.
+              {snapshot.excluded.income !== 0 ? (
+                <>
+                  , <QboLink url={snapshot.excluded.url}>{usd.format(snapshot.excluded.income)}</QboLink> of income
+                </>
+              ) : null}
+              {snapshot.excluded.spending !== 0 ? (
+                <>
+                  , <QboLink url={snapshot.excluded.url}>{usd.format(snapshot.excluded.spending)}</QboLink> of spending
+                </>
+              ) : null}{" "}
+              over the same months. Rebuild money is reported on the Overview and Rebuild tabs, not as day-to-day income.
             </p>
           ) : null}
 
@@ -336,10 +356,14 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
                       {monthly.months.map((m, i) => (
                         <tr key={m}>
                           <th scope="row">{monthAbbrev(m)}</th>
-                          <td className="num">{money(monthly.income.actual[i])}</td>
+                          <td className="num">
+                            <QboLink url={monthly.urls?.[i]}>{money(monthly.income.actual[i])}</QboLink>
+                          </td>
                           <td className="num">{money(monthly.income.budget?.[i] ?? null)}</td>
                           <td className="num">{money(monthly.income.lastYear?.[i] ?? null)}</td>
-                          <td className="num">{money(monthly.spending.actual[i])}</td>
+                          <td className="num">
+                            <QboLink url={monthly.urls?.[i]}>{money(monthly.spending.actual[i])}</QboLink>
+                          </td>
                           <td className="num">{money(monthly.spending.budget?.[i] ?? null)}</td>
                           <td className="num">{money(monthly.spending.lastYear?.[i] ?? null)}</td>
                         </tr>

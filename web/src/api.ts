@@ -1,9 +1,10 @@
 /**
  * The only place this app talks to the network.
  *
- * The frontend never holds credentials or account identifiers. It sends the
- * shared passphrase and receives labels and amounts — nothing that identifies
- * a QuickBooks company or account.
+ * The frontend holds no credentials and nothing about HPIC in its bundle. It sends
+ * the shared passphrase and receives labels, amounts, and links into LGL and
+ * QuickBooks. A link can carry a QuickBooks account ID, which opens nothing without
+ * QuickBooks' own login, and none names the company.
  */
 
 import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";

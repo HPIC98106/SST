@@ -127,6 +127,20 @@ export function qboEnvironment(env: Env): "sandbox" | "production" {
   return env.QBO_ENV === "production" ? "production" : "sandbox";
 }
 
+/**
+ * Where links into QuickBooks' web interface start, or null when a link would not
+ * open these figures: fixture IDs and a sandbox company name nothing real.
+ */
+export function qboUiBase(env: Env): string | null {
+  if (env.QBO_MODE === "fixture" || qboEnvironment(env) !== "production") return null;
+  return env.QBO_UI_BASE_URL?.trim().replace(/\/+$/, "") || null;
+}
+
+/** An account's register. Checked 2026-10-31: all six cash accounts opened on their dashboard balance. */
+export function registerUrl(base: string | null, accountId: string): string | null {
+  return base ? `${base}/register?accountId=${encodeURIComponent(accountId)}` : null;
+}
+
 function baseUrl(env: Env): string {
   return BASE_URLS[qboEnvironment(env)];
 }
@@ -556,7 +570,10 @@ export async function getFunds(env: Env, store: DurableObjectStub<TokenStore>): 
   }
 
   const accounts = [
-    ...results.map((r) => toSnapshot(r.config, r.result)),
+    ...results.map((r) => ({
+      ...toSnapshot(r.config, r.result),
+      url: r.result.ok ? registerUrl(qboUiBase(env), r.config.id) : null,
+    })),
     ...invalid.map(invalidRow),
   ];
 

@@ -129,8 +129,15 @@ HPIC's QuickBooks and LGL data.
   login. When search criteria cannot describe a set of records, `gids/<id>,<id>` can:
   it opens exactly those gifts, and LGL's Pledged tile then shows their remaining
   balance. LGL's constituent search has no equivalent that matched, so Donors, Not
-  auto-renew and the household counts stay plain. No QuickBooks link exists yet: its
-  URLs need checking in a signed-in session before any ships.
+  auto-renew and the household counts stay plain. Use `QboLink` for QuickBooks, whose
+  URLs are `qbo.intuit.com/app/register?accountId=<id>` and
+  `reportv2?rptId=PANDL` or `rptId=ACCTL_QUICKREPORT&account=<id>,<id>&account_incl_subs=false`,
+  each with `date_macro=custom&low_date=MM/DD/YYYY&high_date=MM/DD/YYYY`. These dates
+  only take on the `reportv2?rptId=` route, not on `report/builder` or
+  `reportv2?token=`. Budget vs. Actuals always reopens as the whole year by month, so it
+  backs the budget's name rather than a figure, and the Budget and Projected columns
+  stay plain. Links name no company: someone signed in to several, such as a bookkeeper,
+  sees the one they have open.
 - **A number links into LGL only if the search lands on the same count.** Each
   pattern was run on 2026-10-31 and is pinned in `test/community.test.ts`.
   Where no search matches, the number stays plain: the closest LGL search for
@@ -149,10 +156,10 @@ flagging threshold, groupings agreed by Kyle and set in `QBO_PL_GROUPS`. Decided
 2026-10-31: differences are coloured by whether they are favorable, every one of
 them because there is no threshold, and always say over or under in words.
 
-"Net operating income" here means income less spending on day-to-day accounts:
-rebuild accounts are out and QuickBooks' Other Income is in, so it is not exactly
-the line QuickBooks prints under that name. The 2027 draft budget calls it Net
-Operating Revenue.
+"Net operating income" here means income less spending on day-to-day accounts, with
+rebuild money out. It is the line QuickBooks prints as Net Operating Revenue, as does
+the 2027 draft budget, because HPIC's rebuild accounts sit below it in Other Revenue
+and Other Expenditures.
 
 - **Every column covers the completed months only.** An October 30 read
   reports through September 30. A month in progress is never compared with a
@@ -607,7 +614,7 @@ future value cannot change what an existing test means.
   its budget sheet. The target uses the budget sheet's figure, which taxes the
   contingency at 10.55% like every other line, and is the higher of the two. Never show Metis line items: the
   estimate is for the client and project partners only.
-- **Phase 4, operations: live since 2026-10-31, spending not yet confirmed.**
+- **Phase 4, operations: live since 2026-10-31, and confirmed against QuickBooks.**
   An Operations
   tab (seven-ish board lines, each expandable to its accounts, cumulative
   charts against budget and last year, a month-by-month table) and a "This
@@ -625,10 +632,12 @@ future value cannot change what an existing test means.
   a $0.93 difference on one line where the draft holds a whole-dollar figure.
   The Grants line equals LGL's three non-rebuild grant payments to the cent, so
   no rebuild money is in it, and income kept out as rebuild equals LGL's three
-  rebuild payments to the cent. **Spending is not confirmed.** Several of the
-  draft's spending lines are round figures that were edited in Excel, so that
-  column cannot settle it. Only the section-total check covers it until someone
-  compares the tab with QuickBooks' own P&L.
+  rebuild payments to the cent. **Spending is confirmed too**, on 2026-10-31, against
+  QuickBooks' own Statement of Activity for January to September: every line, Total
+  Expenditures $28,326.80, and Net Operating Revenue $31,704.37 match. So does the
+  rebuild money below it, $243,426.21 of Other Revenue and $95,954.11 of Other
+  Expenditures, which is what the tab keeps out. The draft budget's spending column
+  is the one that differs, not the tab.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Seven tabs, each in the URL hash so a link or reload keeps it:
@@ -715,10 +724,6 @@ future value cannot change what an existing test means.
   and fund are collinear today, so the breakdown's value is catching the first
   award where they disagree. Caveat to state on the panel: a fund records
   where money was *deposited*, not what the funder *restricted*.
-- **QuickBooks links.** Account balances on the Overview and Rebuild, the Operations
-  lines and the budget are still plain, waiting on a signed-in session to check the
-  URLs. `AccountSnapshot.key` already gives the page each cash account's ID, and an
-  Operations line would need its account ID added.
 - **Grant Name and a spend-by date on Grant details.** The name reader is built
   and waits on the field. A spend-by date needs a field too, and then a read and a
   line on the card.

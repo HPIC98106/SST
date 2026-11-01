@@ -13,3 +13,13 @@ export function LglLink({ url, children }: { url: string | null | undefined; chi
     </a>
   );
 }
+
+/** The same for QuickBooks: a figure that opens its register or report, behind QuickBooks' login. */
+export function QboLink({ url, children }: { url: string | null | undefined; children: ReactNode }) {
+  if (!url) return <>{children}</>;
+  return (
+    <a className="lgl-link" href={url} target="_blank" rel="noreferrer" title="Open in QuickBooks (needs a QuickBooks login)">
+      {children}
+    </a>
+  );
+}

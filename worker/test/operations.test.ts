@@ -133,7 +133,7 @@ describe("the year so far", () => {
   it("keeps excluded rebuild money out of every figure, and says how much was kept out", () => {
     const snapshot = assemble();
     const rebuild = total(FIXTURE_FIGURES.thisYear["330"], 0, 9);
-    expect(snapshot.excluded).toEqual({ income: rebuild, spending: 0, accounts: ["Rebuild contributions"] });
+    expect(snapshot.excluded).toMatchObject({ income: rebuild, spending: 0, accounts: ["Rebuild contributions"] });
 
     const operatingIncome = snapshot.groups.filter((g) => g.side === "income").reduce((s, g) => s + g.actual, 0);
     expect(snapshot.totals?.income.actual).toBeCloseTo(operatingIncome, 2);
@@ -160,6 +160,62 @@ describe("the year so far", () => {
     expect(monthly!.months[0]).toBe("2026-01");
     expect(monthly!.income.actual.slice(9)).toEqual([null, null, null]);
     expect(monthly!.income.budget).toHaveLength(12);
+  });
+});
+
+describe("links into QuickBooks", () => {
+  const UI = "https://example.intuit.test/app";
+  const linked = () =>
+    assembleOperations(fixtureInputs(), parseGroupConfig(FIXTURE_GROUPS), BASE, UI);
+  const range = "date_macro=custom&low_date=01/01/2026&high_date=09/30/2026";
+  const lastRange = "date_macro=custom&low_date=01/01/2025&high_date=09/30/2025";
+
+  it("opens the transactions behind one account, for exactly the months on the page", () => {
+    const account = group(linked(), "Memberships")!.accounts[0];
+    expect(account.url).toMatch(/\/reportv2\?rptId=ACCTL_QUICKREPORT&account=\d+&account_incl_subs=false&/);
+    expect(account.url).toContain(range);
+    expect(account.lastYearUrl).toContain(lastRange);
+  });
+
+  it("opens every account of a board line together", () => {
+    const programs = group(linked(), "Events and programs")!;
+    const accounts = programs.url!.match(/account=([\d,]+)/)![1].split(",");
+    expect(accounts.length).toBeGreaterThan(1);
+    expect(new Set(accounts).size).toBe(accounts.length);
+  });
+
+  it("opens QuickBooks' own report for the totals", () => {
+    const { totals, excluded } = linked();
+    const pnl = `${UI}/reportv2?rptId=PANDL&${range}`;
+    for (const total of [totals!.income, totals!.spending, totals!.net]) {
+      expect(total.url).toBe(pnl);
+      expect(total.lastYearUrl).toBe(`${UI}/reportv2?rptId=PANDL&${lastRange}`);
+    }
+    expect(excluded?.url).toBe(pnl);
+  });
+
+  it("opens each completed month, and no month still in progress", () => {
+    const urls = linked().monthly!.urls!;
+    expect(urls[1]).toBe(`${UI}/reportv2?rptId=PANDL&date_macro=custom&low_date=02/01/2026&high_date=02/28/2026`);
+    expect(urls[8]).toContain("low_date=09/01/2026&high_date=09/30/2026");
+    expect(urls[9]).toBeNull();
+  });
+
+  it("opens Budget vs. Actuals from the budget, when one was chosen", () => {
+    const budget = buildBudget({ name: "FY2026", start: "2026-01-01", lines: [{ accountId: "301", months: [1] }] });
+    budget.Id = "42";
+    const snapshot = assembleOperations(fixtureInputs({ budgets: [budget] }), parseGroupConfig(FIXTURE_GROUPS), BASE, UI);
+    expect(snapshot.budget.url).toBe(
+      `${UI}/reportv2?rptId=BUDGET_VS_ACTUALS&budget=42&low_date=01/01/2026&high_date=12/31/2026&column=monthly&rowaxis=primary&axisset=primary-monthly`,
+    );
+  });
+
+  it("carries no links without an address", () => {
+    const snapshot = assemble();
+    expect(snapshot.totals!.net.url).toBeNull();
+    expect(group(snapshot, "Memberships")!.url).toBeNull();
+    expect(snapshot.monthly!.urls!.every((u) => u === null)).toBe(true);
+    expect(snapshot.budget.url).toBeNull();
   });
 });
 

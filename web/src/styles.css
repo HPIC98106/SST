@@ -1007,6 +1007,15 @@ a.lgl-link:focus-visible {
   text-decoration-color: currentColor;
 }
 
+.hero a.lgl-link {
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+}
+
+.hero a.lgl-link:hover,
+.hero a.lgl-link:focus-visible {
+  color: var(--gold);
+}
+
 /* Rolled-up balances open in place, in the hero's colours. */
 .small-balances {
   width: 100%;

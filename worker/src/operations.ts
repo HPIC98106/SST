@@ -35,7 +35,7 @@
  */
 
 import { FIXTURE_GROUPS, fixtureQbo } from "./operations-fixtures";
-import { qboEnvironment, qboGet, type QboAccount, type QboGetResult } from "./qbo";
+import { qboEnvironment, qboGet, qboUiBase, type QboAccount, type QboGetResult } from "./qbo";
 import type { TokenStore } from "./tokens";
 import type {
   BudgetState,
@@ -159,6 +159,49 @@ function lastDayOfMonth(month: string): string {
 function shiftDate(date: string, { years = 0, days = 0 }: { years?: number; days?: number }): string {
   const [y, m, d] = date.split("-").map(Number);
   return new Date(Date.UTC(y + years, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// --- Links into QuickBooks' reports ---
+//
+// QuickBooks has no documented URLs for these. They are what its own pages link to,
+// and on 2026-10-31 each landed on the dashboard's figure for this year and last.
+// Only the `reportv2?rptId=` route carries a date range into the report: the same
+// parameters on `report/builder` are ignored, leaving the year to date, which is
+// not the figure on the page.
+
+/** "09/30/2026" from "2026-09-30", the form these reports take. */
+function reportDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${y}`;
+}
+
+const reportRange = (from: string, to: string) =>
+  `date_macro=custom&low_date=${reportDate(from)}&high_date=${reportDate(to)}`;
+
+/** The whole profit and loss, which HPIC's nonprofit company calls Statement of Activity. */
+export function profitAndLossUrl(base: string | null, from: string, to: string): string | null {
+  return base ? `${base}/reportv2?rptId=PANDL&${reportRange(from, to)}` : null;
+}
+
+/**
+ * The transactions behind some accounts. Sub-accounts stay out: each has its own
+ * row and its own figure on the page, and a parent's figure here is only its own.
+ */
+export function accountReportUrl(base: string | null, ids: string[], from: string, to: string): string | null {
+  if (!base || ids.length === 0) return null;
+  return `${base}/reportv2?rptId=ACCTL_QUICKREPORT&account=${ids.join(",")}&account_incl_subs=false&${reportRange(from, to)}`;
+}
+
+/**
+ * Budget vs. Actuals. QuickBooks resets this one to the whole year by month whatever
+ * it is asked, so it backs the budget's name rather than any single figure.
+ */
+export function budgetReportUrl(base: string | null, budgetId: string | undefined, from: string, to: string): string | null {
+  if (!base || !budgetId) return null;
+  return (
+    `${base}/reportv2?rptId=BUDGET_VS_ACTUALS&budget=${encodeURIComponent(budgetId)}` +
+    `&low_date=${reportDate(from)}&high_date=${reportDate(to)}&column=monthly&rowaxis=primary&axisset=primary-monthly`
+  );
 }
 
 // --- The profit and loss report ---
@@ -372,6 +415,8 @@ interface BudgetFigures {
   monthly: Map<string, Map<string, number>> | null;
   /** Per account, the full-year total in cents, however the budget was entered. */
   fullYear: Map<string, number> | null;
+  /** QuickBooks' ID for the budget chosen, for a link to its report. */
+  id?: string;
 }
 
 /**
@@ -433,9 +478,10 @@ export function readBudget(budgets: QboBudget[], fiscalYearStart: string): Budge
       },
       monthly: null,
       fullYear,
+      id: budget.Id,
     };
   }
-  return { state: { status: "ok", name }, monthly, fullYear };
+  return { state: { status: "ok", name }, monthly, fullYear, id: budget.Id };
 }
 
 // --- Assembly ---
@@ -484,6 +530,8 @@ export function assembleOperations(
   inputs: OperationsInputs,
   config: ParsedGroups,
   base: Pick<OperationsSnapshot, "connection" | "environment">,
+  /** Where links into QuickBooks start. Null leaves every figure without one. */
+  ui: string | null = null,
 ): OperationsSnapshot {
   const { report } = inputs;
   const months = monthKeys(report.start);
@@ -617,6 +665,13 @@ export function assembleOperations(
     });
   }
 
+  // The periods the Actual and Last year figures cover, for links to the same months.
+  const reportFrom = report.start;
+  const reportTo = period.through;
+  const lastFrom = comparison?.start ?? null;
+  const lastTo = comparison ? lastDayOfMonth(monthKeys(comparison.start)[Math.max(completed, 1) - 1]) : null;
+  const idsOf = (rows: AccountFigures[]) => [...new Set(rows.map((r) => r.id))];
+
   const line = (label: string, rows: AccountFigures[]): OperationsLine => {
     const actual = sum(rows.map((r) => sum(r.actual, 0, completed)));
     const monthlyBudget = budgetFigures.monthly !== null;
@@ -631,8 +686,17 @@ export function assembleOperations(
       budgetFullYear: fullYear === null ? null : dollars(fullYear),
       projectedYearEnd: remaining === null ? null : dollars(actual + remaining),
       lastYearToDate: lastYearToDate === null ? null : dollars(lastYearToDate),
+      url: accountReportUrl(ui, idsOf(rows), reportFrom, reportTo),
+      lastYearUrl: lastFrom && lastTo ? accountReportUrl(ui, idsOf(rows), lastFrom, lastTo) : null,
     };
   };
+
+  // Totals are lines QuickBooks prints on its own report, so that is what they open.
+  const asTotal = (l: OperationsLine): OperationsLine => ({
+    ...l,
+    url: profitAndLossUrl(ui, reportFrom, reportTo),
+    lastYearUrl: lastFrom && lastTo ? profitAndLossUrl(ui, lastFrom, lastTo) : null,
+  });
 
   const operating = figures.filter((f) => f.group !== EXCLUDE);
   const excludedRows = figures.filter((f) => f.group === EXCLUDE);
@@ -662,17 +726,17 @@ export function assembleOperations(
     }
   }
 
-  const income = line("Income", operating.filter((f) => f.side === "income"));
-  const spending = line("Spending", operating.filter((f) => f.side === "spending"));
+  const income = asTotal(line("Income", operating.filter((f) => f.side === "income")));
+  const spending = asTotal(line("Spending", operating.filter((f) => f.side === "spending")));
   const minus = (a: number | null, b: number | null) => (a === null || b === null ? null : Math.round((a - b) * 100) / 100);
-  const net: OperationsLine = {
+  const net: OperationsLine = asTotal({
     label: "Net",
     actual: minus(income.actual, spending.actual)!,
     budgetToDate: minus(income.budgetToDate, spending.budgetToDate),
     budgetFullYear: minus(income.budgetFullYear, spending.budgetFullYear),
     projectedYearEnd: minus(income.projectedYearEnd, spending.projectedYearEnd),
     lastYearToDate: minus(income.lastYearToDate, spending.lastYearToDate),
-  };
+  });
 
   const sideMonths = (side: PlSide, pick: (f: AccountFigures) => Months | null): Months | null => {
     const rows = operating.filter((f) => f.side === side);
@@ -695,7 +759,12 @@ export function assembleOperations(
       lastYear: last ? last.map(dollars) : null,
     };
   };
-  const monthly: OperationsMonthly = { months, income: monthlySide("income"), spending: monthlySide("spending") };
+  const monthly: OperationsMonthly = {
+    months,
+    income: monthlySide("income"),
+    spending: monthlySide("spending"),
+    urls: months.map((m, i) => (i < completed ? profitAndLossUrl(ui, `${m}-01`, lastDayOfMonth(m)) : null)),
+  };
 
   // The last twelve completed months of operating spending: this year's
   // completed months, and last year's from the same month on.
@@ -714,12 +783,15 @@ export function assembleOperations(
   const budgeted = operating.filter((f) => f.budget?.some((c) => c !== 0));
   const even = budgeted.filter((f) => Math.max(...f.budget!) - Math.min(...f.budget!) <= 100);
 
+  const budgetUrl = budgetReportUrl(ui, budgetFigures.id, report.start, fiscalYearEnd);
+
   return snapshot({
     status: "ok",
-    budget:
-      budgeted.length > 0
-        ? { ...budgetFigures.state, evenLines: { even: even.length, total: budgeted.length } }
-        : budgetFigures.state,
+    budget: {
+      ...budgetFigures.state,
+      ...(budgeted.length > 0 ? { evenLines: { even: even.length, total: budgeted.length } } : {}),
+      url: budgetUrl,
+    },
     groups,
     totals: { income, spending, net },
     excluded:
@@ -728,6 +800,7 @@ export function assembleOperations(
             income: dollars(sum(excludedRows.filter((r) => r.side === "income").map((r) => sum(r.actual, 0, completed)))),
             spending: dollars(sum(excludedRows.filter((r) => r.side === "spending").map((r) => sum(r.actual, 0, completed)))),
             accounts: excludedRows.map((r) => r.name).sort(),
+            url: profitAndLossUrl(ui, reportFrom, reportTo),
           }
         : null,
     monthly,
@@ -965,5 +1038,5 @@ export async function getOperations(env: Env, store: DurableObjectStub<TokenStor
     return emptySnapshot(env, "unavailable", "ok", `QuickBooks could not be read: ${read.detail}`);
   }
 
-  return assembleOperations(read.inputs, config, { connection: "ok", environment: qboEnvironment(env) });
+  return assembleOperations(read.inputs, config, { connection: "ok", environment: qboEnvironment(env) }, qboUiBase(env));
 }

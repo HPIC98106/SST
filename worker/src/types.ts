@@ -16,6 +16,11 @@ export interface Env {
   // Plain vars — safe to keep in wrangler.toml.
   QBO_ENV: "sandbox" | "production";
   QBO_MODE: "fixture" | "live";
+  /**
+   * QuickBooks' web interface, for links into a register or report. Not a secret.
+   * Unset, and in fixture or sandbox mode, the figures simply carry no links.
+   */
+  QBO_UI_BASE_URL?: string;
   QBO_REALM_ID: string;
   QBO_REDIRECT_URI: string;
 
@@ -157,6 +162,8 @@ export interface AccountSnapshot {
   balance: number | null;
   /** True when the account rolls up sub-accounts, so the mapping gets reviewed. */
   hasSubAccounts: boolean;
+  /** This account's register in QuickBooks. Null or absent when no link applies. */
+  url?: string | null;
   /** Human-readable explanation, shown inline on the panel. */
   note?: string;
 }
@@ -474,6 +481,10 @@ export interface OperationsLine {
   projectedYearEnd: number | null;
   /** The same months of the previous fiscal year. Null when that read failed. */
   lastYearToDate: number | null;
+  /** The report behind `actual` in QuickBooks. Null or absent when no link applies. */
+  url?: string | null;
+  /** The same report for the months behind `lastYearToDate`. */
+  lastYearUrl?: string | null;
 }
 
 /** A board-level line, with the QuickBooks accounts underneath it. */
@@ -488,6 +499,8 @@ export interface OperationsMonthly {
   months: string[];
   income: MonthlySide;
   spending: MonthlySide;
+  /** Each completed month's profit and loss in QuickBooks. Absent when no link applies. */
+  urls?: (string | null)[];
 }
 
 export interface MonthlySide {
@@ -511,6 +524,8 @@ export interface BudgetState {
    * or under budget partway through a year, so the page says how much of it there is.
    */
   evenLines?: { even: number; total: number };
+  /** QuickBooks' Budget vs. Actuals for this budget, month by month for the whole year. */
+  url?: string | null;
 }
 
 /** An account with activity that no group claims. */
@@ -558,7 +573,7 @@ export interface OperationsSnapshot {
    * What `exclude` kept out of every figure above, over the same months, so
    * leaving rebuild money out is visible rather than silent.
    */
-  excluded: { income: number; spending: number; accounts: string[] } | null;
+  excluded: { income: number; spending: number; accounts: string[]; url?: string | null } | null;
   budget: BudgetState;
   lastYear: { status: "ok" | "unavailable"; note?: string };
   monthly: OperationsMonthly | null;

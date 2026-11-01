@@ -20,6 +20,8 @@ export interface AccountSnapshot {
   balance: number | null;
   hasSubAccounts: boolean;
   note?: string;
+  /** This account's register in QuickBooks. */
+  url?: string | null;
 }
 
 export interface PurposeSubtotal {
@@ -174,6 +176,9 @@ export interface OperationsLine {
   budgetFullYear: number | null;
   projectedYearEnd: number | null;
   lastYearToDate: number | null;
+  /** The report behind `actual` in QuickBooks, and behind `lastYearToDate`. */
+  url?: string | null;
+  lastYearUrl?: string | null;
 }
 
 export interface OperationsGroup extends OperationsLine {
@@ -202,16 +207,18 @@ export interface OperationsSnapshot {
   basis: "Accrual";
   groups: OperationsGroup[];
   totals: { income: OperationsLine; spending: OperationsLine; net: OperationsLine } | null;
-  excluded: { income: number; spending: number; accounts: string[] } | null;
+  excluded: { income: number; spending: number; accounts: string[]; url?: string | null } | null;
   budget: {
     status: "ok" | "none" | "ambiguous" | "not_monthly" | "unavailable";
     name: string | null;
     note?: string;
     /** Operating accounts budgeted the same every month, of those budgeted at all. */
     evenLines?: { even: number; total: number };
+    /** QuickBooks' Budget vs. Actuals for this budget. */
+    url?: string | null;
   };
   lastYear: { status: "ok" | "unavailable"; note?: string };
-  monthly: { months: string[]; income: MonthlySide; spending: MonthlySide } | null;
+  monthly: { months: string[]; income: MonthlySide; spending: MonthlySide; urls?: (string | null)[] } | null;
   trailingTwelveMonthSpending: number | null;
   retrievedAt: string | null;
   cached: boolean;

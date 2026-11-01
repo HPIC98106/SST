@@ -59,6 +59,10 @@ QBO_ENV = "production"
 # the developer app, sandbox company, and OAuth seeding are in place.
 QBO_MODE = "live"
 
+# QuickBooks' web interface, for links from the page into a register or report.
+# It names no company: QuickBooks opens whichever one the reader is signed in to.
+QBO_UI_BASE_URL = "https://qbo.intuit.com/app"
+
 # NOTE: QBO_REALM_ID and QBO_ACCOUNTS are deliberately NOT here. This repository is public, and those values name
 # HPIC's actual QuickBooks company and accounts. They are set as secrets:
 #

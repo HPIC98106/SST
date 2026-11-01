@@ -1,8 +1,9 @@
 /**
  * The year in three numbers a board member can read at a glance, at the top of
  * the Operations tab. "Net operating income" is income less spending on day-to-day
- * accounts: rebuild accounts are out, and QuickBooks' Other Income is in, so it is
- * not quite the line QuickBooks prints under that name.
+ * accounts, with rebuild money out. It is the line QuickBooks prints as Net Operating
+ * Revenue: checked to the cent on 2026-10-31, because HPIC's rebuild accounts sit
+ * below it, in Other Revenue and Other Expenditures.
  *
  * Months of operating cash is computed here rather than in the Worker because
  * it joins two reads: programming cash from the cash panel, and operating
@@ -11,6 +12,7 @@
  */
 
 import { monthAbbrev, usd } from "./format";
+import { QboLink } from "./LglLink";
 import { OperationsProblems, periodLabel } from "./Operations";
 import type { FundsSnapshot, OperationsSnapshot } from "./types";
 
@@ -71,10 +73,13 @@ export function YearSoFarView({
         <div className="cards">
           <section className="card">
             <h2>Net operating income{span}</h2>
-            <p className="amount">{usd.format(net.actual)}</p>
+            <p className="amount">
+              <QboLink url={net.url}>{usd.format(net.actual)}</QboLink>
+            </p>
             <p className="note">
-              {usd.format(totals.income.actual)} income less {usd.format(totals.spending.actual)} spending, with rebuild
-              money left out.{" "}
+              <QboLink url={totals.income.url}>{usd.format(totals.income.actual)}</QboLink> income less{" "}
+              <QboLink url={totals.spending.url}>{usd.format(totals.spending.actual)}</QboLink> spending, with rebuild money
+              left out.{" "}
               {net.budgetToDate !== null
                 ? `The budget for the same months was ${usd.format(net.budgetToDate)}.`
                 : operations.budget.note ?? "No budget comparison is available."}

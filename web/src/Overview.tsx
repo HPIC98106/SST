@@ -11,7 +11,7 @@
 import type { ReactNode } from "react";
 import { FundingBar } from "./FundingBar";
 import { formatRetrievedAt, monthAbbrev, usd } from "./format";
-import { LglLink } from "./LglLink";
+import { LglLink, QboLink } from "./LglLink";
 import { monthsOfCash } from "./YearSoFar";
 import type { AccountSnapshot, CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
@@ -218,9 +218,11 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
               <ul>
                 {named.map((a) => (
                   <li key={a.key}>
-                    <span>{a.label}</span>
+                    <span>
+                      <QboLink url={a.url}>{a.label}</QboLink>
+                    </span>
                     <span className={a.status === "ok" ? "num" : "num unavailable"}>
-                      {a.status === "ok" ? usd.format(a.balance ?? 0) : "Unavailable"}
+                      {a.status === "ok" ? <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink> : "Unavailable"}
                     </span>
                   </li>
                 ))}
@@ -234,8 +236,12 @@ function Hero({ funds }: { funds: FundsSnapshot | null }) {
                       <ul>
                         {small.map((a) => (
                           <li key={a.key}>
-                            <span>{a.label}</span>
-                            <span className="num">{usd.format(a.balance ?? 0)}</span>
+                            <span>
+                              <QboLink url={a.url}>{a.label}</QboLink>
+                            </span>
+                            <span className="num">
+                              <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink>
+                            </span>
                           </li>
                         ))}
                       </ul>

@@ -13,7 +13,7 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OAuthEndpoints } from "../src/endpoints";
-import { getFunds } from "../src/qbo";
+import { getFunds, qboUiBase, registerUrl } from "../src/qbo";
 import type { Env } from "../src/types";
 
 const ENDPOINTS: OAuthEndpoints = {
@@ -234,5 +234,32 @@ describe("accounts grouped by purpose", () => {
     expect(snapshot.accounts).toEqual([]);
     expect(snapshot.totalCash).toBeNull();
     expect(subtotal(snapshot, "rebuild")?.total).toBeNull();
+  });
+});
+
+describe("links into QuickBooks", () => {
+  const UI = "https://example.intuit.test/app";
+  const answer = (id: string) =>
+    new Response(JSON.stringify({ Account: { Id: id, Name: `Account ${id}`, CurrentBalance: 100 }, time: "2026-10-30T10:00:00-07:00" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("opens each account's register in production, and no link anywhere else", () => {
+    expect(registerUrl(qboUiBase({ QBO_MODE: "live", QBO_ENV: "production", QBO_UI_BASE_URL: `${UI}/` } as Env), "36")).toBe(
+      `${UI}/register?accountId=36`,
+    );
+    expect(qboUiBase({ QBO_MODE: "live", QBO_ENV: "sandbox", QBO_UI_BASE_URL: UI } as Env)).toBeNull();
+    expect(qboUiBase({ QBO_MODE: "fixture", QBO_ENV: "production", QBO_UI_BASE_URL: UI } as Env)).toBeNull();
+    expect(qboUiBase({ QBO_MODE: "live", QBO_ENV: "production" } as Env)).toBeNull();
+  });
+
+  it("puts the register on an account that read, not on one that failed", async () => {
+    const store = await connectedStore("links");
+    respond = (url) => (url.includes("/account/36") ? new Response("nope", { status: 500 }) : answer("35"));
+    const production = { ...liveEnv(), QBO_ENV: "production", QBO_UI_BASE_URL: UI } as Env;
+    const snapshot = await getFunds(production, store);
+    expect(snapshot.accounts.find((a) => a.key === "35")?.url).toBe(`${UI}/register?accountId=35`);
+    expect(snapshot.accounts.find((a) => a.key === "36")?.url).toBeNull();
   });
 });

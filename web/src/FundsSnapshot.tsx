@@ -1,4 +1,5 @@
 import { formatRetrievedAt, usd } from "./format";
+import { QboLink } from "./LglLink";
 import type { AccountSnapshot, FundsSnapshot, PurposeSubtotal } from "./types";
 
 function SubtotalCard({ subtotal }: { subtotal: PurposeSubtotal }) {
@@ -18,9 +19,13 @@ function SubtotalCard({ subtotal }: { subtotal: PurposeSubtotal }) {
 function AccountCard({ account }: { account: AccountSnapshot }) {
   return (
     <section className={`card status-${account.status}`}>
-      <h2>{account.label}</h2>
+      <h2>
+        <QboLink url={account.url}>{account.label}</QboLink>
+      </h2>
       {account.status === "ok" ? (
-        <p className="amount">{usd.format(account.balance ?? 0)}</p>
+        <p className="amount">
+          <QboLink url={account.url}>{usd.format(account.balance ?? 0)}</QboLink>
+        </p>
       ) : (
         <p className="amount unavailable">
           {account.status === "not_configured" ? "Not configured" : "Unavailable"}
