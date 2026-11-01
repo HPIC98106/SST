@@ -646,6 +646,8 @@ export interface RenewalRow {
   /** Null when LGL_UI_BASE_URL is unset, and for the row past the last month. */
   url: string | null;
   autoRenewUrl: string | null;
+  /** Members ending that month who paid dues by hand when it began. */
+  manualUrl: string | null;
 }
 
 /**

@@ -223,6 +223,8 @@ describe("links into LGL", () => {
     const row = withLinks([], active).renewals!.rows.find((r) => r.month === "2027-02")!;
     expect(row.url).toBe(`${UI}/constituents/search/comb/and:and/md_fl/latest/md_type/end/me_from/2027-02-01/me_to/2027-02-28/memberd/1/members/1`);
     expect(row.autoRenewUrl).toBe(`${UI}/constituents/search/comb/and:and/in-gct/6096/in-gifts_type/1,7,8,9,12/md_fl/latest/md_type/end/me_from/2027-02-01/me_to/2027-02-28/memberd/1/members/1`);
+    // The Overview's renew-by-hand search (7 for 7 on 2026-11-01), one month at a time.
+    expect(row.manualUrl).toBe(`${UI}/constituents/search/comb/and:and/gift_from/2026-01-01/gift_to/2026-02-28/in-gct/6081/in-gifts_type/1,7,8,9,12/md_fl/latest/md_type/end/me_from/2027-02-01/me_to/2027-02-28/memberd/1/members/1`);
   });
 
   it("opens a campaign's gifts for each year, leaving out what giving leaves out", () => {
@@ -276,7 +278,7 @@ describe("links into LGL", () => {
     ]);
     expect(snapshot.members).toMatchObject({ url: null, newUrl: null });
     expect(snapshot.byCampaign[0].thisYearUrl).toBeNull();
-    expect(snapshot.renewals!.rows[0]).toMatchObject({ url: null, autoRenewUrl: null });
+    expect(snapshot.renewals!.rows[0]).toMatchObject({ url: null, autoRenewUrl: null, manualUrl: null });
   });
 });
 

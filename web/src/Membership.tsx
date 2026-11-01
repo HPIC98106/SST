@@ -87,7 +87,7 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
               <th scope="col">Membership ends</th>
               <th scope="col" className="num">Members</th>
               <th scope="col" className="num">Auto-renew</th>
-              <th scope="col" className="num">Not auto-renew</th>
+              <th scope="col" className="num">Renew by hand</th>
               <th scope="col" className="num">No dues on record</th>
             </tr>
           </thead>
@@ -101,7 +101,9 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
                 <td className="num">
                   <LglLink url={r.autoRenewUrl}>{count(r.autoRenew)}</LglLink>
                 </td>
-                <td className="num">{count(r.manual)}</td>
+                <td className="num">
+                  <LglLink url={r.manualUrl}>{count(r.manual)}</LglLink>
+                </td>
                 <td className="num">{count(r.noDues)}</td>
               </tr>
             ))}
@@ -119,7 +121,8 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
       </div>
       <p className="note">
         Counts people, so a household renewing on one payment counts once per member. Auto-renew means their latest dues
-        payment is coded Membership-Recurring in LGL, including a household member credited on someone else's payment.
+        payment is coded Membership-Recurring in LGL, including a household member credited on someone else's payment. Members
+        with no dues on record are listed on the Reconciliation tab.
         {renewals.undated > 0 ? ` ${count(renewals.undated)} with no end date in LGL are not in any month.` : ""}
       </p>
     </section>

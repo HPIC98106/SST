@@ -153,7 +153,9 @@ HPIC's QuickBooks and LGL data.
   instead: "Renew by hand" links to members ending in the window who paid
   Memberships dues a year earlier, `gift_from/…/gift_to/…/in-gct/6081`, from a
   month before a year ago through the window's end a year ago. It returned 7 for 7,
-  and the same search with 6096 returned 33 for 33.
+  and the same search with 6096 returned 33 for 33. The Membership tab's renewals
+  table uses the same search month by month, in a column renamed from "Not
+  auto-renew" to "Renew by hand" because that is what it always counted.
 - **The Overview does not lead with the funding gap or with "money available".**
   Decided 2026-11-01, Kyle's view and offered as one perspective. "Money available
   now" added rebuild money to programming money and read as if spending were the

@@ -306,6 +306,8 @@ export interface RenewalRow {
   noDues: number;
   url: string | null;
   autoRenewUrl: string | null;
+  /** Members ending that month who paid dues by hand when it began. */
+  manualUrl: string | null;
 }
 
 /** What the same three months brought in a year earlier: a projection. */

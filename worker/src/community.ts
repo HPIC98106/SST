@@ -297,6 +297,16 @@ function countRenewals(
     const [y, m] = month.split("-").map(Number);
     return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   };
+  // LGL cannot list people with no recurring gift, so this asks who paid dues by
+  // hand when the membership now ending began: a year back, with a month's slack
+  // for records that start after their payment. On 2026-11-01 the ninety-day
+  // version returned 7 for 7, and the same search for the recurring category 33
+  // for 33.
+  const manualSearch = (from: string, to: string) =>
+    memberSearch(
+      config,
+      `gift_from/${yearBefore(from, 1)}/gift_to/${yearBefore(to)}/in-gct/${config.membershipCategories.join(",")}/in-gifts_type/1,7,8,9,12/${membershipDates("end", "latest", from, to)}`,
+    );
   const row = (month: string | null): RenewalRow => {
     const range = month ? membershipDates("end", "latest", `${month}-01`, lastDay(month)) : null;
     return {
@@ -309,6 +319,7 @@ function countRenewals(
       autoRenewUrl: range
         ? memberSearch(config, `in-gct/${recurring.join(",")}/in-gifts_type/1,7,8,9,12/${range}`)
         : null,
+      manualUrl: month ? manualSearch(`${month}-01`, lastDay(month)) : null,
     };
   };
   const rows = new Map(keys.map((k) => [k, row(k)]));
@@ -330,14 +341,7 @@ function countRenewals(
     noDues: 0,
     url: memberSearch(config, soonRange),
     autoRenewUrl: memberSearch(config, `in-gct/${recurring.join(",")}/in-gifts_type/1,7,8,9,12/${soonRange}`),
-    // LGL cannot list people with no recurring gift, so this asks who paid dues by
-    // hand when the membership now ending began: a year back, with a month's slack
-    // for records that start after their payment. On 2026-11-01 it returned 7 for
-    // 7, and the same search for the recurring category 33 for 33.
-    manualUrl: memberSearch(
-      config,
-      `gift_from/${yearBefore(today, 1)}/gift_to/${yearBefore(soonEnd)}/in-gct/${config.membershipCategories.join(",")}/in-gifts_type/1,7,8,9,12/${soonRange}`,
-    ),
+    manualUrl: manualSearch(today, soonEnd),
   };
 
   for (const member of active) {
