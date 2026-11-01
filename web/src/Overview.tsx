@@ -276,7 +276,9 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
             </li>
             <li>
               <span>Renew by hand</span>
-              <span className="num">{soon.manual.toLocaleString("en-US")}</span>
+              <span className="num">
+                <LglLink url={soon.manualUrl}>{soon.manual.toLocaleString("en-US")}</LglLink>
+              </span>
             </li>
             {soon.noDues > 0 ? (
               <li>

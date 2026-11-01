@@ -561,4 +561,13 @@ describe("memberships ending soon", () => {
     ]).renewals!.soon;
     expect(soon).toMatchObject({ from: "2026-11-01", through: "2027-01-29", total: 3, autoRenew: 1, manual: 1, noDues: 1 });
   });
+
+  it("links renew by hand to the search that matched it in LGL", () => {
+    const linked = communityConfig({ ...CONFIG_ENV, LGL_MEMBERSHIP_CATEGORY_IDS: "6081", LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: "6096", LGL_UI_BASE_URL: "https://lgl.test" } as Env);
+    const soon = assembleCommunity([manual(2)], [ending(2, "2027-01-29")], "2026-11-01", linked, BASE).renewals!.soon;
+    // Run on 2026-11-01: 7 against the dashboard's 7, and 33 for 33 with category 6096.
+    expect(soon.manualUrl).toBe(
+      "https://lgl.test/constituents/search/comb/and:and/gift_from/2025-10-01/gift_to/2026-01-29/in-gct/6081/in-gifts_type/1,7,8,9,12/md_fl/latest/md_type/end/me_from/2026-11-01/me_to/2027-01-29/memberd/1/members/1",
+    );
+  });
 });

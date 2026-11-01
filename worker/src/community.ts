@@ -108,6 +108,12 @@ function addDays(date: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+/** The same day a year earlier, less `months` more. */
+function yearBefore(date: string, months = 0): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y - 1, m - 1 - months, d)).toISOString().slice(0, 10);
+}
+
 /** "2026-11" for the month `offset` months after `year`-`month0`+1. */
 function monthKey(year: number, month0: number, offset = 0): string {
   const d = new Date(Date.UTC(year, month0 + offset, 1));
@@ -322,6 +328,14 @@ function countRenewals(
     noDues: 0,
     url: memberSearch(config, soonRange),
     autoRenewUrl: memberSearch(config, `in-gct/${recurring.join(",")}/in-gifts_type/1,7,8,9,12/${soonRange}`),
+    // LGL cannot list people with no recurring gift, so this asks who paid dues by
+    // hand when the membership now ending began: a year back, with a month's slack
+    // for records that start after their payment. On 2026-11-01 it returned 7 for
+    // 7, and the same search for the recurring category 33 for 33.
+    manualUrl: memberSearch(
+      config,
+      `gift_from/${yearBefore(today, 1)}/gift_to/${yearBefore(soonEnd)}/in-gct/${config.membershipCategories.join(",")}/in-gifts_type/1,7,8,9,12/${soonRange}`,
+    ),
   };
 
   for (const member of active) {

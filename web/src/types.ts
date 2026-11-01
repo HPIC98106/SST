@@ -376,6 +376,8 @@ export interface CommunitySnapshot {
       noDues: number;
       url: string | null;
       autoRenewUrl: string | null;
+      /** Members who paid dues by hand when the membership now ending began. */
+      manualUrl: string | null;
     };
   } | null;
   /** Distinct givers, leaving out dues, grant payments and purchases. */
