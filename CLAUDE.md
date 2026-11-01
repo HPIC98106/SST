@@ -703,8 +703,9 @@ future value cannot change what an existing test means.
     is tested only against the shapes LGL uses for other fields.
   - **Reconciliation** (named Housekeeping until 2026-11-01; `#housekeeping` still
     opens it): LGL against QuickBooks for dues, operating grants and rebuild grants, the
-    data-quality list, ungrouped QuickBooks accounts, and how a grant moves through the
-    systems. Its tab shows a count of blocking records, so problems are one click away
+    data-quality list, active members with no dues payment on record (by LGL record
+    number and level, never by name, each opening at `/constituents/<id>`), ungrouped
+    QuickBooks accounts, and how a grant moves through the systems. Its tab shows a count of blocking records, so problems are one click away
     and never hidden. Live on 2026-11-01, January to October: both grant lines match to
     the cent, and dues read $17,558.80 in LGL against $16,612.40 in QuickBooks.
 

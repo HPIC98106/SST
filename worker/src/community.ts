@@ -23,7 +23,7 @@
 
 import { getAll, isFixtureMode, parseIds, type LglGift } from "./lgl";
 import { communityFixtureGifts, communityFixtureMembers, COMMUNITY_FIXTURE_DATE } from "./community-fixtures";
-import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, GrantPayment, MemberLevel, OperatingAward, RenewalRow } from "./types";
+import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, GrantPayment, MemberLevel, NoDuesMember, OperatingAward, RenewalRow } from "./types";
 
 export const COMMUNITY_SOURCE = "LGL membership and gift records";
 
@@ -315,6 +315,8 @@ function countRenewals(
   const later = row(null);
   const tally = { autoRenew: 0, manual: 0, noDues: 0 };
   let undated = 0;
+  // Listed by LGL record number, never by name: names stay behind LGL's login.
+  const noDuesMembers: NoDuesMember[] = [];
 
   // The Overview's "coming up": a range from today, where the rows above are whole months.
   const soonEnd = addDays(today, RENEWALS_AHEAD_DAYS - 1);
@@ -352,6 +354,14 @@ function countRenewals(
     target.total += 1;
     target[how] += 1;
     tally[how] += 1;
+    if (how === "noDues") {
+      noDuesMembers.push({
+        id: member.id,
+        level: currentRecord(member)?.membership_level_name ?? null,
+        finish,
+        url: config.uiBaseUrl ? `${config.uiBaseUrl}/constituents/${member.id}` : null,
+      });
+    }
     if (finish <= soonEnd) {
       soon.total += 1;
       soon[how] += 1;
@@ -360,7 +370,8 @@ function countRenewals(
 
   // The month in progress usually has nothing left to run out, so it only shows if it does.
   const listed = keys.map((k) => rows.get(k)!).filter((r, i) => i > 0 || r.total > 0);
-  return { rows: later.total > 0 ? [...listed, later] : listed, ...tally, undated, soon };
+  noDuesMembers.sort((a, b) => a.finish.localeCompare(b.finish) || a.id - b.id);
+  return { rows: later.total > 0 ? [...listed, later] : listed, ...tally, undated, soon, noDuesMembers };
 }
 
 /**

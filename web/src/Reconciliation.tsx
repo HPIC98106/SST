@@ -7,9 +7,9 @@
  * the assurance a board member is after.
  */
 
-import { formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
 import { LglLink, QboLink } from "./LglLink";
-import type { GrantSnapshot, ReconciliationSnapshot } from "./types";
+import type { CommunitySnapshot, GrantSnapshot, ReconciliationSnapshot } from "./types";
 
 /**
  * Whether the rules were actually run. Exceptions are only looked for once every
@@ -83,5 +83,34 @@ export function ReconciliationTable({ snapshot, error }: { snapshot: Reconciliat
         or an expense belongs to, so these are totals only.
       </p>
     </>
+  );
+}
+
+/**
+ * Active members with no dues payment on record, so nothing says how they renew.
+ * By LGL record number, never by name: the passphrase is shared, and the link opens
+ * the record behind LGL's own login.
+ */
+export function NoDuesMembers({ community }: { community: CommunitySnapshot | null }) {
+  const members = community?.status === "ok" ? community.renewals?.noDuesMembers : undefined;
+  if (!members || members.length === 0) return null;
+  return (
+    <div className="subpanel">
+      <h2>Members with no dues payment on record ({members.length.toLocaleString("en-US")})</h2>
+      <p className="muted">
+        Active in LGL, but no Memberships or Membership-Recurring gift is linked to them, so the dashboard cannot say how
+        they renew. Usually a household member whose soft credit on the shared payment was never added, or a membership
+        that came with a gift coded to another category. Each opens in LGL.
+      </p>
+      <ul className="ops-list">
+        {members.map((m) => (
+          <li key={m.id}>
+            <LglLink url={m.url}>LGL record {m.id}</LglLink>
+            {m.level ? ` · ${m.level}` : ""} · membership ends {formatDate(m.finish)}
+          </li>
+        ))}
+      </ul>
+      <p className="note">Read from LGL {formatRetrievedAt(community!.retrievedAt)}.</p>
+    </div>
   );
 }

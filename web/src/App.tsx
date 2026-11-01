@@ -14,7 +14,7 @@ import { OperationsProblems, OperationsView } from "./Operations";
 import { OverviewView, Reading, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
 import { PhaseReadinessView } from "./PhaseReadiness";
-import { ReconciliationTable, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
+import { NoDuesMembers, ReconciliationTable, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
 import { YearSoFarView } from "./YearSoFar";
 import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot, ReconciliationSnapshot } from "./types";
 
@@ -334,6 +334,7 @@ export function App() {
               ) : (
                 <p className="banner banner-error">LGL could not be read, so records could not be checked.</p>
               )}
+              <NoDuesMembers community={community.data} />
               {operations.data && (operations.data.ungrouped.length > 0 || operations.data.invalidConfig.length > 0) ? (
                 <div className="subpanel">
                   <h2>QuickBooks accounts not yet grouped</h2>

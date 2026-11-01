@@ -562,6 +562,16 @@ describe("memberships ending soon", () => {
     expect(soon).toMatchObject({ from: "2026-11-01", through: "2027-01-29", total: 3, autoRenew: 1, manual: 1, noDues: 1 });
   });
 
+  it("lists every member with no dues by LGL record, soonest ending first", () => {
+    const linked = communityConfig({ ...CONFIG_ENV, LGL_MEMBERSHIP_CATEGORY_IDS: "6081", LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: "6096", LGL_UI_BASE_URL: "https://lgl.test" } as Env);
+    const renewals = assembleCommunity([manual(2)], [ending(5, "2027-08-01"), ending(2, "2027-01-29"), ending(3, "2026-12-01")], "2026-11-01", linked, BASE).renewals!;
+    expect(renewals.noDuesMembers).toEqual([
+      { id: 3, level: "Classic", finish: "2026-12-01", url: "https://lgl.test/constituents/3" },
+      { id: 5, level: "Classic", finish: "2027-08-01", url: "https://lgl.test/constituents/5" },
+    ]);
+    expect(renewals.noDuesMembers.length).toBe(renewals.noDues);
+  });
+
   it("links renew by hand to the search that matched it in LGL", () => {
     const linked = communityConfig({ ...CONFIG_ENV, LGL_MEMBERSHIP_CATEGORY_IDS: "6081", LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: "6096", LGL_UI_BASE_URL: "https://lgl.test" } as Env);
     const soon = assembleCommunity([manual(2)], [ending(2, "2027-01-29")], "2026-11-01", linked, BASE).renewals!.soon;

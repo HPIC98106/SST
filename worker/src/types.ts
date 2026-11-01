@@ -778,6 +778,8 @@ export interface CommunitySnapshot {
     noDues: number;
     /** Members whose record has no end date, so they fall in no month. */
     undated: number;
+    /** Every active member counted in `noDues`, soonest ending first. */
+    noDuesMembers: NoDuesMember[];
     /** Those ending within the next ninety days. Counts people. */
     soon: {
       from: string;
@@ -873,4 +875,19 @@ export interface ReconciliationSnapshot {
   rows: ReconciliationRow[];
   lglRetrievedAt: string | null;
   qboRetrievedAt: string | null;
+}
+
+/**
+ * An active member with no dues gift on record, for the Reconciliation tab. Usually
+ * a household member whose soft credit on the shared payment was never entered, or
+ * a membership issued with a gift outside the dues categories. Identified by LGL
+ * record number only: names stay behind LGL's own login.
+ */
+export interface NoDuesMember {
+  id: number;
+  level: string | null;
+  /** When their current membership ends. */
+  finish: string;
+  /** Their record in LGL. Null when LGL_UI_BASE_URL is unset. */
+  url: string | null;
 }
