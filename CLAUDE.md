@@ -14,8 +14,9 @@ decisions go in this file, never in KYLE-TODO. Step-by-step procedures live in
 
 A read-only board dashboard for the Highland Park Improvement Club, a
 volunteer-run Seattle nonprofit rebuilding its clubhouse after a 2021 fire.
-It answers: how much cash do we have, how much grant money is owed to us, and
-can we afford the next construction phase.
+It answers: how is the club doing and what has happened lately, how is the
+day-to-day money, where does the rebuild stand, and do LGL and QuickBooks agree.
+The board's central place to see both systems, and the gaps between them.
 
 **Never write to QuickBooks or Little Green Light.** Every call to a data API is
 a GET. The only POSTs in the codebase go to Intuit's OAuth token endpoint.
@@ -144,6 +145,21 @@ HPIC's QuickBooks and LGL data.
   donors returns 27 people against the dashboard's 25, so that card links to the
   gifts and says "their 65 gifts" instead. "Not auto-renew" has no link for the
   same reason.
+- **The Overview does not lead with the funding gap or with "money available".**
+  Decided 2026-11-01, Kyle's view and offered as one perspective. "Money available
+  now" added rebuild money to programming money and read as if spending were the
+  goal. The gap is so large that leading with it is demoralizing, and it barely moves:
+  HPIC applies for a grant every month or two, dues and gifts will not close it, and
+  Galen tells the board about any traction with a funder, so nobody opens this page to
+  check on it. So the Overview leads with what changes between visits. The gap stays on
+  the Rebuild tab, one click away and never hidden. No applications line: that is still
+  Alex's 2026-08-14 scope, and Galen's updates are the channel.
+- **Whether LGL and QuickBooks agree is reported, never explained away.**
+  `worker/src/reconcile.ts` sets the two snapshots side by side for the completed
+  months. One cent is a difference, with no threshold, like Operations. Either read
+  incomplete means nothing was compared, never an empty table that looks like agreement.
+  A renamed QuickBooks line reports "not compared". Its lines are found by the names
+  in `QBO_PL_GROUPS` ("Membership dues", "Grants") and the excluded rebuild income.
 - **Figures are exact and only their display is rounded.** `usd` shows whole
   dollars everywhere (decided 2026-10-31). The Worker keeps cents and totals use
   them, so a column can differ from its printed total by a dollar; the page
@@ -641,16 +657,18 @@ future value cannot change what an existing test means.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Seven tabs, each in the URL hash so a link or reload keeps it:
-  - **Overview**, the page to show at a meeting: money available now (with
-    account balances), five tiles (net operating income, months of operating cash,
-    total members, new members, donors), what the next three months brought
-    last year, and a funding bar for the current phase. No to-do lists and no
-    names. An account under 1% of all cash rolls into "Smaller balances" here,
+  - **Overview**, the page to show at a meeting, rebuilt 2026-11-01: the club today
+    and the last 30 days (`CommunitySnapshot.recent`), coming up (memberships ending
+    in the next 90 days and the same months' giving a year earlier), day-to-day money,
+    the rebuild as plain facts (awarded, received, in the rebuild accounts, never added
+    together), and whether the books agree. No to-do lists and no names. Donors stay on
+    Giving: most arrive with the December drive, so the count reads low most of the year.
+    An account under 1% of all cash rolls into "Smaller balances" here,
     decided 2026-10-31: it stays in every total and opens in place to itemise, and
     it is a share rather than a list of names so that Undeposited Funds comes
     back on its own if deposits pile up. A failed read is never folded away.
   - **Rebuild**: the funding bar, the readiness table, cash in the rebuild accounts.
-    Programming balances and total cash are on the Overview only (2026-10-31).
+    Programming balances are on the Overview only, and total cash is not displayed.
   - **Operations**: Phase 4. The table answers one question at a time, so income
     and spending fit a phone: so far against budget, the full year, or against
     last year, three columns each.
@@ -674,15 +692,17 @@ future value cannot change what an existing test means.
     tracked yet", so nothing there calls a grant healthy until P3. Names come from
     a Gift custom field called "Grant Name", which does not exist yet, so the reader
     is tested only against the shapes LGL uses for other fields.
-  - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
-    how a grant moves through the systems. Its tab shows a count of blocking
-    records, so problems are one click away and never hidden.
+  - **Reconciliation** (named Housekeeping until 2026-11-01; `#housekeeping` still
+    opens it): LGL against QuickBooks for dues, operating grants and rebuild grants, the
+    data-quality list, ungrouped QuickBooks accounts, and how a grant moves through the
+    systems. Its tab shows a count of blocking records, so problems are one click away
+    and never hidden. Live on 2026-11-01, January to October: both grant lines match to
+    the cent, and dues read $17,558.80 in LGL against $16,612.40 in QuickBooks.
 
   Rules carried over: the funding bar never calls awarded money available (it
   is a lighter step of the same hue, labelled "awarded, not yet received");
   the next-three-months figure is a projection labelled with its basis (the
-  same months a year earlier), never added to cash; rebuild grants are shown
-  as $0 expected because they pay only after HPIC spends. The Membership read
+  same months a year earlier), never added to cash. The Membership read
   is dozens of LGL requests (about 35 seconds cold, 33 of them the gift walk),
   so `TokenStore` serves it for two hours and the hourly cron rewrites it, which
   rides out one failed run (decided 2026-10-31: at 15 minutes it was cold for

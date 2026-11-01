@@ -730,6 +730,22 @@ export interface OperatingAward {
   url: string | null;
 }
 
+/** Some gifts over a stretch of days, and those gifts in LGL. */
+export interface RecentActivity {
+  count: number;
+  amount: number;
+  url: string | null;
+}
+
+/** One grant payment in LGL. `linked` is false when it hangs off no award. */
+export interface GrantPayment {
+  id: number;
+  date: string;
+  amount: number;
+  scope: "rebuild" | "operating";
+  linked: boolean;
+}
+
 export interface CommunitySnapshot {
   /**
    * "ok" only for a complete read of every gift. A walk that stopped at its
@@ -762,6 +778,17 @@ export interface CommunitySnapshot {
     noDues: number;
     /** Members whose record has no end date, so they fall in no month. */
     undated: number;
+    /** Those ending within the next ninety days. Counts people. */
+    soon: {
+      from: string;
+      through: string;
+      total: number;
+      autoRenew: number;
+      manual: number;
+      noDues: number;
+      url: string | null;
+      autoRenewUrl: string | null;
+    };
   } | null;
   /**
    * Distinct givers, leaving out dues, grant payments and purchases. LGL can list
@@ -795,10 +822,53 @@ export interface CommunitySnapshot {
     receivedUrl: string | null;
     remainingUrl: string | null;
   } | null;
+  /**
+   * The last thirty days, for the Overview. Counts and totals, never names. A part is
+   * null when it cannot be told: an undated member, or campaigns not configured.
+   */
+  recent: {
+    from: string;
+    through: string;
+    newMembers: { count: number; url: string | null } | null;
+    dues: RecentActivity | null;
+    gifts: RecentActivity | null;
+    /** Provisional, like every LGL payment figure. */
+    grantPayments: RecentActivity | null;
+  } | null;
+  /** Grant payments this year and last, to set against QuickBooks. Null if not configured. */
+  grantPayments: GrantPayment[] | null;
   /** Cash gifts read, beside every figure drawn from them. */
   giftCount: number;
   retrievedAt: string | null;
   cached: boolean;
   source: string;
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
+}
+
+/**
+ * One kind of money as each system has it, over the same months. `difference` is
+ * LGL less QuickBooks. A difference is reported, never explained away: it can be
+ * timing, since QuickBooks books by accrual and LGL by date received.
+ */
+export interface ReconciliationRow {
+  key: "dues" | "operating_grants" | "rebuild_grants";
+  label: string;
+  status: "match" | "differs" | "not_compared";
+  lgl: number | null;
+  qbo: number | null;
+  difference: number | null;
+  lglUrl: string | null;
+  qboUrl: string | null;
+  note?: string;
+}
+
+export interface ReconciliationSnapshot {
+  /** "ok" only when both systems read completely. Otherwise nothing was compared. */
+  status: "ok" | "unavailable";
+  note?: string;
+  /** Completed months only, the same as Operations. */
+  period: { from: string; through: string } | null;
+  rows: ReconciliationRow[];
+  lglRetrievedAt: string | null;
+  qboRetrievedAt: string | null;
 }

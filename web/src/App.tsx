@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrantDetails, fetchGrants, fetchOperations } from "./api";
+import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrantDetails, fetchGrants, fetchOperations, fetchReconciliation } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
 import { formatRetrievedAt, usd } from "./format";
 import { FundingBar } from "./FundingBar";
@@ -14,8 +14,9 @@ import { OperationsProblems, OperationsView } from "./Operations";
 import { OverviewView, Reading, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
 import { PhaseReadinessView } from "./PhaseReadiness";
+import { ReconciliationTable, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
 import { YearSoFarView } from "./YearSoFar";
-import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot, ReconciliationSnapshot } from "./types";
 
 const STORAGE_KEY = "hpic-sst-passphrase";
 
@@ -26,7 +27,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "membership", label: "Membership" },
   { key: "giving", label: "Giving" },
   { key: "grants", label: "Grants" },
-  { key: "housekeeping", label: "Housekeeping" },
+  { key: "reconciliation", label: "Reconciliation" },
 ];
 
 /**
@@ -35,6 +36,8 @@ const TABS: { key: Tab; label: string }[] = [
  */
 function tabFromHash(): Tab {
   const hash = window.location.hash.replace(/^#/, "").split("/")[0];
+  // Its name until 2026-11-01, and links to it may still be around.
+  if (hash === "housekeeping") return "reconciliation";
   return TABS.some((t) => t.key === hash) ? (hash as Tab) : "overview";
 }
 
@@ -69,6 +72,7 @@ export function App() {
   const [operations, setOperations] = useState<Panel<OperationsSnapshot>>({ data: null });
   const [community, setCommunity] = useState<Panel<CommunitySnapshot>>({ data: null });
   const [grantDetails, setGrantDetails] = useState<Panel<GrantDetailsSnapshot>>({ data: null });
+  const [reconciliation, setReconciliation] = useState<Panel<ReconciliationSnapshot>>({ data: null });
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const [grantsView, setGrantsView] = useState<GrantsView>(grantsViewFromHash);
   const [loading, setLoading] = useState(false);
@@ -117,12 +121,14 @@ export function App() {
       }
     };
 
+    // Reconciliation sets the two reads it follows side by side, so it waits for
+    // them: asked at the same moment on a cold cache, it would read LGL a second time.
+    const bothRead = Promise.all([settle(fetchOperations(secret), setOperations), settle(fetchCommunity(secret), setCommunity)]);
     await Promise.all([
       settle(fetchFunds(secret), setFunds),
       settle(fetchGrants(secret), setGrants),
-      settle(fetchOperations(secret), setOperations),
-      settle(fetchCommunity(secret), setCommunity),
       settle(fetchGrantDetails(secret), setGrantDetails),
+      bothRead.then(() => settle(fetchReconciliation(secret), setReconciliation)),
     ]);
     if (thisLoad === latestLoad.current) setLoading(false);
   }, []);
@@ -147,12 +153,13 @@ export function App() {
 
   const grantNames = new Map((grantDetails.data?.grants ?? []).map((g) => [g.id, g.name]));
   const exceptions = grants.data?.exceptions ?? [];
-  const blocking = exceptions.filter((e) => e.severity === "blocking").length;
+  const blocking = recordsNeedingAttention(grants.data);
   const pending = {
     funds: isPending(funds),
     grants: isPending(grants),
     operations: isPending(operations),
     community: isPending(community),
+    reconciliation: isPending(reconciliation),
   };
 
   return (
@@ -187,7 +194,7 @@ export function App() {
                 }}
               >
                 {t.label}
-                {t.key === "housekeeping" && blocking > 0 ? <span className="tab-count">{blocking}</span> : null}
+                {t.key === "reconciliation" && blocking > 0 ? <span className="tab-count">{blocking}</span> : null}
               </a>
             ))}
           </div>
@@ -201,6 +208,7 @@ export function App() {
             grants={grants.data}
             operations={operations.data}
             community={community.data}
+            reconciliation={reconciliation.data}
             pending={pending}
             open={open}
           />
@@ -303,19 +311,26 @@ export function App() {
         ) : (
           <div className="stack">
             <section className="panel">
-              <h1>Housekeeping</h1>
+              <h1>Reconciliation</h1>
+              <p className="muted">Whether LGL and QuickBooks hold the same money, one kind at a time.</p>
+              {pending.reconciliation ? (
+                <Reading what="LGL against QuickBooks" />
+              ) : (
+                <ReconciliationTable snapshot={reconciliation.data} error={reconciliation.error} />
+              )}
+            </section>
+            <section className="panel">
+              <h1>Records to fix</h1>
               <p className="muted">
                 Records that break a rule, and how the systems fit together. Fixing a record here fixes a number
                 elsewhere on the dashboard.
               </p>
               {pending.grants ? (
                 <Reading what="LGL's grant records" />
-              ) : grants.data ? (
-                exceptions.length > 0 ? (
-                  <DataQualityPanel exceptions={exceptions} />
-                ) : (
-                  <p className="banner banner-live">Every LGL grant record read passes every rule.</p>
-                )
+              ) : exceptions.length > 0 ? (
+                <DataQualityPanel exceptions={exceptions} />
+              ) : recordsChecked(grants.data) ? (
+                <p className="banner banner-live">Every LGL grant record read passes every rule.</p>
               ) : (
                 <p className="banner banner-error">LGL could not be read, so records could not be checked.</p>
               )}

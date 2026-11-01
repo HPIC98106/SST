@@ -7,7 +7,7 @@
  * QuickBooks' own login, and none names the company.
  */
 
-import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot, ReconciliationSnapshot } from "./types";
 
 const WORKER_URL: string = import.meta.env.VITE_WORKER_URL ?? "http://127.0.0.1:8787";
 
@@ -47,4 +47,8 @@ export function fetchGrantDetails(passphrase: string): Promise<GrantDetailsSnaps
 
 export function fetchCommunity(passphrase: string): Promise<CommunitySnapshot> {
   return get<CommunitySnapshot>("/api/community", passphrase);
+}
+
+export function fetchReconciliation(passphrase: string): Promise<ReconciliationSnapshot> {
+  return get<ReconciliationSnapshot>("/api/reconciliation", passphrase);
 }

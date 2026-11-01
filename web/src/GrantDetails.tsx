@@ -238,7 +238,7 @@ export function GrantDetailsView({ snapshot }: { snapshot: GrantDetailsSnapshot 
               </LglLink>{" "}
               {unlinkedPayments.count === 1 ? "is" : "are"} linked to no award, so{" "}
               {unlinkedPayments.count === 1 ? "it is" : "they are"} on no grant here. See{" "}
-              <a href="#housekeeping">Housekeeping</a>.
+              <a href="#reconciliation">Reconciliation</a>.
             </>
           ) : null}
         </p>

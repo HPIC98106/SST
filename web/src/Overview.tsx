@@ -1,21 +1,35 @@
 /**
  * The board's landing page: the page to put on the screen at a meeting.
  *
- * It leads with money available now, then how the year is going, what the
- * next three months usually bring, and how far the rebuild is funded. No to-do
- * lists and no names: the records that need fixing live on Housekeeping. But
- * "safe to show" never means hiding a problem: a figure that cannot be read
- * still says so here, in place.
+ * It answers "how is the club doing, and what has happened lately?", because those
+ * answers change between visits and the board can do something about them. Decided
+ * 2026-11-01. It used to lead with "Money available now", which added rebuild money
+ * to programming money and read as if spending were the goal, and leading with the
+ * distance to the next phase would be no better: that gap barely moves from one
+ * visit to the next. The gap is not hidden, it is on the Rebuild tab, one click away.
+ *
+ * No to-do lists and no names: the records that need fixing live on Reconciliation.
+ * But "safe to show" never means hiding a problem: a figure that cannot be read
+ * still says so here, in place, and whether the two systems agree is always on the
+ * page.
  */
 
 import type { ReactNode } from "react";
-import { FundingBar } from "./FundingBar";
 import { formatRetrievedAt, monthAbbrev, usd } from "./format";
 import { LglLink, QboLink } from "./LglLink";
+import { recordsChecked, recordsNeedingAttention } from "./Reconciliation";
 import { monthsOfCash } from "./YearSoFar";
-import type { AccountSnapshot, CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+import type {
+  AccountSnapshot,
+  CommunitySnapshot,
+  FundsSnapshot,
+  GrantSnapshot,
+  OperationsSnapshot,
+  ReconciliationSnapshot,
+  RecentActivity,
+} from "./types";
 
-export type Tab = "overview" | "rebuild" | "operations" | "membership" | "giving" | "grants" | "housekeeping";
+export type Tab = "overview" | "rebuild" | "operations" | "membership" | "giving" | "grants" | "reconciliation";
 
 /**
  * A balance under this share of all cash does not earn its own line at a meeting.
@@ -49,6 +63,7 @@ export interface Pending {
   grants: boolean;
   operations: boolean;
   community: boolean;
+  reconciliation: boolean;
 }
 
 /** In place of a figure whose read is still under way. */
@@ -111,179 +126,174 @@ export function Kpi({
   );
 }
 
-/** Total members, new members and donors, each opening the tab it comes from. */
-function MemberKpis({
-  members,
-  donors,
-  year,
-  note,
-  reading = false,
-  onOpen,
-  onOpenDonors,
-}: {
-  members: CommunitySnapshot["members"];
-  donors: CommunitySnapshot["donors"];
-  year: number | null;
-  note?: string;
-  reading?: boolean;
-  onOpen: () => void;
-  onOpenDonors: () => void;
-}) {
-  const isNew = members?.newThisYear ?? null;
-  if (reading) {
-    return (
-      <>
-        {["Total members", "New members", "Donors"].map((label) => (
-          <Kpi
-            key={label}
-            label={label}
-            value="Reading…"
-            tone="reading"
-            detail="From LGL. This can take half a minute."
-            onOpen={label === "Donors" ? onOpenDonors : onOpen}
-          />
-        ))}
-      </>
-    );
-  }
+const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+
+/** A line in "the last 30 days". Null means it cannot be told, which is not the same as none. */
+function RecentLine({ label, activity, noun, provisional }: { label: string; activity: RecentActivity | null; noun: string; provisional?: boolean }) {
   return (
-    <>
-      <Kpi
-        label="Total members"
-        value={members ? members.total.toLocaleString("en-US") : "Not shown"}
-        tone={members ? undefined : "unavailable"}
-        detail={members ? "Active in LGL today" : note}
-        onOpen={onOpen}
-      />
-      <Kpi
-        label={year ? `New members in ${year}` : "New members"}
-        value={isNew !== null ? isNew.toLocaleString("en-US") : "Not shown"}
-        tone={isNew !== null ? undefined : "unavailable"}
-        detail={isNew !== null ? "First membership began this year" : undefined}
-        onOpen={onOpen}
-      />
-      <Kpi
-        label={year ? `Donors in ${year}` : "Donors"}
-        value={donors ? donors.thisYear.toLocaleString("en-US") : "Not shown"}
-        tone={donors ? undefined : "unavailable"}
-        detail={donors ? "Gifts beyond dues, grants and auction buys. Most come with the December drive." : undefined}
-        onOpen={onOpenDonors}
-      />
-    </>
+    <li>
+      <span>
+        {label}
+        {activity ? <small>{plural(activity.count, noun)}{provisional ? ". Provisional." : ""}</small> : null}
+      </span>
+      {activity ? (
+        <span className="num">
+          <LglLink url={activity.url}>{usd.format(activity.amount)}</LglLink>
+        </span>
+      ) : (
+        <span className="num unavailable">Not shown</span>
+      )}
+    </li>
   );
 }
 
-function Hero({ funds }: { funds: FundsSnapshot | null }) {
-  if (!funds) {
+/** The first thing anyone sees: who the club is today, and what has happened lately. */
+function ClubToday({ community, reading, open }: { community: CommunitySnapshot | null; reading: boolean; open: (tab: Tab) => void }) {
+  if (reading) {
     return (
       <section className="hero">
-        <span className="kpi-label">Money available now</span>
-        <p className="hero-value unavailable">Could not be loaded</p>
+        <div className="hero-main">
+          <span className="hero-label">The club today</span>
+          <p className="hero-value unavailable" aria-busy="true">
+            Reading…
+          </p>
+          <p className="hero-note">From LGL. This can take half a minute.</p>
+        </div>
       </section>
     );
   }
-  const groups = funds.subtotals ?? [];
+  const members = community?.status === "ok" ? community.members : null;
+  if (!members) {
+    return (
+      <section className="hero">
+        <div className="hero-main">
+          <span className="hero-label">The club today</span>
+          <p className="hero-value unavailable">Not shown</p>
+          <p className="hero-note">{community?.note ?? "Membership could not be read from LGL."}</p>
+        </div>
+      </section>
+    );
+  }
+  const recent = community?.recent ?? null;
   return (
     <section className="hero">
       <div className="hero-main">
-        <span className="hero-label">Money available now</span>
-        <p className={funds.totalCash === null ? "hero-value unavailable" : "hero-value"}>
-          {funds.totalCash === null ? "Not shown" : usd.format(funds.totalCash)}
+        <span className="hero-label">The club today</span>
+        <p className="hero-value">
+          <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
+          <span className="hero-unit"> members</span>
         </p>
-        {funds.totalCash === null && funds.totalCashNote ? <p className="hero-note">{funds.totalCashNote}</p> : null}
         <div className="hero-split">
-          {groups.map((g) => (
-            <div key={g.purpose}>
-              <span>{g.label}</span>
-              <strong>{g.total === null ? "Not shown" : usd.format(g.total)}</strong>
+          <div>
+            <span>New in {community!.year}</span>
+            <strong>
+              {members.newThisYear === null ? "Not shown" : <LglLink url={members.newUrl}>{members.newThisYear.toLocaleString("en-US")}</LglLink>}
+            </strong>
+          </div>
+          {members.households !== null ? (
+            <div>
+              <span>Households</span>
+              <strong>{members.households.toLocaleString("en-US")}</strong>
             </div>
-          ))}
+          ) : null}
         </div>
         <p className="hero-note">
-          {funds.environment === "sandbox" ? "Test company, not HPIC's books. " : ""}
-          {funds.connection === "fixture" ? "Fixture data. " : ""}
-          QuickBooks book balances, {formatRetrievedAt(funds.retrievedAt)}.
+          Active in LGL, {formatRetrievedAt(community!.retrievedAt)}. New means a first membership record that began this
+          year, so someone long-standing who was entered in LGL late can look new.{" "}
+          <button type="button" className="hero-more" onClick={() => open("membership")}>
+            See Membership
+          </button>
         </p>
       </div>
 
-      <div className="hero-accounts">
-        {groups.map((g) => {
-          const { named, small, smallTotal } = namedAndSmall(
-            funds.accounts.filter((a) => a.purpose === g.purpose),
-            funds.totalCash,
-          );
-          return (
-            <div key={g.purpose} className="account-list">
-              <h3>{g.label}</h3>
-              <ul>
-                {named.map((a) => (
-                  <li key={a.key}>
-                    <span>
-                      <QboLink url={a.url}>{a.label}</QboLink>
-                    </span>
-                    <span className={a.status === "ok" ? "num" : "num unavailable"}>
-                      {a.status === "ok" ? <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink> : "Unavailable"}
-                    </span>
-                  </li>
-                ))}
-                {small.length > 0 ? (
-                  <li>
-                    <details className="small-balances">
-                      <summary>
-                        <span>Smaller balances</span>
-                        <span className="num">{usd.format(smallTotal)}</span>
-                      </summary>
-                      <ul>
-                        {small.map((a) => (
-                          <li key={a.key}>
-                            <span>
-                              <QboLink url={a.url}>{a.label}</QboLink>
-                            </span>
-                            <span className="num">
-                              <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
+      {recent ? (
+        <div className="hero-accounts">
+          <div className="account-list">
+            <h3>The last 30 days</h3>
+            <ul>
+              <li>
+                <span>New members</span>
+                {recent.newMembers ? (
+                  <span className="num">
+                    <LglLink url={recent.newMembers.url}>{recent.newMembers.count.toLocaleString("en-US")}</LglLink>
+                  </span>
+                ) : (
+                  <span className="num unavailable">Not shown</span>
+                )}
+              </li>
+              <RecentLine label="Dues" activity={recent.dues} noun="payment" />
+              <RecentLine label="Gifts" activity={recent.gifts} noun="gift" />
+              <RecentLine label="Grant payments" activity={recent.grantPayments} noun="payment" provisional />
+            </ul>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function NextQuarter({
-  community,
-  grants,
-  reading,
-}: {
-  community: CommunitySnapshot | null;
-  grants: GrantSnapshot | null;
-  reading: boolean;
-}) {
-  const quarter = community?.status === "ok" ? community.nextQuarter : null;
-  const span = quarter
-    ? `${monthAbbrev(quarter.months[0])} to ${monthAbbrev(quarter.months[2])}`
-    : "the next three months";
-  const giving = quarter ? quarter.items.reduce((s, i) => s + i.amount, 0) : null;
-  const operating = community?.status === "ok" ? community.operatingGrants : null;
-  const rebuild = grants?.awardsByReimbursable.find((b) => b.status === "reimbursable")?.remaining ?? null;
+/** What is on its way: renewals, and what giving usually brings in the coming months. */
+function ComingUp({ community, reading }: { community: CommunitySnapshot | null; reading: boolean }) {
+  if (reading) {
+    return (
+      <section className="card card-pad">
+        <h2>Coming up</h2>
+        <Reading what="renewals and giving from LGL" slow />
+      </section>
+    );
+  }
+  if (community?.status !== "ok") {
+    return (
+      <section className="card card-pad">
+        <h2>Coming up</h2>
+        <p className="muted">{community?.note ?? "Renewals and giving could not be read from LGL."}</p>
+      </section>
+    );
+  }
+  const soon = community.renewals?.soon ?? null;
+  const quarter = community.nextQuarter;
+  const span = quarter ? `${monthAbbrev(quarter.months[0])} to ${monthAbbrev(quarter.months[2])}` : null;
+  const operating = community.operatingGrants;
 
   return (
     <section className="card card-pad">
-      <div className="card-head">
-        <h2>Expected, {span}</h2>
-        <span className="tag">Projection</span>
-      </div>
+      <h2>Coming up</h2>
+
+      {soon ? (
+        <>
+          <h3 className="card-subhead">
+            <span>Memberships ending in the next 90 days</span>
+            <strong className="num">
+              <LglLink url={soon.url}>{soon.total.toLocaleString("en-US")}</LglLink>
+            </strong>
+          </h3>
+          <ul className="line-list">
+            <li>
+              <span>On auto-renew</span>
+              <span className="num">
+                <LglLink url={soon.autoRenewUrl}>{soon.autoRenew.toLocaleString("en-US")}</LglLink>
+              </span>
+            </li>
+            <li>
+              <span>Renew by hand</span>
+              <span className="num">{soon.manual.toLocaleString("en-US")}</span>
+            </li>
+            {soon.noDues > 0 ? (
+              <li>
+                <span>No dues on record, so how they renew is unknown</span>
+                <span className="num">{soon.noDues.toLocaleString("en-US")}</span>
+              </li>
+            ) : null}
+          </ul>
+        </>
+      ) : null}
+
       {quarter ? (
         <>
-          <p className="big-figure">{usd.format(giving!)}</p>
-          <p className="muted small">From giving, if this season goes the way the same months did last year.</p>
+          <h3 className="card-subhead card-subhead-next">
+            <span>Expected from giving, {span}</span>
+            <span className="tag">Projection</span>
+          </h3>
           <ul className="line-list">
             {quarter.items.map((item) => (
               <li key={item.key}>
@@ -293,42 +303,300 @@ function NextQuarter({
                 </span>
               </li>
             ))}
+            {operating && operating.remaining > 0 ? (
+              <li>
+                <span>
+                  Operating grants awarded, not yet received
+                  <small>
+                    {plural(operating.awards.length, "award")}; timing set by each funder. Provisional, and not part of
+                    the projection.
+                  </small>
+                </span>
+                <span className="num">
+                  <LglLink url={operating.remainingUrl}>{usd.format(operating.remaining)}</LglLink>
+                </span>
+              </li>
+            ) : null}
+          </ul>
+          <p className="note">Giving lines are what the same months brought a year earlier, not a forecast of this year.</p>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+const bookBalanceNote = (funds: FundsSnapshot) =>
+  `${funds.environment === "sandbox" ? "Test company, not HPIC's books. " : ""}${funds.connection === "fixture" ? "Fixture data. " : ""}QuickBooks book balances, ${formatRetrievedAt(funds.retrievedAt)}.`;
+
+/** The day-to-day organization: how the year is going and what it has to run on. */
+function DayToDay({
+  funds,
+  operations,
+  pending,
+  open,
+}: {
+  funds: FundsSnapshot | null;
+  operations: OperationsSnapshot | null;
+  pending: Pending;
+  open: (tab: Tab) => void;
+}) {
+  const net = operations?.status === "ok" ? operations.totals?.net ?? null : null;
+  const through = operations?.period ? monthAbbrev(operations.period.through.slice(0, 7)) : null;
+  const cash = operations ? monthsOfCash(funds, operations) : null;
+  const programming = funds?.subtotals?.find((s) => s.purpose === "programming");
+  const { named, small, smallTotal } = namedAndSmall(
+    (funds?.accounts ?? []).filter((a) => a.purpose === "programming"),
+    funds?.totalCash ?? null,
+  );
+
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>Day-to-day money</h2>
+        <button type="button" className="link-button" onClick={() => open("operations")}>
+          Operations
+        </button>
+      </div>
+
+      <ul className="line-list">
+        <li>
+          <span>
+            Net operating income{through ? `, to ${through}` : ""}
+            <small>
+              {pending.operations
+                ? "Reading from QuickBooks…"
+                : net
+                  ? net.budgetToDate !== null
+                    ? `Budget for the same months: ${usd.format(net.budgetToDate)}`
+                    : "No monthly budget to compare with yet"
+                  : operations?.status === "not_configured"
+                    ? "Account groups not set up yet"
+                    : "Could not be read"}
+            </small>
+          </span>
+          {pending.operations ? (
+            <span className="num muted">Reading…</span>
+          ) : net ? (
+            <span className="num">
+              <QboLink url={net.url}>{usd.format(net.actual)}</QboLink>
+            </span>
+          ) : (
+            <span className="num unavailable">Not shown</span>
+          )}
+        </li>
+        <li>
+          <span>
+            Months of operating cash
+            <small>
+              {pending.operations || pending.funds
+                ? "Reading from QuickBooks…"
+                : cash?.value
+                  ? "Programming cash at the last twelve months' rate of spending"
+                  : "Needs this year's figures"}
+            </small>
+          </span>
+          {pending.operations || pending.funds ? (
+            <span className="num muted">Reading…</span>
+          ) : cash?.value ? (
+            <span className="num">{cash.value}</span>
+          ) : (
+            <span className="num unavailable">Not shown</span>
+          )}
+        </li>
+      </ul>
+
+      {pending.funds ? (
+        <Reading what="balances from QuickBooks" />
+      ) : funds ? (
+        <>
+          <h3 className="card-subhead card-subhead-next">
+            <span>Programming cash</span>
+            {programming?.total != null ? (
+              <strong className="num">{usd.format(programming.total)}</strong>
+            ) : (
+              <strong className="num unavailable">Not shown</strong>
+            )}
+          </h3>
+          <div className="account-list">
+            <ul>
+              {named.map((a) => (
+                <li key={a.key}>
+                  <span>
+                    <QboLink url={a.url}>{a.label}</QboLink>
+                  </span>
+                  <span className={a.status === "ok" ? "num" : "num unavailable"}>
+                    {a.status === "ok" ? <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink> : "Unavailable"}
+                  </span>
+                </li>
+              ))}
+              {small.length > 0 ? (
+                <li>
+                  <details className="small-balances">
+                    <summary>
+                      <span>Smaller balances</span>
+                      <span className="num">{usd.format(smallTotal)}</span>
+                    </summary>
+                    <ul>
+                      {small.map((a) => (
+                        <li key={a.key}>
+                          <span>
+                            <QboLink url={a.url}>{a.label}</QboLink>
+                          </span>
+                          <span className="num">
+                            <QboLink url={a.url}>{usd.format(a.balance ?? 0)}</QboLink>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+          {programming?.total == null && programming?.note ? <p className="note">{programming.note}</p> : null}
+          <p className="note">{bookBalanceNote(funds)}</p>
+        </>
+      ) : (
+        <p className="muted">Balances could not be read from QuickBooks.</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The rebuild as plain facts: what funders have awarded, what has arrived, what is in
+ * the rebuild accounts. Awards and cash are separate lines and are never added
+ * together. How far this goes toward the next phase is on the Rebuild tab.
+ */
+function RebuildFacts({
+  funds,
+  grants,
+  pending,
+  open,
+}: {
+  funds: FundsSnapshot | null;
+  grants: GrantSnapshot | null;
+  pending: Pending;
+  open: (tab: Tab) => void;
+}) {
+  const stage = (key: "pledged" | "received") => grants?.stages.find((s) => s.key === key);
+  const pledged = stage("pledged");
+  const received = stage("received");
+  const cash = funds?.subtotals?.find((s) => s.purpose === "rebuild");
+
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>The rebuild</h2>
+        <button type="button" className="link-button" onClick={() => open("rebuild")}>
+          Funding and estimate
+        </button>
+      </div>
+      <ul className="line-list">
+        <li>
+          <span>
+            Awarded by funders
+            {pledged?.recordCount != null ? <small>{plural(pledged.recordCount, "award")}</small> : null}
+          </span>
+          {pending.grants ? (
+            <span className="num muted">Reading…</span>
+          ) : pledged?.amount != null ? (
+            <span className="num">
+              <LglLink url={pledged.figureUrl}>{usd.format(pledged.amount)}</LglLink>
+            </span>
+          ) : (
+            <span className="num unavailable">Not shown</span>
+          )}
+        </li>
+        <li>
+          <span>
+            Received so far
+            {received?.status === "provisional" ? <small>Provisional, from LGL payment records</small> : null}
+          </span>
+          {pending.grants ? (
+            <span className="num muted">Reading…</span>
+          ) : received?.amount != null ? (
+            <span className="num">
+              <LglLink url={received.figureUrl}>{usd.format(received.amount)}</LglLink>
+            </span>
+          ) : (
+            <span className="num unavailable">Not shown</span>
+          )}
+        </li>
+        <li>
+          <span>
+            In the rebuild accounts
+            {funds ? <small>{bookBalanceNote(funds)}</small> : null}
+          </span>
+          {pending.funds ? (
+            <span className="num muted">Reading…</span>
+          ) : cash?.total != null ? (
+            <span className="num">{usd.format(cash.total)}</span>
+          ) : (
+            <span className="num unavailable">Not shown</span>
+          )}
+        </li>
+      </ul>
+      <p className="note">Reimbursable awards pay only after HPIC spends and invoices, so they are not money in hand.</p>
+    </section>
+  );
+}
+
+/** Whether LGL and QuickBooks agree, and how many records break a rule. No names. */
+function BooksAgree({
+  reconciliation,
+  grants,
+  pending,
+  open,
+}: {
+  reconciliation: ReconciliationSnapshot | null;
+  grants: GrantSnapshot | null;
+  pending: Pending;
+  open: (tab: Tab) => void;
+}) {
+  const needing = recordsNeedingAttention(grants);
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>Do the books agree?</h2>
+        <button type="button" className="link-button" onClick={() => open("reconciliation")}>
+          Reconciliation
+        </button>
+      </div>
+
+      {pending.reconciliation ? (
+        <Reading what="LGL against QuickBooks" />
+      ) : reconciliation?.status === "ok" && reconciliation.period ? (
+        <>
+          <p className="muted small">LGL against QuickBooks, to {monthAbbrev(reconciliation.period.through.slice(0, 7))}</p>
+          <ul className="line-list">
+            {reconciliation.rows.map((row) => (
+              <li key={row.key}>
+                <span>{row.label}</span>
+                {row.status === "match" ? (
+                  <span className="num">Match</span>
+                ) : row.status === "differs" ? (
+                  <strong className="num">Differ by {usd.format(Math.abs(row.difference!))}</strong>
+                ) : (
+                  <span className="num unavailable">Not compared</span>
+                )}
+              </li>
+            ))}
           </ul>
         </>
-      ) : reading ? (
-        <Reading what="giving history from LGL" slow />
       ) : (
-        <p className="muted">{community?.note ?? "Giving history could not be read from LGL."}</p>
+        <p className="muted">{reconciliation?.note ?? "LGL and QuickBooks could not be compared."}</p>
       )}
 
-      <ul className="line-list line-list-secondary">
-        {operating && operating.remaining > 0 ? (
-          <li>
-            <span>
-              Operating grants awarded, not yet received
-              <small>
-                {operating.awards.length} award{operating.awards.length === 1 ? "" : "s"}; timing set by each funder.
-                Provisional.
-              </small>
-            </span>
-            <span className="num">
-              <LglLink url={operating.remainingUrl}>{usd.format(operating.remaining)}</LglLink>
-            </span>
-          </li>
-        ) : null}
-        {rebuild !== null ? (
-          <li>
-            <span>
-              Rebuild grants
-              <small>
-                {usd.format(rebuild)} awarded, but it arrives only after HPIC spends and invoices, so nothing is
-                expected until construction starts.
-              </small>
-            </span>
-            <span className="num">$0</span>
-          </li>
-        ) : null}
-      </ul>
+      {pending.grants ? null : recordsChecked(grants) ? (
+        <p className="note">
+          {needing > 0
+            ? `${plural(needing, "LGL grant record")} ${needing === 1 ? "needs" : "need"} attention.`
+            : "Every LGL grant record read passes every rule."}
+        </p>
+      ) : (
+        <p className="note">LGL's grant records could not be checked.</p>
+      )}
     </section>
   );
 }
@@ -338,6 +606,7 @@ export function OverviewView({
   grants,
   operations,
   community,
+  reconciliation,
   pending,
   open,
 }: {
@@ -345,77 +614,20 @@ export function OverviewView({
   grants: GrantSnapshot | null;
   operations: OperationsSnapshot | null;
   community: CommunitySnapshot | null;
+  reconciliation: ReconciliationSnapshot | null;
   pending: Pending;
   open: (tab: Tab) => void;
 }) {
-  const net = operations?.status === "ok" ? operations.totals?.net ?? null : null;
-  const through = operations?.period ? monthAbbrev(operations.period.through.slice(0, 7)) : null;
-  const cash = operations ? monthsOfCash(funds, operations) : null;
-  const members = community?.status === "ok" ? community.members : null;
-  const donors = community?.status === "ok" ? community.donors : null;
-  const year = community?.year ?? null;
-
   return (
     <div className="stack">
-      {pending.funds ? <div className="skeleton skeleton-hero" aria-busy="true" aria-label="Loading" /> : <Hero funds={funds} />}
-
-      <div className="kpis kpis-5">
-        {pending.operations ? (
-          <Kpi label="Net operating income" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
-        ) : (
-          <Kpi
-            label={through ? `Net operating income, to ${through}` : "Net operating income"}
-            value={net ? usd.format(net.actual) : "Not shown"}
-            tone={net ? undefined : "unavailable"}
-            detail={
-              net
-                ? net.budgetToDate !== null
-                  ? `Budget for the same months: ${usd.format(net.budgetToDate)}`
-                  : "No monthly budget to compare with yet"
-                : operations?.status === "not_configured"
-                  ? "Account groups not set up yet"
-                  : "Could not be read"
-            }
-            onOpen={() => open("operations")}
-          />
-        )}
-        {pending.operations || pending.funds ? (
-          <Kpi label="Operating cash" value="Reading…" tone="reading" detail="From QuickBooks" onOpen={() => open("operations")} />
-        ) : (
-          <Kpi
-            label="Operating cash"
-            value={cash?.value ?? "Not shown"}
-            tone={cash?.value ? undefined : "unavailable"}
-            detail={cash?.value ? "Programming cash at the last year's rate of spending" : "Needs this year's figures"}
-            onOpen={() => open("operations")}
-          />
-        )}
-        <MemberKpis
-          members={members}
-          donors={donors}
-          year={year}
-          note={community?.note}
-          reading={pending.community}
-          onOpen={() => open("membership")}
-          onOpenDonors={() => open("giving")}
-        />
-      </div>
-
+      <ClubToday community={community} reading={pending.community} open={open} />
       <div className="grid-2">
-        <NextQuarter community={community} grants={grants} reading={pending.community} />
-        <section className="card card-pad">
-          <div className="card-head">
-            <h2>The rebuild</h2>
-            <button type="button" className="link-button" onClick={() => open("rebuild")}>
-              Details
-            </button>
-          </div>
-          {pending.funds || pending.grants ? (
-            <Reading what="cash and awards" />
-          ) : (
-            <FundingBar funds={funds} grants={grants} compact />
-          )}
-        </section>
+        <ComingUp community={community} reading={pending.community} />
+        <DayToDay funds={funds} operations={operations} pending={pending} open={open} />
+      </div>
+      <div className="grid-2">
+        <RebuildFacts funds={funds} grants={grants} pending={pending} open={open} />
+        <BooksAgree reconciliation={reconciliation} grants={grants} pending={pending} open={open} />
       </div>
     </div>
   );

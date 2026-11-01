@@ -23,9 +23,13 @@
 
 import { getAll, isFixtureMode, parseIds, type LglGift } from "./lgl";
 import { communityFixtureGifts, communityFixtureMembers, COMMUNITY_FIXTURE_DATE } from "./community-fixtures";
-import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, MemberLevel, OperatingAward, RenewalRow } from "./types";
+import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, GrantPayment, MemberLevel, OperatingAward, RenewalRow } from "./types";
 
 export const COMMUNITY_SOURCE = "LGL membership and gift records";
+
+/** How far back "lately" looks, and how far ahead "coming up" looks, counting today. */
+const RECENT_DAYS = 30;
+const RENEWALS_AHEAD_DAYS = 90;
 
 /** 50 pages of 100: room for several times HPIC's gift history today. */
 const COMMUNITY_MAX_PAGES = 50;
@@ -98,6 +102,12 @@ function monthIndex(date: string): number {
   return Number(date.slice(5, 7)) - 1;
 }
 
+/** A calendar date `days` later (or earlier). */
+function addDays(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
 /** "2026-11" for the month `offset` months after `year`-`month0`+1. */
 function monthKey(year: number, month0: number, offset = 0): string {
   const d = new Date(Date.UTC(year, month0 + offset, 1));
@@ -126,13 +136,13 @@ const membershipDates = (kind: "start" | "end", which: "first" | "latest", from:
  * those installments, and HPIC's only installments are grant payments, which
  * giving excludes anyway.
  */
-function giftSearch(config: CommunityConfig, criteria: string, from: string, to: string): string | null {
+export function giftSearch(config: CommunityConfig, criteria: string, from: string, to: string): string | null {
   if (!config.uiBaseUrl) return null;
   return `${config.uiBaseUrl}/fundraising/search/gt/gift/phase/1,12/${criteria}/from/${from}/to/${to}`;
 }
 
 /** Exactly these gifts, for a list no search criteria can describe. */
-function giftIds(config: CommunityConfig, ids: number[]): string | null {
+export function giftIds(config: CommunityConfig, ids: number[]): string | null {
   return config.uiBaseUrl && ids.length > 0 ? `${config.uiBaseUrl}/fundraising/search/gt/gift/gids/${ids.join(",")}` : null;
 }
 
@@ -141,6 +151,11 @@ function giftIds(config: CommunityConfig, ids: number[]): string | null {
 /** The record running latest, which is the level a member holds and when it ends. */
 function currentRecord(member: LglMember): LglMembership | undefined {
   return [...(member.memberships ?? [])].sort((a, b) => (b.finish_date ?? "").localeCompare(a.finish_date ?? ""))[0];
+}
+
+/** When a member's first record began. Undefined if none of their records is dated. */
+function firstStart(member: LglMember): string | undefined {
+  return (member.memberships ?? []).map((r) => r.date_start).filter((d): d is string => Boolean(d)).sort()[0];
 }
 
 /** The relationship types that make people one household. */
@@ -199,9 +214,9 @@ function countMembers(
   let newThisYear: number | null = 0;
 
   for (const member of active) {
-    const starts = (member.memberships ?? []).map((r) => r.date_start).filter((d): d is string => Boolean(d)).sort();
-    if (starts.length === 0) newThisYear = null;
-    else if (newThisYear !== null && starts[0].startsWith(`${year}-`)) newThisYear += 1;
+    const first = firstStart(member);
+    if (!first) newThisYear = null;
+    else if (newThisYear !== null && first.startsWith(`${year}-`)) newThisYear += 1;
 
     const current = currentRecord(member);
     const level = current?.membership_level_name?.trim() || "No level";
@@ -295,6 +310,20 @@ function countRenewals(
   const tally = { autoRenew: 0, manual: 0, noDues: 0 };
   let undated = 0;
 
+  // The Overview's "coming up": a range from today, where the rows above are whole months.
+  const soonEnd = addDays(today, RENEWALS_AHEAD_DAYS - 1);
+  const soonRange = membershipDates("end", "latest", today, soonEnd);
+  const soon = {
+    from: today,
+    through: soonEnd,
+    total: 0,
+    autoRenew: 0,
+    manual: 0,
+    noDues: 0,
+    url: memberSearch(config, soonRange),
+    autoRenewUrl: memberSearch(config, `in-gct/${recurring.join(",")}/in-gifts_type/1,7,8,9,12/${soonRange}`),
+  };
+
   for (const member of active) {
     const finish = currentRecord(member)?.finish_date;
     if (!finish) {
@@ -309,11 +338,50 @@ function countRenewals(
     target.total += 1;
     target[how] += 1;
     tally[how] += 1;
+    if (finish <= soonEnd) {
+      soon.total += 1;
+      soon[how] += 1;
+    }
   }
 
   // The month in progress usually has nothing left to run out, so it only shows if it does.
   const listed = keys.map((k) => rows.get(k)!).filter((r, i) => i > 0 || r.total > 0);
-  return { rows: later.total > 0 ? [...listed, later] : listed, ...tally, undated };
+  return { rows: later.total > 0 ? [...listed, later] : listed, ...tally, undated, soon };
+}
+
+/**
+ * Every grant payment this year and last, sorted into rebuild or operating so it
+ * can be set against QuickBooks. A payment takes its award's campaign, because
+ * payments often carry none of their own. One linked to no award falls back on its
+ * own campaign and says so. Null when the grant categories are not configured.
+ */
+function readGrantPayments(cash: LglGift[], gifts: LglGift[], year: number, config: CommunityConfig): GrantPayment[] | null {
+  if (config.awardCategories.length === 0 || config.paymentCategories.length === 0) return null;
+  const byId = new Map(gifts.map((g) => [g.id, g]));
+  const awardOf = (g: LglGift): LglGift | undefined => {
+    let at = g.parent_gift_id != null ? byId.get(g.parent_gift_id) : undefined;
+    for (let hop = 0; at && hop < 5; hop += 1) {
+      if (at.gift_type_name === "Pledge" && config.awardCategories.includes(at.gift_category_id ?? -1)) return at;
+      at = at.parent_gift_id != null ? byId.get(at.parent_gift_id) : undefined;
+    }
+    return undefined;
+  };
+  const payments: GrantPayment[] = [];
+  for (const g of cash) {
+    const date = g.received_date!;
+    if (!date.startsWith(`${year}-`) && !date.startsWith(`${year - 1}-`)) continue;
+    const award = awardOf(g);
+    if (!award && !config.paymentCategories.includes(g.gift_category_id ?? -1)) continue;
+    const campaign = award ? award.campaign_id : g.campaign_id;
+    payments.push({
+      id: g.id,
+      date,
+      amount: dollars(amountOf(g)),
+      scope: config.grantCampaigns.includes(campaign ?? -1) ? "rebuild" : "operating",
+      linked: Boolean(award),
+    });
+  }
+  return payments;
 }
 
 /**
@@ -379,6 +447,47 @@ export function assembleCommunity(
         ),
       }
     : null;
+
+  const grantPayments = readGrantPayments(cash, gifts, year, config);
+
+  // What has happened lately, for the Overview. New members are people, so one
+  // with no dated record blanks the count, as it does for the year.
+  const recentFrom = addDays(today, 1 - RECENT_DAYS);
+  const inRecent = (g: LglGift) => g.received_date! >= recentFrom;
+  const recentDues = haveDues ? giving.filter((g) => isDuesGift(g) && inRecent(g)) : null;
+  const recentGifts = haveDues ? donations.filter(inRecent) : null;
+  const recentPayments = grantPayments?.filter((p) => p.date >= recentFrom) ?? null;
+  const firsts = activeMembers.map(firstStart);
+  const recent: CommunitySnapshot["recent"] = {
+    from: recentFrom,
+    through: today,
+    newMembers: firsts.every(Boolean)
+      ? {
+          count: firsts.filter((d) => d! >= recentFrom && d! <= today).length,
+          url: memberSearch(config, membershipDates("start", "first", recentFrom, today)),
+        }
+      : null,
+    dues: recentDues && {
+      count: recentDues.length,
+      amount: dollars(sum(recentDues)),
+      url: giftSearch(config, `campaign/${config.membershipCampaigns.join(",")}`, recentFrom, today),
+    },
+    gifts: recentGifts && {
+      count: recentGifts.length,
+      amount: dollars(sum(recentGifts)),
+      url: giftSearch(
+        config,
+        [`ni-campaign/${config.membershipCampaigns.join(",")}`, notGiftsCriteria].filter(Boolean).join("/"),
+        recentFrom,
+        today,
+      ),
+    },
+    grantPayments: recentPayments && {
+      count: recentPayments.length,
+      amount: recentPayments.reduce((s, p) => s + p.amount, 0),
+      url: giftIds(config, recentPayments.map((p) => p.id)),
+    },
+  };
 
   // Monthly series for the charts.
   const months = Array.from({ length: 12 }, (_, i) => monthKey(year, i));
@@ -513,6 +622,8 @@ export function assembleCommunity(
     purchasesThisYear: dollars(sum(giving.filter((g) => isPurchase(g) && !isDuesGift(g) && inYear(year)(g)))),
     nextQuarter: { months: nextMonths, items },
     operatingGrants,
+    recent,
+    grantPayments,
     giftCount: cash.length,
     cached: false,
     source: COMMUNITY_SOURCE,
@@ -538,6 +649,8 @@ function empty(
     purchasesThisYear: 0,
     nextQuarter: null,
     operatingGrants: null,
+    recent: null,
+    grantPayments: null,
     giftCount: 0,
     retrievedAt: null,
     cached: false,

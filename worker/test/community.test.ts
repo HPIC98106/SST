@@ -450,7 +450,7 @@ describe("the cached snapshot", () => {
     const stub = env.TOKEN_STORE.get(env.TOKEN_STORE.idFromName("qbo"));
     const snapshot = assemble([dues(1, "2026-05-01")]);
     await runInDurableObject(stub, (_instance, state) =>
-      state.storage.put("community-v3", { snapshot, cachedAt: Date.now() - age }),
+      state.storage.put("community-v4", { snapshot, cachedAt: Date.now() - age }),
     );
     const lgl = vi.fn(async () =>
       new Response(JSON.stringify({ items: [], total_items: 0 }), {
@@ -487,3 +487,78 @@ const CONFIG_ENV = {
   LGL_GRANT_PAYMENT_CATEGORY_IDS: "6076",
   LGL_NON_DONATION_CATEGORY_IDS: "6134",
 };
+
+describe("the last thirty days", () => {
+  const TODAY = "2026-11-01";
+  const recent = (gifts: LglGift[], active: LglMember[] = []) => assembleCommunity(gifts, active, TODAY, LINKED, BASE).recent!;
+  const LINKED = communityConfig({
+    LGL_MEMBERSHIP_CAMPAIGN_IDS: "846",
+    LGL_GRANT_CAMPAIGN_IDS: "871",
+    LGL_GRANT_GIFT_CATEGORY_IDS: "6031",
+    LGL_GRANT_PAYMENT_CATEGORY_IDS: "6076",
+    LGL_NON_DONATION_CATEGORY_IDS: "6134",
+    LGL_UI_BASE_URL: "https://lgl.test",
+  } as Env);
+
+  it("counts thirty days including today, and nothing older", () => {
+    // October 3 is the thirtieth day back; October 2 is the thirty-first.
+    const window = recent([dues(1, "2026-10-03", 40), dues(2, "2026-10-02", 100), dues(3, TODAY, 20)]);
+    expect(window.from).toBe("2026-10-03");
+    expect(window.dues).toMatchObject({ count: 2, amount: 60 });
+  });
+
+  it("keeps dues, grant payments and purchases out of gifts", () => {
+    const window = recent([
+      dues(1, "2026-10-20"),
+      gift({ constituent_id: 2, campaign_id: 882, received_amount: 50, received_date: "2026-10-20" }),
+      gift({ constituent_id: 3, campaign_id: 887, gift_category_id: 6134, received_amount: 500, received_date: "2026-10-20" }),
+      gift({ constituent_id: 4, campaign_id: 841, gift_category_id: 6076, received_amount: 7000, received_date: "2026-10-20" }),
+    ]);
+    expect(window.gifts).toMatchObject({ count: 1, amount: 50 });
+    expect(window.grantPayments).toMatchObject({ count: 1, amount: 7000 });
+    expect(window.dues).toMatchObject({ count: 1, amount: 40 });
+  });
+
+  it("calls a member new only if their first record began in the window", () => {
+    const window = recent([], [
+      member(1, ["Classic", "2026-10-15", "2027-10-15"]),
+      member(2, ["Classic", "2026-09-01", "2027-09-01"]),
+      // Came back after years away: a record in the window, but not their first.
+      member(3, ["Classic", "2019-03-01", "2020-03-01"], ["Classic", "2026-10-15", "2027-10-15"]),
+    ]);
+    expect(window.newMembers?.count).toBe(1);
+  });
+
+  it("will not count new members when one has no dated record", () => {
+    expect(recent([], [{ id: 1, memberships: [] }]).newMembers).toBeNull();
+  });
+
+  it("opens each figure's own records in LGL", () => {
+    const paid = gift({ constituent_id: 4, campaign_id: 841, gift_category_id: 6076, received_amount: 7000, received_date: "2026-10-20" });
+    const window = recent([paid]);
+    expect(window.newMembers?.url).toBe(
+      "https://lgl.test/constituents/search/comb/and:and/md_fl/first/md_type/start/me_from/2026-10-03/me_to/2026-11-01/memberd/1/members/1",
+    );
+    expect(window.dues?.url).toBe("https://lgl.test/fundraising/search/gt/gift/phase/1,12/campaign/846/from/2026-10-03/to/2026-11-01");
+    expect(window.gifts?.url).toBe(
+      "https://lgl.test/fundraising/search/gt/gift/phase/1,12/ni-campaign/846/ni-category/6076,6134/from/2026-10-03/to/2026-11-01",
+    );
+    expect(window.grantPayments?.url).toBe(`https://lgl.test/fundraising/search/gt/gift/gids/${paid.id}`);
+  });
+});
+
+describe("memberships ending soon", () => {
+  const ending = (id: number, finish: string): LglMember => member(id, ["Classic", "2025-06-01", finish]);
+  const recurring = (who: number) => gift({ constituent_id: who, gift_category_id: 6096, received_amount: 40, received_date: "2026-01-05" });
+  const manual = (who: number) => gift({ constituent_id: who, gift_category_id: 6081, received_amount: 40, received_date: "2026-01-05" });
+
+  it("counts ninety days including today, by how each renews", () => {
+    const soon = assemble([recurring(1), manual(2), recurring(4)], "2026-11-01", [
+      ending(1, "2026-11-20"),
+      ending(2, "2027-01-29"), // The ninetieth day.
+      ending(3, "2026-12-01"), // No dues gift on record.
+      ending(4, "2027-01-30"), // The ninety-first.
+    ]).renewals!.soon;
+    expect(soon).toMatchObject({ from: "2026-11-01", through: "2027-01-29", total: 3, autoRenew: 1, manual: 1, noDues: 1 });
+  });
+});

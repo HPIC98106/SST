@@ -82,6 +82,15 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   Spent per grant and authoritative Received (P3), then the health signals and
   uninvoiced reimbursable spending (P5).
 
+- **Rachel, about the dues difference on Reconciliation.** January to October reads
+  $17,558.80 in LGL and $16,612.40 in QuickBooks. Most of the $946.40 is October (LGL
+  $2,320), so ask whether October's dues are all booked yet. Unblocks: the first line
+  of the board's reconciliation reading "Match", or a known reason it does not.
+
+- **Galen and Alex, about the new Overview.** Show them the live page and ask whether
+  it is what the board wants to open first: it was rebuilt on your view, which you
+  called one perspective. Unblocks: settling the Overview, or changing it.
+
 - **Galen, about the percent-funded denominator.** The spec's 40% / 70%
   thresholds are almost certainly against the whole capital campaign, not
   Dry-in. Need: what funders measure against, and the source for the total
@@ -96,7 +105,7 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   go to, which favors keeping 909414 (Programs). Confirm, then fix the records in
   LGL: which one stays decides whether the money counts toward the rebuild. If it
   was two payments after all, no 2025 CARE award exists in LGL to link them to, so
-  one needs creating. Unblocks: two of the four unlinked payments on Housekeeping
+  one needs creating. Unblocks: two of the four unlinked payments on Reconciliation
   and Grant details. Runbook §8.
 
 - **Whether to define `contract_signed` in LGL.** Only if someone commits to

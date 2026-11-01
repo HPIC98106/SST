@@ -12,23 +12,6 @@ import { usd } from "./format";
 import { LglLink } from "./LglLink";
 import type { FundsSnapshot, GrantSnapshot } from "./types";
 
-/** "October 22, 2026" from "2026-10-22", read as a calendar date. */
-export function calendarDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-/** Whether a contractor's prices have lapsed, by Seattle's date today. */
-export function pricesLapsed(validUntil: string | null | undefined): boolean {
-  if (!validUntil) return false;
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }) > validUntil;
-}
-
 export function fundingFigures(funds: FundsSnapshot | null, grants: GrantSnapshot | null) {
   const target = grants?.phaseTarget.targetCost ?? null;
   const cash = funds?.subtotals?.find((s) => s.purpose === "rebuild")?.total ?? null;
@@ -37,19 +20,10 @@ export function fundingFigures(funds: FundsSnapshot | null, grants: GrantSnapsho
   return { target, cash, awarded: awarded ?? null, toRaise };
 }
 
-export function FundingBar({
-  funds,
-  grants,
-  compact = false,
-}: {
-  funds: FundsSnapshot | null;
-  grants: GrantSnapshot | null;
-  compact?: boolean;
-}) {
+export function FundingBar({ funds, grants }: { funds: FundsSnapshot | null; grants: GrantSnapshot | null }) {
   const { target, cash, awarded, toRaise } = fundingFigures(funds, grants);
   const phase = grants?.phaseTarget;
   const name = phase?.name ?? "the next phase";
-  const lapsed = pricesLapsed(phase?.pricesValidUntil);
 
   if (target === null) {
     return (
@@ -111,25 +85,18 @@ export function FundingBar({
         <span className="funding-awarded" style={{ width: `${awardedPct}%` }} />
       </div>
 
-      <ul className={compact ? "funding-legend compact" : "funding-legend"}>
+      <ul className="funding-legend">
         {rows.map((r) => (
           <li key={r.key}>
             <span className={`swatch swatch-${r.key}`} aria-hidden="true" />
             <span className="funding-label">
               {r.label}
-              {compact ? null : <small>{r.detail}</small>}
+              <small>{r.detail}</small>
             </span>
             <strong>{r.value === null ? "Unavailable" : <LglLink url={r.url}>{usd.format(r.value)}</LglLink>}</strong>
           </li>
         ))}
       </ul>
-
-      {/* Compact only: on the Rebuild tab the readiness panel beneath carries the full warning. */}
-      {compact && lapsed && phase?.pricesValidUntil ? (
-        <p className="note warn-text">
-          The estimate's prices lapsed on {calendarDate(phase.pricesValidUntil)}; re-pricing could move this target.
-        </p>
-      ) : null}
     </div>
   );
 }

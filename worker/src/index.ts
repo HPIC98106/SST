@@ -12,14 +12,15 @@
  */
 
 import { AUTH_HEADER, authorize, checkPassphrase } from "./auth";
-import { getCommunity } from "./community";
+import { communityConfig, getCommunity } from "./community";
 import { getGrantDetails } from "./grant-details";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
 import { getOperations, parseGroupConfig, readSetup, resolveGroup } from "./operations";
+import { assembleReconciliation } from "./reconcile";
 import { PURPOSE_LABELS, getFunds, listAssetAccounts, parseAccountConfig } from "./qbo";
 import { TokenStore } from "./tokens";
-import type { Env } from "./types";
+import type { CommunitySnapshot, Env, OperationsSnapshot } from "./types";
 
 export { TokenStore };
 
@@ -126,6 +127,15 @@ export default {
           return json({ error: "Not authorized" }, env, 401);
         }
         return handleCommunity(env);
+      }
+
+      // LGL against QuickBooks, from the two reads above, so it costs neither
+      // system anything when they are cached.
+      case "/api/reconciliation": {
+        if (!authorize(request, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return handleReconciliation(env);
       }
 
       // Phase 2. Behind the same passphrase, and read-only like everything
@@ -436,32 +446,43 @@ async function keepAlive(env: Env): Promise<void> {
   }
 }
 
-async function handleCommunity(env: Env): Promise<Response> {
+async function readCommunity(env: Env): Promise<CommunitySnapshot> {
   const store = tokenStore(env);
   if (env.LGL_MODE === "live") {
     const cached = await store.getCachedCommunity(COMMUNITY_CACHE_TTL_MS);
-    if (cached) return json({ ...cached.snapshot, cached: true }, env);
+    if (cached) return { ...cached.snapshot, cached: true };
   }
   const snapshot = await getCommunity(env);
   if (snapshot.status === "ok" && snapshot.connection === "ok") await store.putCachedCommunity(snapshot);
-  return json(snapshot, env);
+  return snapshot;
 }
 
-async function handleOperations(env: Env): Promise<Response> {
+async function readOperations(env: Env): Promise<OperationsSnapshot> {
   const store = tokenStore(env);
   const configKey = env.QBO_PL_GROUPS ?? "";
 
   const cached = await store.getCachedOperations(CACHE_TTL_MS, configKey);
-  if (cached) {
-    return json({ ...cached.snapshot, cached: true }, env);
-  }
+  if (cached) return { ...cached.snapshot, cached: true };
 
   const snapshot = await getOperations(env, store);
   // Only a complete read is cached, for the same reason as the cash snapshot.
   if (snapshot.connection === "ok" && snapshot.status === "ok") {
     await store.putCachedOperations(snapshot, configKey);
   }
-  return json(snapshot, env);
+  return snapshot;
+}
+
+async function handleCommunity(env: Env): Promise<Response> {
+  return json(await readCommunity(env), env);
+}
+
+async function handleOperations(env: Env): Promise<Response> {
+  return json(await readOperations(env), env);
+}
+
+async function handleReconciliation(env: Env): Promise<Response> {
+  const [community, operations] = await Promise.all([readCommunity(env), readOperations(env)]);
+  return json(assembleReconciliation(community, operations, communityConfig(env)), env);
 }
 
 async function handleFunds(env: Env): Promise<Response> {

@@ -230,7 +230,7 @@ export function DataQualityPanel({ exceptions }: { exceptions: DataQualityExcept
 
 /**
  * `showExceptions` is false on the Grants tab: the data-quality list lives on
- * Housekeeping, where the people who fix records look for it. It is never
+ * Reconciliation, where the people who fix records look for it. It is never
  * dropped, only moved one click away from the board's landing page.
  */
 export function GrantFunnelView({

@@ -1348,7 +1348,7 @@ a.lgl-link:focus-visible {
   margin: 1.6rem 0 0.2rem;
 }
 
-/* --- Hero: money available now --- */
+/* --- Hero: the club today --- */
 
 .hero {
   display: grid;
@@ -1459,16 +1459,62 @@ a.lgl-link:focus-visible {
   color: var(--unavailable);
 }
 
-.line-list small {
+.line-list small,
+.account-list small {
   display: block;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.hero .account-list small {
+  color: #c9d3e3;
 }
 
 .line-list-secondary {
   margin-top: 0.8rem;
   padding-top: 0.4rem;
   border-top: 1px dashed var(--line);
+}
+
+.card-subhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+  margin: 0.7rem 0 0.2rem;
+}
+
+.card-subhead-next {
+  margin-top: 1.1rem;
+}
+
+.reconcile-difference {
+  white-space: normal;
+}
+
+.row-note {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.hero-unit {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.hero-more {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--gold);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .big-figure {
@@ -1493,10 +1539,6 @@ a.lgl-link:focus-visible {
 
 .kpis-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.kpis-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .kpi {
@@ -1716,9 +1758,6 @@ a.kpi-external:focus-visible {
   }
   /* An odd row closes on one wide card rather than leaving a hole. */
   .kpis-3 > :last-child,
-  .kpis-5 > :last-child {
-    grid-column: 1 / -1;
-  }
   .grid-2,
   .charts,
   .giving-top,
