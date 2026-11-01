@@ -12,6 +12,7 @@
  */
 
 import { formatDate, formatRetrievedAt, usd } from "./format";
+import { LglLink } from "./LglLink";
 import type { GrantDetail, GrantDetailsSnapshot, GrantStatus, GrantTotals } from "./types";
 
 const STATUS_LABELS: Record<GrantStatus, string> = {
@@ -50,7 +51,9 @@ function GrantCard({ grant }: { grant: GrantDetail }) {
   const percent = grant.received !== null && grant.awarded > 0 ? Math.round((grant.received / grant.awarded) * 100) : null;
   return (
     <article className="grant-card">
-      <h3>{grant.name}</h3>
+      <h3>
+        <LglLink url={grant.url}>{grant.name}</LglLink>
+      </h3>
       <p className="grant-meta">
         {[
           grant.named ? grant.funder : null,
@@ -88,20 +91,14 @@ function GrantCard({ grant }: { grant: GrantDetail }) {
       ) : null}
 
       <details className="grant-more">
-        <summary>Payments and records</summary>
+        <summary>Payments</summary>
         {grant.payments.length > 0 ? (
           <ul className="line-list">
             {grant.payments.map((p) => (
               <li key={p.id}>
                 <span>{formatDate(p.date)}</span>
                 <span className="num">
-                  {p.url ? (
-                    <a className="lgl-link" href={p.url} target="_blank" rel="noreferrer" title="Open in LGL (needs an LGL login)">
-                      {usd.format(p.amount)}
-                    </a>
-                  ) : (
-                    usd.format(p.amount)
-                  )}
+                  <LglLink url={p.url}>{usd.format(p.amount)}</LglLink>
                 </span>
               </li>
             ))}
@@ -114,13 +111,6 @@ function GrantCard({ grant }: { grant: GrantDetail }) {
             <strong>Scheduled in LGL:</strong> {grant.scheduled.map((n) => usd.format(n)).join(", ")}. LGL holds these with
             no date and does not mark one when a payment arrives, so this can include one already paid. None is counted as
             received.
-          </p>
-        ) : null}
-        {grant.url ? (
-          <p className="note">
-            <a href={grant.url} target="_blank" rel="noreferrer">
-              Open this award in LGL
-            </a>
           </p>
         ) : null}
       </details>

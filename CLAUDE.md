@@ -121,6 +121,13 @@ HPIC's QuickBooks and LGL data.
   donor count, the chart or the table. They are on Membership, Grants and
   Operations. Mixing them in made "Gifts in 2026" read 273 for what were dues
   payments.
+- **Whatever a board member reads should open in the system it came from, wherever
+  possible.** Asked for by Kyle on 2026-10-31, as a standing rule for everything
+  built from here: a record's name opens that record, and a figure opens the list
+  behind it, in LGL or QuickBooks. New panels ship with their links rather than
+  gaining them later. Use `LglLink` for LGL, which also keeps names behind LGL's own
+  login. No QuickBooks link exists yet: its URLs need checking in a signed-in session
+  before any ships.
 - **A number links into LGL only if the search lands on the same count.** Each
   pattern was run on 2026-10-31 and is pinned in `test/community.test.ts`.
   Where no search matches, the number stays plain: the closest LGL search for
@@ -705,6 +712,9 @@ future value cannot change what an existing test means.
   and fund are collinear today, so the breakdown's value is catching the first
   award where they disagree. Caveat to state on the panel: a fund records
   where money was *deposited*, not what the funder *restricted*.
+- **Links on the panels built before that rule.** QuickBooks has none: account
+  balances, the Operations lines, the budget. Within LGL, the Summary funnel's
+  headline figures and the operating grants table link by gift ID or count only.
 - **Grant Name and a spend-by date on Grant details.** The name reader is built
   and waits on the field. A spend-by date needs a field too, and then a read and a
   line on the card.
