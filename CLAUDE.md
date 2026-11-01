@@ -291,9 +291,14 @@ If LGL is chosen instead, the prerequisites are: every payment linked to its
 award, 6076 kept free of non-grant income, custom fields defined on Pledge, and
 award status held in a field rather than a freetext note (the Goal note on the
 $38,000 OAC award still says a decision was anticipated April 2026, months
-after the award landed). LGL's `Installment` type (13) exists and is unused:
-worth checking whether it enforces the payment-to-award link that hand-entered
-type-1 gifts do not.
+after the award landed).
+
+**LGL's `Installment` type (13) is a schedule, not money** (verified 2026-10-31).
+Two operating awards use it. An installment carries an amount and a parent but no
+`received_date` or category, and LGL does not mark one when a payment arrives:
+4Culture's $7,936 payment is a separate Gift beside two undated $7,936
+installments. So only a dated child counts as received, and an undated one is
+reported as scheduled.
 
 Choosing QuickBooks instead needs a **bookkeeping practice**: QuickBooks must
 carry a dimension that ties a deposit or expense to a specific grant, applied
@@ -315,6 +320,40 @@ account-type filter for `Asset`, not a QuickBooks Class.) The Phase 1
 completeness rule governs either way: a deposit attributable to no grant is
 invisible, so incomplete attribution renders unavailable rather than quietly
 low.
+
+### What QuickBooks holds about grants, read 2026-10-31
+
+From one temporary GET-only read of transactions since January 2023, never
+committed and removed the same day. This settles the "what does the LGL sync
+create" question and what the bookkeeping conversation has to change.
+
+- **Plan and settings:** QuickBooks Online Plus, so Projects and Class are both
+  available. `ProjectsEnabled` is true and no project exists. Billable expense
+  tracking is on, and all 615 Purchase and Bill lines are `NotBillable`. QuickBooks
+  calls customers "Donors" here, and there are 877, nearly all of them people.
+- **Nothing ties spending to a grant.** None of the 138 Purchase and Bill lines in
+  rebuild accounts names a customer or project. Almost all carry the class
+  "Building Reconstruction", which says rebuild, not which grant. 138 lines in
+  nearly four years is small enough to tag by hand.
+- **Projects, not bare Customers.** A funder can hold several awards (Commerce 2,
+  Arts & Culture 3, the City 2 or more), so one Customer per award does not fit the
+  customers that already exist. One Project per award under its funder does, and
+  this refines the 2026-09-06 decision without changing its reasoning.
+- **Spent has to read transactions, not the profit and loss.** Year-end journal
+  entries post large amounts to the rebuild accounts, so a report total is not what
+  was spent on a grant. What those entries do has not been checked.
+- **Received is half there.** Grant money entered by hand is a SalesReceipt whose
+  customer is the funder: Commerce reads $485,000 and Garneau-Nicon $10,000, both
+  matching LGL. **The LGL sync loses the funder:** its two grant payments so far
+  ($38,000 and $2,750) are SalesReceipts under one customer, "General LGL
+  Constituent", with the right item and class. Commerce's two awards cannot be told
+  apart either way.
+- **Two records this explains.** 4Culture has two $7,936 SalesReceipts (July 28 and
+  August 4, 2026) and a $7,936 Purchase on August 24 posted to the Grants income
+  account, which looks like a double entry being reversed; it is the same figure
+  the draft budget's reviewer asked about. And there is one $7,500 receipt on
+  2025-01-17, into US Bank Checking and coded Grants, which bears on gifts 906707
+  and 909414 in KYLE-TODO.
 
 Two more things that matter:
 
@@ -471,13 +510,12 @@ of 2026-08-14, the token refresh itself:
 "kind":"refreshed","detail":"new access token valid 3600s; refresh token unchanged"
 ```
 
-**One sub-case is still test-only: a rotated refresh token.** Intuit returned
-the same refresh token on that first live refresh, which is normal: it rotates
-roughly every 24 hours, not every hour. So the property that matters most, that
-a *rotated* value is re-stored, has been proven by `worker/test/tokens.test.ts`
-but not yet observed live. Confirm it by checking `/admin/status` for a
-`refreshed` event whose detail says `rotated` rather than `unchanged`; there
-should be one within a day of the connection being seeded.
+**A rotated refresh token has now been seen live too.** Intuit returns the same
+token on most refreshes and rotates it roughly daily. On the production connection
+`/admin/status` shows `refresh token rotated` at 2026-10-31 07:00 UTC, with every
+hourly refresh succeeding since. So the property that matters most, that a
+*rotated* value is re-stored, holds in production as well as in
+`worker/test/tokens.test.ts`.
 
 The tests also cover `invalid_grant`, an unreachable Intuit, and the
 single-flight guard. None of those three can be reached against live Intuit at
@@ -538,8 +576,9 @@ future value cannot change what an existing test means.
   $1,471,000 / $545,000 / $926,000 on 2026-09-09, and $1,471,000 / $583,000 /
   $888,000 on 2026-10-07 after the $38,000 OAC payment arrived.
   Applied was built and removed on 2026-08-18, once Alex confirmed the tool
-  starts at money awarded rather than requested. Still to do: the campaign/fund
-  restriction breakdown and the pledge detail list.
+  starts at money awarded rather than requested. The detail list shipped
+  2026-10-31 as Grant details (see Phase 5). Still to do: the campaign/fund
+  restriction breakdown.
 - **Phase 3, phase readiness: shipped, resting on provisional Received.** The
   panel measures cash against the Dry-in target: the grand total of the Metis
   control estimate dated 9/22/26, including Metis's 6% contractor contingency
@@ -605,8 +644,17 @@ future value cannot change what an existing test means.
     the passphrase is shared, and a linked number opens behind LGL's own login.
   - **Giving** (same module and read, split out 2026-10-31): donors, the giving
     chart and giving by campaign, gifts only.
-  - **Grants**: the funnel, and operating grants outside the rebuild with what
-    is still to arrive on each (provisional, from linked payments).
+  - **Grants**, two views in the hash, `#grants` and `#grants/details`, kept apart
+    for now at Kyle's request (2026-10-31). **Summary**: the funnel, and operating
+    grants outside the rebuild with what is still to arrive on each (provisional,
+    from linked payments). **Grant details** (`worker/src/grant-details.ts`,
+    `/api/grant-details`): a card per award across every campaign, with awarded,
+    spent, received and still to arrive, its payments and its schedule. Its rebuild
+    totals match the funnel, which a test pins. **No notes leave the Worker**: they
+    hold funder staff names and email addresses. Spent is null and reads "Not
+    tracked yet", so nothing there calls a grant healthy until P3. Names come from
+    a Gift custom field called "Grant Name", which does not exist yet, so the reader
+    is tested only against the shapes LGL uses for other fields.
   - **Housekeeping**: the data-quality list, ungrouped QuickBooks accounts, and
     how a grant moves through the systems. Its tab shows a count of blocking
     records, so problems are one click away and never hidden.
@@ -630,6 +678,12 @@ future value cannot change what an existing test means.
   pushing the page** when the snapshot's shape changes: the new page crashes on
   the old Worker's response.
 
+  **Programming cash is in scope.** Whether the dashboard should answer "how much
+  can we spend on programming" and read past campaign 871 was an open decision.
+  It settled itself in this phase, on purpose: the Overview shows programming cash
+  and months of operating cash, Operations covers day-to-day money, and Grant
+  details covers every campaign.
+
   **The draft budget does not get a tab** (decided 2026-10-31). Operations already
   shows actuals against the budget in QuickBooks, and a spreadsheet tab would add a
   hand-maintained source of numbers while the draft is still moving. Enter the
@@ -651,15 +705,14 @@ future value cannot change what an existing test means.
   and fund are collinear today, so the breakdown's value is catching the first
   award where they disagree. Caveat to state on the panel: a fund records
   where money was *deposited*, not what the funder *restricted*.
-- **QuickBooks read of what the LGL sync creates.** LGL has synced new
-  payments to QuickBooks since mid-September (including the $38,000 OAC
-  payment). Once production is connected, read what a synced gift became
-  (Deposit or SalesReceipt, with which Customer, Class or account) before the
-  Rachel conversation. Part of the grant dimension may already exist.
+- **Grant Name and a spend-by date on Grant details.** The name reader is built
+  and waits on the field. A spend-by date needs a field too, and then a read and a
+  line on the card.
 - **P3, Received and Spent from QuickBooks.** Blocked on the bookkeeping
-  existing. One Customer (or Project) per award, tied to LGL by **an explicit
+  existing. One Project per award under its funder, tied to LGL by **an explicit
   map in Worker config keyed by LGL gift id**, never a naming convention: a
-  renamed customer must fail loudly, not detach silently. Completeness rule:
+  renamed project must fail loudly, not detach silently. `GrantDetail.spent` and
+  its place on the card are ready for it. Completeness rule:
   deposits and expenses in the rebuild accounts with no grant attribution are
   an *unattributed pool*, shown with a count and total; the roll-up "total
   grant cash received" renders only when that pool is empty.
@@ -668,7 +721,10 @@ future value cannot change what an existing test means.
   `Billable`: spent, eligible, never invoiced. This is money HPIC is owed
   and hasn't asked for. Neither system can answer it alone. It belongs in the
   data-quality panel as a named list, because the fix is to send an invoice.
-- **Pledge detail list** (rest of Phase 2).
+- **Health signals on Grant details.** Needs P3. On a reimbursable grant, spent
+  minus received is what HPIC is fronting and should invoice. On one paid up front,
+  received minus spent is restricted money still unspent. On either, what is left
+  to spend, and spending past the award.
 
 ## Hosting, and where it is going
 

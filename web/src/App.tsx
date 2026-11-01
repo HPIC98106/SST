@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrants, fetchOperations } from "./api";
+import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrantDetails, fetchGrants, fetchOperations } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
 import { formatRetrievedAt, usd } from "./format";
 import { FundingBar } from "./FundingBar";
 import { FundsSnapshotView } from "./FundsSnapshot";
 import { GivingView } from "./Giving";
+import { GrantDetailsView } from "./GrantDetails";
 import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
@@ -13,7 +14,7 @@ import { OverviewView, Reading, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
 import { PhaseReadinessView } from "./PhaseReadiness";
 import { YearSoFarView } from "./YearSoFar";
-import type { CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
+import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
 const STORAGE_KEY = "hpic-sst-passphrase";
 
@@ -32,8 +33,15 @@ const TABS: { key: Tab; label: string }[] = [
  * member, opens the same view. The passphrase never goes in the URL.
  */
 function tabFromHash(): Tab {
-  const hash = window.location.hash.replace(/^#/, "");
+  const hash = window.location.hash.replace(/^#/, "").split("/")[0];
   return TABS.some((t) => t.key === hash) ? (hash as Tab) : "overview";
+}
+
+/** Grants has two views, kept in the hash the same way: #grants and #grants/details. */
+type GrantsView = "summary" | "details";
+
+function grantsViewFromHash(): GrantsView {
+  return window.location.hash === "#grants/details" ? "details" : "summary";
 }
 
 /**
@@ -59,7 +67,9 @@ export function App() {
   const [grants, setGrants] = useState<Panel<GrantSnapshot>>({ data: null });
   const [operations, setOperations] = useState<Panel<OperationsSnapshot>>({ data: null });
   const [community, setCommunity] = useState<Panel<CommunitySnapshot>>({ data: null });
+  const [grantDetails, setGrantDetails] = useState<Panel<GrantDetailsSnapshot>>({ data: null });
   const [tab, setTab] = useState<Tab>(tabFromHash);
+  const [grantsView, setGrantsView] = useState<GrantsView>(grantsViewFromHash);
   const [loading, setLoading] = useState(false);
   const [gateError, setGateError] = useState<string | undefined>();
   const latestLoad = useRef(0);
@@ -67,6 +77,7 @@ export function App() {
   useEffect(() => {
     const onHash = () => {
       setTab(tabFromHash());
+      setGrantsView(grantsViewFromHash());
       window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", onHash);
@@ -110,6 +121,7 @@ export function App() {
       settle(fetchGrants(secret), setGrants),
       settle(fetchOperations(secret), setOperations),
       settle(fetchCommunity(secret), setCommunity),
+      settle(fetchGrantDetails(secret), setGrantDetails),
     ]);
     if (thisLoad === latestLoad.current) setLoading(false);
   }, []);
@@ -246,20 +258,44 @@ export function App() {
           )
         ) : tab === "grants" ? (
           <div className="stack">
-            {pending.grants ? (
-              <PanelLoading />
-            ) : grants.data ? (
-              <GrantFunnelView snapshot={grants.data} showExceptions={false} />
+            <nav className="lens grants-views" aria-label="Grants views">
+              {(["summary", "details"] as const).map((view) => (
+                <a
+                  key={view}
+                  className="lens-option"
+                  href={view === "details" ? "#grants/details" : "#grants"}
+                  aria-current={grantsView === view ? "page" : undefined}
+                >
+                  {view === "details" ? "Grant details" : "Summary"}
+                </a>
+              ))}
+            </nav>
+            {grantsView === "details" ? (
+              isPending(grantDetails) ? (
+                <PanelLoading />
+              ) : grantDetails.data ? (
+                <GrantDetailsView snapshot={grantDetails.data} />
+              ) : (
+                <PanelError title="Grant details" detail={grantDetails.error} />
+              )
             ) : (
-              <PanelError title="Grant funnel" detail={grants.error} />
-            )}
-            {pending.community ? (
-              <section className="panel">
-                <h1>Operating grants</h1>
-                <Reading what="operating grants from LGL" slow />
-              </section>
-            ) : (
-              <OperatingGrants community={community.data} />
+              <>
+                {pending.grants ? (
+                  <PanelLoading />
+                ) : grants.data ? (
+                  <GrantFunnelView snapshot={grants.data} showExceptions={false} />
+                ) : (
+                  <PanelError title="Grant funnel" detail={grants.error} />
+                )}
+                {pending.community ? (
+                  <section className="panel">
+                    <h1>Operating grants</h1>
+                    <Reading what="operating grants from LGL" slow />
+                  </section>
+                ) : (
+                  <OperatingGrants community={community.data} />
+                )}
+              </>
             )}
           </div>
         ) : (

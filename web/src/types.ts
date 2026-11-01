@@ -215,6 +215,52 @@ export interface OperationsSnapshot {
   environment: "sandbox" | "production";
 }
 
+// --- Grant details: each award on its own ---
+
+export type GrantStatus = "awaiting" | "partial" | "full" | "over" | "unknown";
+
+export interface GrantDetail {
+  id: number;
+  name: string;
+  /** False when the funder and award year stand in for a Grant Name field in LGL. */
+  named: boolean;
+  funder: string | null;
+  scope: "rebuild" | "operating";
+  awardDate: string | null;
+  awarded: number;
+  /** Null until QuickBooks can say which grant an expense belongs to. Never $0 in the meantime. */
+  spent: number | null;
+  /** Provisional, from LGL payment records. Null when they could not be read completely. */
+  received: number | null;
+  stillToArrive: number | null;
+  overBy: number | null;
+  status: GrantStatus;
+  terms: ReimbursableStatus;
+  termsUnreadable: string | null;
+  payments: { id: number; date: string; amount: number; url: string | null }[];
+  /** Undated installments in LGL. Never counted as received. */
+  scheduled: number[];
+  url: string | null;
+}
+
+export interface GrantTotals {
+  count: number;
+  awarded: number;
+  received: number | null;
+  stillToArrive: number | null;
+}
+
+export interface GrantDetailsSnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  grants: GrantDetail[];
+  totals: { rebuild: GrantTotals; operating: GrantTotals };
+  unlinkedPayments: { count: number; amount: number } | null;
+  retrievedAt: string | null;
+  source: string;
+  connection: "ok" | "not_configured" | "unavailable" | "fixture";
+}
+
 // --- Membership tab: members, donors and giving, from LGL ---
 
 export interface CampaignGiving {

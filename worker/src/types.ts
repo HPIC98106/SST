@@ -638,6 +638,61 @@ export interface ExpectedInflow {
   amount: number;
 }
 
+// --- Grant details: each award on its own ---
+
+export type GrantScope = "rebuild" | "operating";
+
+/** Only what the records say. Whether a grant is healthy needs Spent, which is not tracked yet. */
+export type GrantStatus = "awaiting" | "partial" | "full" | "over" | "unknown";
+
+export interface GrantDetail {
+  id: number;
+  /** The Grant Name field in LGL, or the funder and award year until it is filled in. */
+  name: string;
+  named: boolean;
+  /** An organization's name. Individuals are never named, and null means it could not be read. */
+  funder: string | null;
+  scope: GrantScope;
+  /** The award's date in LGL, which is not always the real award date. */
+  awardDate: string | null;
+  awarded: number;
+  /** Null until QuickBooks can say which grant an expense belongs to. Never $0 in the meantime. */
+  spent: number | null;
+  /** Provisional, from LGL payment records. Null when they could not be read completely. */
+  received: number | null;
+  stillToArrive: number | null;
+  /** How far payments linked to this award exceed it, when they do. */
+  overBy: number | null;
+  status: GrantStatus;
+  terms: ReimbursableStatus;
+  /** A Payment Terms value this code cannot map, quoted back. Null when simply unset. */
+  termsUnreadable: string | null;
+  payments: { id: number; date: string; amount: number; url: string | null }[];
+  /** Undated installments in LGL. Never counted as received, and may include one already paid. */
+  scheduled: number[];
+  url: string | null;
+}
+
+/** Rebuild and programs are totalled apart and never added together. */
+export interface GrantTotals {
+  count: number;
+  awarded: number;
+  received: number | null;
+  stillToArrive: number | null;
+}
+
+export interface GrantDetailsSnapshot {
+  status: "ok" | "unavailable" | "not_configured";
+  note?: string;
+  grants: GrantDetail[];
+  totals: { rebuild: GrantTotals; operating: GrantTotals };
+  /** Grant payments linked to no award, so on no grant. Null when they could not be read. */
+  unlinkedPayments: { count: number; amount: number } | null;
+  retrievedAt: string | null;
+  source: string;
+  connection: "ok" | "not_configured" | "unavailable" | "fixture";
+}
+
 /** A grant award outside the rebuild, and what is still to arrive on it. */
 export interface OperatingAward {
   id: number;

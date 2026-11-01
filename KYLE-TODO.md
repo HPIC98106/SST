@@ -18,6 +18,26 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
+- **Add a "Grant Name" field to gifts in LGL and fill it in on each award.** Name
+  it exactly that, under custom fields on Gift. Existing Gift fields are picklists,
+  so if free text isn't offered, use a picklist with one option per grant. Suggested
+  names, from each award's notes (gift ID, name):
+  903691 Commerce: Local Community Projects · 905452 Commerce: Building for the
+  Arts · 905997 City of Seattle: Rebuild · 909194 Neighborhoods: Demolition ·
+  906602 Arts & Culture: Rebuild · 904066 Garneau-Nicon: Rebuild · 904061 4Culture:
+  Sustained Support · 908457 Arts & Culture: First Fridays · 906062 Arts & Culture:
+  CARE · 907007 Neighborhoods: First Friday Canopies.
+  Then ask Claude to check that the names appear, since the code has only been
+  tested against the shape of LGL's other fields. Unblocks: real names on Grant
+  details, which today shows the funder and year, with two pairs reading alike.
+
+- **Set Payment Terms on the three awards without them:** 904061 (4Culture), 906062
+  (CARE), 907007 (Canopies). Unblocks: those cards stop saying "Terms not set".
+
+- **Check whether LGL can hold a spend-by date on a gift, and add it if so.** If it
+  can, ask Claude to read it onto Grant details. Worth doing while you are in those
+  records: a deadline is the health signal nothing here can see yet.
+
 - **Ask Metis to re-price the Dry-in estimate.** The spreadsheet received
   2026-10-29 is byte-identical to the 9/22/26 estimate already on the
   dashboard, whose prices held 30 days, to 2026-10-22. When the new one
@@ -27,10 +47,6 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   While asking, mention that their workbook taxes the 6% contingency at 10.35%
   on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
   readiness target; the panel says the old one has lapsed.
-
-- **After 2026-10-31, ask Claude to check `/admin/status` for a `rotated`
-  token refresh.** The last open check on the production cutover; Intuit
-  rotates roughly daily and the connection was seeded 2026-10-29 23:31 PDT.
 
 - **Compare the Operations tab with QuickBooks' Profit and Loss.** Run it on an
   accrual basis, January 1 to the last completed month. QuickBooks' Total Income
@@ -42,32 +58,35 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
   the approved figures, keeping each amount in the month the money actually
-  moves, which `Budget_FY26_P&L` mostly did not do. Keep one active budget per
-  year. Settle these in the draft spreadsheet first, with whoever owns it: the net
-  in its notes disagrees with the sheet's total; the Licenses and Permits subtotal
-  does not equal its lines; its January to September spending is below QuickBooks',
-  mostly on Supplies; its whole-year 2027 spending is less than was spent by
-  September this year; several 2027 lines are nine-month actuals carried as a full
-  year (SPU, internet); Online Auction and Sponsorship are budgeted at nothing
-  though both brought money in this year, and the First Fridays tab assumes
-  sponsorship; and Interest is far above this year's. Unblocks: budget to date and
-  projected year-end for 2027.
+  moves, which 11 of the 23 lines in `Budget_FY26_P&L` do not. Keep one active
+  budget per year. Settle these in the draft spreadsheet first, with Galen and
+  Alex: the net in its notes disagrees with the sheet's total; the Licenses and
+  Permits subtotal does not equal its lines; its January to September spending is
+  below QuickBooks', mostly on Supplies; its whole-year 2027 spending is less than
+  was spent by September this year; several 2027 lines are nine-month actuals
+  carried as a full year (SPU, internet); Online Auction and Sponsorship are
+  budgeted at nothing though both brought money in this year, and the First Fridays
+  tab assumes sponsorship; and Interest is far above this year's. Unblocks: budget
+  to date and projected year-end for 2027.
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can
-  recover that mailbox, or move the login to a role address. Runbook §6. Not a
-  hard blocker for the cutover, but it becomes one the moment production
-  depends on it.
+  recover that mailbox, or move the login to a role address. Runbook §6. Production
+  depends on it now, so a lost mailbox would strand the QuickBooks connection.
 
 ## Conversations
 
-- **Rachel, about the QuickBooks grant dimension.** Propose one Customer (or
-  Project) per grant award, applied at entry time, with an agreed start date.
-  Check the plan tier first: Projects and Class need Plus or Advanced. Start
-  from whatever the LGL→QuickBooks sync already creates rather than a
-  convention from scratch (Claude can read that once production is connected).
-  Also raise the SPU compost records (907952, 903731), coded Grant "to match
-  the QuickBooks record." Unblocks: authoritative Received and Spent (P3), then
+- **Rachel, about tagging grants in QuickBooks.** This is what Spent on Grant
+  details is waiting for. Propose one **Project per award**, under its funder,
+  applied at entry time. Claude read QuickBooks on 2026-10-31, so you can start from
+  facts (details in CLAUDE.md): the plan is Plus and Projects are already on; no
+  project exists; no rebuild expense says which grant it belongs to, though there
+  are only 138 such lines since 2023, so tagging back is feasible. Agree how far back
+  to tag and how to split one bill across grants. Also raise: the LGL sync files
+  grant payments under "General LGL Constituent" rather than the funder, and every
+  expense is `NotBillable` even though billable tracking is on; and the SPU compost
+  records (907952, 903731), coded Grant "to match the QuickBooks record." Unblocks:
+  Spent per grant and authoritative Received (P3), then the health signals and
   uninvoiced reimbursable spending (P5).
 
 - **Galen, about the percent-funded denominator.** The spec's 40% / 70%
@@ -79,31 +98,30 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 - **Gifts 906707 and 909414: one $7,500 payment, or two?** Same amount and
   date, one coded Rebuild and one Programs; 909414 was added retroactively
-  2026-09-04. Decide before touching either: which one stays decides whether
-  the money counts toward the rebuild. If they're two payments, no 2025 CARE
-  award exists in LGL to link them to, so one needs creating. Unblocks: two of
-  the four unlinked-payment rows on the data-quality panel. Runbook §8.
+  2026-09-04. QuickBooks now points to one: it holds a single $7,500 receipt that
+  day, coded Grants and deposited to US Bank Checking, the account program grants
+  go to, which favors keeping 909414 (Programs). Confirm, then fix the records in
+  LGL: which one stays decides whether the money counts toward the rebuild. If it
+  was two payments after all, no 2025 CARE award exists in LGL to link them to, so
+  one needs creating. Unblocks: two of the four unlinked payments on Housekeeping
+  and Grant details. Runbook §8.
 
 - **Whether to define `contract_signed` in LGL.** Only if someone commits to
   keeping it current. 905452 (BFA, $388,000) and 905997 (City of Seattle,
-  $500,000) are exactly the state it would capture. Today that state is only
-  in freetext notes. Runbook §5.
-
-- **Whether the dashboard should answer "how much can we spend on
-  programming."** That's mostly a cash question about the operating account,
-  and it would widen scope past campaign 871 for the first time. Decide it
-  deliberately rather than drifting into it.
+  $500,000) are exactly the state it would capture: Grant details can only say
+  "Awaiting first payment", and whether a contract is signed lives in freetext
+  notes the page does not show. Runbook §5.
 
 ## Credentials and access
 
 - **Put `ACCESS_PASSPHRASE` somewhere the board can reach it**: a shared
   password manager or the org's Google Workspace. Today it exists only in your
-  head, and Cloudflare secrets can't be read back. If you're unavailable, the
-  board loses its dashboard. Runbook §7.
+  head and in `worker/.dev.vars` on this machine, and Cloudflare secrets can't be
+  read back. If you're unavailable, the board loses its dashboard. Runbook §7.
 
-- **Delete the stray Worker secret whose name looks like a passphrase.** It
-  shows in `npx wrangler secret list`, does nothing, and if it's a real
-  password it shouldn't be sitting in a name field:
+- **Delete the stray Worker secret whose name looks like a passphrase.** Still
+  there on 2026-10-31. It shows in `npx wrangler secret list`, does nothing, and if
+  it's a real password it shouldn't be sitting in a name field:
   `npx wrangler secret delete <name>`.
 
 ## Waiting on others

@@ -816,10 +816,153 @@ button.lens-option {
   border-radius: 6px;
 }
 
-button.lens-option[aria-pressed="true"] {
+button.lens-option[aria-pressed="true"],
+a.lens-option[aria-current="page"] {
   background: var(--surface);
   font-weight: 650;
   box-shadow: 0 1px 2px rgba(9, 40, 87, 0.15);
+}
+
+a.lens-option {
+  color: var(--navy);
+  padding: 0.3rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.grants-views {
+  justify-self: start;
+  margin-top: 0;
+}
+
+/* --- Grant details: one card per award --- */
+
+.grant-totals {
+  margin-top: 0.8rem;
+}
+
+/* The line is long for a phone, so its figures drop under its label there. */
+.grant-totals li {
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.grant-totals .num {
+  white-space: normal;
+}
+
+.grant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.7rem;
+}
+
+.grant-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+}
+
+.grant-card h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  color: var(--navy);
+}
+
+.grant-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.grant-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.7rem;
+}
+
+.grant-awarded {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.grant-awarded strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.grant-remaining {
+  margin: 0.5rem 0 0;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--line);
+}
+
+/* Each meter is its grant's own award: thin, one hue, the figure beside it in ink. */
+.grant-meter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.grant-meter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.grant-meter-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.grant-track {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: block;
+  height: 8px;
+  background: var(--navy-tint);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.grant-fill {
+  display: block;
+  height: 100%;
+  background: var(--navy-2);
+  border-radius: 999px;
+}
+
+.grant-more {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.grant-more summary,
+.grant-full > summary {
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 500;
+}
+
+.grant-more .line-list {
+  margin-top: 0.3rem;
+}
+
+.grant-full {
+  margin: 1.4rem 0 1rem;
+}
+
+.grant-notes {
+  margin-top: 1.4rem;
 }
 
 .sr-only {
@@ -1569,7 +1712,8 @@ a.kpi-external:focus-visible {
   }
   .grid-2,
   .charts,
-  .giving-top {
+  .giving-top,
+  .grant-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

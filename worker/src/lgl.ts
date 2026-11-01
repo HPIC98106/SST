@@ -182,7 +182,7 @@ export interface LglGift {
 }
 
 /** Only the name fields matter; a constituent is read solely to label a record. */
-interface LglConstituent {
+export interface LglConstituent {
   id: number;
   is_org?: boolean | null;
   org_name?: string | null;
@@ -279,7 +279,7 @@ async function getPage<T>(
  * rather than `{ items: [...] }`, so the paging walk would read it as empty.
  * Only used for best-effort labelling, never for a figure.
  */
-async function getRecord<T>(env: Env, path: string): Promise<T | null> {
+export async function getRecord<T>(env: Env, path: string): Promise<T | null> {
   if (isFixtureMode(env)) {
     const items = lglFixture(path, new URLSearchParams());
     return (items?.[0] as T) ?? null;
@@ -387,31 +387,44 @@ function isPaymentTermsField(key: string | null | undefined, name: string | null
 }
 
 /**
- * The raw payment-terms value LGL holds, or null when nobody has set one.
+ * The raw value a custom field holds, or null when nobody has set one.
  *
  * A field that exists but holds no value counts as null: it reads on the
  * record exactly like an absent one, and to a volunteer it is the same job
  * left undone.
  */
-function readPaymentTermsRaw(record: {
-  custom_fields?: LglCustomField[] | null;
-  custom_attrs?: LglCustomAttr[] | null;
-}): string | null {
+function readFieldRaw(
+  record: { custom_fields?: LglCustomField[] | null; custom_attrs?: LglCustomAttr[] | null },
+  matches: (key: string | null | undefined, name: string | null | undefined) => boolean,
+): string | null {
   const nonEmpty = (value: string | null | undefined): string | null =>
     value && value.trim() !== "" ? value : null;
 
   for (const field of record.custom_fields ?? []) {
-    if (!isPaymentTermsField(field.key, field.name)) continue;
+    if (!matches(field.key, field.name)) continue;
     const first = field.values?.[0];
     return nonEmpty(first?.name ?? first?.short_code);
   }
 
   for (const attr of record.custom_attrs ?? []) {
-    if (!isPaymentTermsField(attr.key, attr.name)) continue;
+    if (!matches(attr.key, attr.name)) continue;
     return nonEmpty(attr.value);
   }
 
   return null;
+}
+
+/**
+ * The name an organisation gave a grant, from a Gift custom field called "Grant
+ * Name". LGL holds no name for an award otherwise, only its funder, and one funder
+ * can hold several awards. Matched on the field's name, since a field HPIC creates
+ * gets a UUID key.
+ */
+export function readGrantName(record: {
+  custom_fields?: LglCustomField[] | null;
+  custom_attrs?: LglCustomAttr[] | null;
+}): string | null {
+  return readFieldRaw(record, (_key, name) => normalizeKey(name) === "grant_name")?.trim() ?? null;
 }
 
 /** What LGL's payment-terms field says about an award, and what it literally held. */
@@ -443,7 +456,7 @@ export function readPaymentTerms(record: {
   custom_fields?: LglCustomField[] | null;
   custom_attrs?: LglCustomAttr[] | null;
 }): PaymentTermsReading {
-  const raw = readPaymentTermsRaw(record);
+  const raw = readFieldRaw(record, isPaymentTermsField);
   if (raw === null) return { status: "unknown", unrecognizedValue: null };
 
   const status = toReimbursableStatus(raw);
@@ -459,7 +472,7 @@ export function readReimbursable(record: {
 }
 
 /** The amount LGL recorded for a gift, preferring the documented field name. */
-function giftAmount(gift: LglGift): number {
+export function giftAmount(gift: LglGift): number {
   const amount = gift.received_amount ?? gift.amount;
   return typeof amount === "number" ? amount : 0;
 }
@@ -474,19 +487,34 @@ function giftAmount(gift: LglGift): number {
  * which is indistinguishable from HPIC having no grants.
  */
 async function pledgeGiftTypeId(env: Env): Promise<{ ok: true; id: number } | { ok: false; detail: string }> {
+  const result = await giftTypeIds(env, ["pledge"]);
+  if (!result.ok) return result;
+  return { ok: true, id: result.ids.pledge };
+}
+
+/**
+ * Resolve gift types by name, for the same reason as above. A name in `required`
+ * that LGL does not report is a failed read; any other simply is not in `ids`.
+ */
+export async function giftTypeIds(
+  env: Env,
+  required: string[],
+): Promise<{ ok: true; ids: Record<string, number> } | { ok: false; detail: string }> {
   const result = await getAll<LglGiftType>(env, "gift_types");
   if (!result.ok) return result;
 
-  const pledge = result.items.find((type) => normalizeKey(type.name) === "pledge");
-  if (!pledge) {
+  const ids = Object.fromEntries(result.items.map((type) => [normalizeKey(type.name), type.id]));
+  const missing = required.find((name) => ids[name] === undefined);
+  if (missing) {
+    const label = missing.charAt(0).toUpperCase() + missing.slice(1);
     return {
       ok: false,
       detail:
-        "LGL did not report a 'Pledge' gift type, so awards cannot be " +
+        `LGL did not report a '${label}' gift type, so awards cannot be ` +
         "identified. Check the gift types configured in LGL.",
     };
   }
-  return { ok: true, id: pledge.id };
+  return { ok: true, ids };
 }
 
 /** Awards: gifts whose gift type is "Pledge", narrowed to grant activity. */
@@ -519,7 +547,7 @@ async function readAwards(env: Env): Promise<ReadResult<LglGift>> {
  * Scope is applied afterwards instead, by keeping only payments whose
  * `parent_gift_id` names an award already known to be in scope.
  */
-async function readPayments(env: Env): Promise<ReadResult<LglGift> | null> {
+export async function readPayments(env: Env): Promise<ReadResult<LglGift> | null> {
   const categoryIds = parseIds(env.LGL_GRANT_PAYMENT_CATEGORY_IDS);
   if (categoryIds.length === 0) return null;
   return getAll<LglGift>(env, "gifts/search", [
@@ -678,7 +706,7 @@ function uiBase(env: Env): string | null {
   return env.LGL_UI_BASE_URL?.trim().replace(/\/+$/, "") || null;
 }
 
-function giftUrl(env: Env, id: number): string | null {
+export function giftUrl(env: Env, id: number): string | null {
   const base = uiBase(env);
   return base ? `${base}/gifts/${id}` : null;
 }

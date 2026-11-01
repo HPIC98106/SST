@@ -13,6 +13,7 @@
 
 import { AUTH_HEADER, authorize, checkPassphrase } from "./auth";
 import { getCommunity } from "./community";
+import { getGrantDetails } from "./grant-details";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
 import { getOperations, parseGroupConfig, readSetup, resolveGroup } from "./operations";
@@ -136,6 +137,15 @@ export default {
           return json({ error: "Not authorized" }, env, 401);
         }
         return json(await getGrants(env), env);
+      }
+
+      // Each award on its own, with its funder. Also uncached, for the same
+      // reason: a handful of awards and their payments, a few requests to read.
+      case "/api/grant-details": {
+        if (!authorize(request, env)) {
+          return json({ error: "Not authorized" }, env, 401);
+        }
+        return json(await getGrantDetails(env), env);
       }
 
       // Setup tool, not part of the board dashboard: lists chart-of-accounts
