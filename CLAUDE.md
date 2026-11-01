@@ -144,7 +144,12 @@ HPIC's QuickBooks and LGL data.
   Where no search matches, the number stays plain: the closest LGL search for
   donors returns 27 people against the dashboard's 25, so that card links to the
   gifts and says "their 65 gifts" instead. "Not auto-renew" has no link for the
-  same reason.
+  same reason, and neither do the Overview's "Renew by hand" and "No dues on
+  record". **LGL's constituent search finds people who have a matching gift, never
+  people who have none**, tried on 2026-11-01 against 16, 7 and 9: `ni-gct/<ids>`
+  means "has a gift outside these categories" (24, 12 and 15), `comb/and:not` is
+  ignored (33, the auto-renew count), and Gift categories with Number of gifts = 0
+  finds nobody. Do not try these again without a new LGL feature.
 - **The Overview does not lead with the funding gap or with "money available".**
   Decided 2026-11-01, Kyle's view and offered as one perspective. "Money available
   now" added rebuild money to programming money and read as if spending were the
