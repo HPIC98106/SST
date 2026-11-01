@@ -237,9 +237,37 @@ describe("links into LGL", () => {
     expect(donors?.giftsUrl).toBe(`${UI}/fundraising/search/gt/gift/phase/1,12/ni-campaign/846/ni-category/6076,6134/from/2026-01-01/to/2026-10-30`);
   });
 
-  it("has nothing to search on for gifts with no campaign", () => {
+  it("opens gifts with no campaign through LGL's blank-campaign search", () => {
     const { byCampaign } = withLinks([gift({ constituent_id: 1, received_amount: 50, received_date: "2026-02-01" })]);
-    expect(byCampaign[0]).toMatchObject({ campaign: "No campaign", thisYearUrl: null, lastYearUrl: null });
+    expect(byCampaign[0].campaign).toBe("No campaign");
+    expect(byCampaign[0].thisYearUrl).toBe(`${UI}/fundraising/search/gt/gift/phase/1,12/bl-campaign/1/ni-category/6076,6134/from/2026-01-01/to/2026-10-30`);
+  });
+
+  it("opens what the next three months brought last year, across the new year", () => {
+    const annual = communityConfig({
+      LGL_MEMBERSHIP_CAMPAIGN_IDS: "846",
+      LGL_ANNUAL_FUND_CAMPAIGN_IDS: "872",
+      LGL_GRANT_PAYMENT_CATEGORY_IDS: "6076",
+      LGL_UI_BASE_URL: UI,
+    } as Env);
+    const items = assembleCommunity([], [], "2026-10-30", annual, BASE).nextQuarter!.items;
+    const url = (key: string) => items.find((i) => i.key === key)?.url;
+    const range = "from/2025-11-01/to/2026-01-31";
+    expect(url("annual_fund")).toBe(`${UI}/fundraising/search/gt/gift/phase/1,12/campaign/872/ni-category/6076/${range}`);
+    expect(url("memberships")).toBe(`${UI}/fundraising/search/gt/gift/phase/1,12/campaign/846/ni-category/6076/${range}`);
+    expect(url("other_giving")).toBe(`${UI}/fundraising/search/gt/gift/phase/1,12/ni-campaign/846,872/ni-category/6076/${range}`);
+  });
+
+  it("opens operating grants by gift ID, the open ones and their payments apart", () => {
+    const grantConfig = communityConfig({ LGL_GRANT_GIFT_CATEGORY_IDS: "6031", LGL_GRANT_CAMPAIGN_IDS: "871", LGL_UI_BASE_URL: UI } as Env);
+    const open = gift({ gift_type_name: "Pledge", gift_category_id: 6031, campaign_id: 841, received_amount: 100, received_date: "2026-01-01" });
+    const paid = gift({ gift_type_name: "Pledge", gift_category_id: 6031, campaign_id: 841, received_amount: 50, received_date: "2026-01-01" });
+    const payment = gift({ parent_gift_id: paid.id, received_amount: 50, received_date: "2026-02-01" });
+    const scheduled = gift({ gift_type_name: "Installment", parent_gift_id: open.id, received_amount: 100, received_date: null });
+    const grants = assembleCommunity([open, paid, payment, scheduled], [], "2026-10-30", grantConfig, BASE).operatingGrants!;
+    expect(grants.awardedUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${open.id},${paid.id}`);
+    expect(grants.receivedUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${payment.id}`);
+    expect(grants.remainingUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${open.id}`);
   });
 
   it("offers no links without the LGL address", () => {

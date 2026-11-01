@@ -131,6 +131,11 @@ function giftSearch(config: CommunityConfig, criteria: string, from: string, to:
   return `${config.uiBaseUrl}/fundraising/search/gt/gift/phase/1,12/${criteria}/from/${from}/to/${to}`;
 }
 
+/** Exactly these gifts, for a list no search criteria can describe. */
+function giftIds(config: CommunityConfig, ids: number[]): string | null {
+  return config.uiBaseUrl && ids.length > 0 ? `${config.uiBaseUrl}/fundraising/search/gt/gift/gids/${ids.join(",")}` : null;
+}
+
 // --- Members ---
 
 /** The record running latest, which is the level a member holds and when it ends. */
@@ -409,14 +414,14 @@ export function assembleCommunity(
   }
   const byCampaign: CampaignGiving[] = [...campaigns.entries()]
     .map(([campaign, r]) => {
-      const criteria = [`campaign/${r.id}`, notGiftsCriteria].filter(Boolean).join("/");
+      const criteria = [r.id ? `campaign/${r.id}` : "bl-campaign/1", notGiftsCriteria].filter(Boolean).join("/");
       return {
         campaign,
         thisYear: dollars(r.thisYear),
         lastYearTotal: dollars(r.total),
         gifts: r.gifts,
-        thisYearUrl: r.id ? giftSearch(config, criteria, `${year}-01-01`, today) : null,
-        lastYearUrl: r.id ? giftSearch(config, criteria, `${lastYear}-01-01`, `${lastYear}-12-31`) : null,
+        thisYearUrl: giftSearch(config, criteria, `${year}-01-01`, today),
+        lastYearUrl: giftSearch(config, criteria, `${lastYear}-01-01`, `${lastYear}-12-31`),
       };
     })
     .sort((a, b) => b.thisYear - a.thisYear || b.lastYearTotal - a.lastYearTotal);
@@ -427,16 +432,35 @@ export function assembleCommunity(
   const inWindow = giving.filter((g) => yearEarlier.has(g.received_date!.slice(0, 7)));
   const isFund = inCampaigns(config.annualFundCampaigns);
   const items: ExpectedInflow[] = [];
+  // Those gifts in LGL. The months run on from one another, so one range covers them.
+  const earlier = [...yearEarlier].sort();
+  const windowStart = `${earlier[0]}-01`;
+  const windowEnd = new Date(Date.UTC(Number(earlier[2].slice(0, 4)), Number(earlier[2].slice(5, 7)), 0)).toISOString().slice(0, 10);
+  const notPayments = config.paymentCategories.length > 0 ? `ni-category/${config.paymentCategories.join(",")}` : "";
+  const windowUrl = (criteria: string) =>
+    giftSearch(config, [criteria, notPayments].filter(Boolean).join("/"), windowStart, windowEnd);
   if (config.annualFundCampaigns.length > 0) {
-    items.push({ key: "annual_fund", label: "Annual Fund Drive", amount: dollars(sum(inWindow.filter(isFund))) });
+    items.push({
+      key: "annual_fund",
+      label: "Annual Fund Drive",
+      amount: dollars(sum(inWindow.filter(isFund))),
+      url: windowUrl(`campaign/${config.annualFundCampaigns.join(",")}`),
+    });
   }
   if (haveDues) {
-    items.push({ key: "memberships", label: "Membership dues", amount: dollars(sum(inWindow.filter(isDuesGift))) });
+    items.push({
+      key: "memberships",
+      label: "Membership dues",
+      amount: dollars(sum(inWindow.filter(isDuesGift))),
+      url: windowUrl(`campaign/${config.membershipCampaigns.join(",")}`),
+    });
   }
+  const others = [...config.membershipCampaigns, ...config.annualFundCampaigns];
   items.push({
     key: "other_giving",
     label: "Other giving",
     amount: dollars(sum(inWindow.filter((g) => !isDuesGift(g) && !isFund(g)))),
+    url: windowUrl(others.length > 0 ? `ni-campaign/${others.join(",")}` : ""),
   });
 
   // Grant awards outside the rebuild, and what is still to arrive on each.
@@ -465,11 +489,15 @@ export function assembleCommunity(
       };
     });
     const open = rows.filter((r) => r.remaining > 0).sort((a, b) => b.remaining - a.remaining);
+    const awardIds = new Set(rows.map((r) => r.id));
     operatingGrants = {
       awarded: rows.reduce((s, r) => s + r.amount, 0),
       received: rows.reduce((s, r) => s + r.received, 0),
       remaining: open.reduce((s, r) => s + r.remaining, 0),
       awards: open,
+      awardedUrl: giftIds(config, rows.map((r) => r.id)),
+      receivedUrl: giftIds(config, cash.filter((g) => awardIds.has(g.parent_gift_id ?? -1)).map((g) => g.id)),
+      remainingUrl: giftIds(config, open.map((r) => r.id)),
     };
   }
 

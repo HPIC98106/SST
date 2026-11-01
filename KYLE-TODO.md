@@ -18,6 +18,10 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
+- **Sign in to QuickBooks in the browser pane, then tell Claude.** Claude cannot enter
+  that password, and only needs the session to read which URLs open an account and a
+  report. Unblocks: links from cash balances and the Operations lines into QuickBooks.
+
 - **Add a "Grant Name" field to gifts in LGL and fill it in on each award.** Name
   it exactly that, under custom fields on Gift. Existing Gift fields are picklists,
   so if free text isn't offered, use a picklist with one option per grant. Suggested

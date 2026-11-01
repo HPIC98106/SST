@@ -90,7 +90,6 @@ import type {
   PhaseTarget,
   ReimbursableBucket,
   ReimbursableStatus,
-  LglSearchLink,
 } from "./types";
 
 const BASE_URL = "https://api.littlegreenlight.com/api/v1";
@@ -711,6 +710,27 @@ export function giftUrl(env: Env, id: number): string | null {
   return base ? `${base}/gifts/${id}` : null;
 }
 
+/**
+ * Exactly these gifts, as a search in LGL. Checked on 2026-10-31: it lands on the
+ * same records and totals, and LGL's own Pledged tile shows their remaining balance.
+ * This is how a figure built by walking records still opens exactly those records.
+ * Null with nothing to list, rather than opening every gift.
+ */
+export function giftIdsUrl(env: Env, ids: number[]): string | null {
+  const base = uiBase(env);
+  return base && ids.length > 0 ? `${base}/fundraising/search/gt/gift/gids/${ids.join(",")}` : null;
+}
+
+/** The awards with money still to arrive, by the same payment walk as Received. */
+function awardsWithBalance(awards: LglGift[], payments: LglGift[]): LglGift[] {
+  const paid = new Map<number, number>();
+  for (const payment of paymentsAgainst(awards, payments)) {
+    const id = payment.parent_gift_id!;
+    paid.set(id, (paid.get(id) ?? 0) + Math.round(giftAmount(payment) * 100));
+  }
+  return awards.filter((award) => Math.round(giftAmount(award) * 100) > (paid.get(award.id) ?? 0));
+}
+
 /** The one gift type every record shares, or null if they do not share one. */
 function sharedGiftType(gifts: LglGift[]): number | null {
   const types = new Set(gifts.map((gift) => gift.gift_type_id));
@@ -748,13 +768,12 @@ function lglSearchUrl(
 }
 
 /**
- * Attach a search link to each funnel stage that has a figure.
+ * Attach links to each funnel stage that has a figure.
  *
  * Pledged's search is the same query `readAwards` sends, so it opens exactly
- * the records counted. Received cannot be reproduced exactly: the figure walks
- * each payment up to its award, and LGL search can only filter on the
- * payment's own campaign. Rather than hide that, the note counts the
- * difference in both directions from the records already in hand.
+ * the records counted. Received walks each payment up to its award, which LGL
+ * cannot filter on, and Outstanding is a subtraction, so those two open a list of
+ * the gift IDs behind them.
  */
 function attachSearchLinks(
   env: Env,
@@ -772,53 +791,26 @@ function attachSearchLinks(
     sharedGiftType(awards.items),
   );
 
-  let received: LglSearchLink | null = null;
-  if (payments?.ok) {
-    const counted = paymentsAgainst(awards.items, payments.items);
-    const typeId = sharedGiftType(counted);
-    const url = lglSearchUrl(env, campaignIds, parseIds(env.LGL_GRANT_PAYMENT_CATEGORY_IDS), typeId);
-    if (url) {
-      // What the search returns: every payment in the configured payment
-      // category (already all of `payments.items`) carrying the campaign and type.
-      const found = payments.items.filter(
-        (p) => p.campaign_id === campaignIds[0] && p.gift_type_id === typeId,
-      );
-      const countedIds = new Set(counted.map((p) => p.id));
-      const foundIds = new Set(found.map((p) => p.id));
-      const extra = found.filter((p) => !countedIds.has(p.id)).length;
-      const missing = counted.filter((p) => !foundIds.has(p.id)).length;
-
-      const parts: string[] = [];
-      if (extra > 0) {
-        parts.push(
-          `${extra} of those ${extra === 1 ? "is" : "are"} not counted here, because ` +
-            `${extra === 1 ? "it is" : "they are"} not linked to any award above.`,
-        );
-      }
-      if (missing > 0) {
-        parts.push(
-          `${missing} counted here ${missing === 1 ? "is" : "are"} missing from it, because ` +
-            `${missing === 1 ? "it carries" : "they carry"} no campaign or a different one.`,
-        );
-      }
-      received = {
-        url,
-        note: parts.length > 0 ? `The LGL search returns ${found.length}. ${parts.join(" ")}` : null,
-      };
-    }
-  }
+  const paid = payments?.ok ? paymentsAgainst(awards.items, payments.items).map((p) => p.id) : [];
+  const receivedUrl = giftIdsUrl(env, paid);
+  const balanceUrl = payments?.ok ? giftIdsUrl(env, awardsWithBalance(awards.items, payments.items).map((a) => a.id)) : null;
 
   for (const stage of stages) {
     if (stage.status === "unavailable") continue;
     if (stage.key === "pledged" && awardsUrl) {
       stage.search = { url: awardsUrl, note: null };
-    } else if (stage.key === "outstanding" && awardsUrl) {
-      stage.search = {
-        url: awardsUrl,
-        note: "Opens the awards. LGL search cannot subtract payments, so each award's balance has to be read on the award itself.",
-      };
-    } else if (stage.key === "received") {
-      stage.search = received;
+      stage.figureUrl = awardsUrl;
+    } else if (stage.key === "outstanding") {
+      stage.figureUrl = balanceUrl;
+      if (awardsUrl) {
+        stage.search = {
+          url: awardsUrl,
+          note: balanceUrl ? "The amount opens only the awards with money still to arrive; the count opens them all." : null,
+        };
+      }
+    } else if (stage.key === "received" && receivedUrl) {
+      stage.search = { url: receivedUrl, note: null };
+      stage.figureUrl = receivedUrl;
     }
   }
 }
@@ -855,6 +847,10 @@ function splitByReimbursable(
       awards: matching.map(
         (award): AwardLink => ({ id: award.id, amount: giftAmount(award), url: giftUrl(env, award.id) }),
       ),
+      url: giftIdsUrl(env, matching.map((award) => award.id)),
+      remainingUrl: paymentsReadable
+        ? giftIdsUrl(env, awardsWithBalance(matching, payments.items).map((award) => award.id))
+        : null,
     };
   });
 }

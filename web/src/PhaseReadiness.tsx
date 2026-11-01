@@ -21,7 +21,9 @@
  * so rather than substituting a placeholder.
  */
 
+import type { ReactNode } from "react";
 import { usd } from "./format";
+import { LglLink } from "./LglLink";
 import type { FundsSnapshot, GrantSnapshot, ReimbursableStatus } from "./types";
 
 /** "October 22, 2026" from "2026-10-22", read as a calendar date in any zone. */
@@ -55,7 +57,7 @@ function Row({
   tone,
 }: {
   label: string;
-  amount: string;
+  amount: ReactNode;
   detail: string;
   tone?: "available" | "excluded" | "unknown" | "target";
 }) {
@@ -134,7 +136,11 @@ export function PhaseReadinessView({
           <Row
             label="Remaining reimbursable grant funds"
             amount={
-              reimbursable?.remaining != null ? usd.format(reimbursable.remaining) : "Unavailable"
+              reimbursable?.remaining != null ? (
+                <LglLink url={reimbursable.remainingUrl}>{usd.format(reimbursable.remaining)}</LglLink>
+              ) : (
+                "Unavailable"
+              )
             }
             detail={
               !reimbursable
@@ -151,7 +157,13 @@ export function PhaseReadinessView({
           {unknown && unknown.recordCount > 0 ? (
             <Row
               label="Remaining, terms unknown"
-              amount={unknown.remaining != null ? usd.format(unknown.remaining) : "Unavailable"}
+              amount={
+                unknown.remaining != null ? (
+                  <LglLink url={unknown.remainingUrl}>{usd.format(unknown.remaining)}</LglLink>
+                ) : (
+                  "Unavailable"
+                )
+              }
               detail={`${unknown.recordCount} award(s) with no Payment Terms set in LGL${
                 unknown.remaining != null
                   ? `, ${usd.format(unknown.amount)} awarded less ${usd.format(unknown.received ?? 0)} already received`

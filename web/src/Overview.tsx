@@ -11,6 +11,7 @@
 import type { ReactNode } from "react";
 import { FundingBar } from "./FundingBar";
 import { formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { LglLink } from "./LglLink";
 import { monthsOfCash } from "./YearSoFar";
 import type { AccountSnapshot, CommunitySnapshot, FundsSnapshot, GrantSnapshot, OperationsSnapshot } from "./types";
 
@@ -281,7 +282,9 @@ function NextQuarter({
             {quarter.items.map((item) => (
               <li key={item.key}>
                 <span>{item.label}</span>
-                <span className="num">{usd.format(item.amount)}</span>
+                <span className="num">
+                  <LglLink url={item.url}>{usd.format(item.amount)}</LglLink>
+                </span>
               </li>
             ))}
           </ul>
@@ -302,7 +305,9 @@ function NextQuarter({
                 Provisional.
               </small>
             </span>
-            <span className="num">{usd.format(operating.remaining)}</span>
+            <span className="num">
+              <LglLink url={operating.remainingUrl}>{usd.format(operating.remaining)}</LglLink>
+            </span>
           </li>
         ) : null}
         {rebuild !== null ? (

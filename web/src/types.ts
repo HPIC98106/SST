@@ -78,6 +78,8 @@ export interface FunnelStage {
    * render.
    */
   search?: LglSearchLink | null;
+  /** The records behind the amount itself, in LGL. */
+  figureUrl?: string | null;
 }
 
 /** `note` says how the search differs from the figure; null when it does not. */
@@ -105,6 +107,9 @@ export interface ReimbursableBucket {
   remaining?: number | null;
   /** Optional for the same reason as `FunnelStage.search`. */
   awards?: AwardLink[];
+  url?: string | null;
+  /** Those with money still to arrive, in LGL. */
+  remainingUrl?: string | null;
 }
 
 export interface DataQualityRecord {
@@ -233,6 +238,7 @@ export interface GrantDetail {
   /** Provisional, from LGL payment records. Null when they could not be read completely. */
   received: number | null;
   stillToArrive: number | null;
+  receivedUrl: string | null;
   overBy: number | null;
   status: GrantStatus;
   terms: ReimbursableStatus;
@@ -248,6 +254,8 @@ export interface GrantTotals {
   awarded: number;
   received: number | null;
   stillToArrive: number | null;
+  awardedUrl: string | null;
+  receivedUrl: string | null;
 }
 
 export interface GrantDetailsSnapshot {
@@ -255,7 +263,7 @@ export interface GrantDetailsSnapshot {
   note?: string;
   grants: GrantDetail[];
   totals: { rebuild: GrantTotals; operating: GrantTotals };
-  unlinkedPayments: { count: number; amount: number } | null;
+  unlinkedPayments: { count: number; amount: number; url: string | null } | null;
   retrievedAt: string | null;
   source: string;
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
@@ -298,6 +306,7 @@ export interface ExpectedInflow {
   key: "annual_fund" | "memberships" | "other_giving";
   label: string;
   amount: number;
+  url: string | null;
 }
 
 export interface OperatingAward {
@@ -340,7 +349,15 @@ export interface CommunitySnapshot {
   purchasesThisYear: number;
   nextQuarter: { months: string[]; items: ExpectedInflow[] } | null;
   /** Provisional: from LGL payment records linked to their award. */
-  operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;
+  operatingGrants: {
+    awarded: number;
+    received: number;
+    remaining: number;
+    awards: OperatingAward[];
+    awardedUrl: string | null;
+    receivedUrl: string | null;
+    remainingUrl: string | null;
+  } | null;
   giftCount: number;
   retrievedAt: string | null;
   cached: boolean;

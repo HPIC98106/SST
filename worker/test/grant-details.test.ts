@@ -123,13 +123,34 @@ describe("what a grant has received", () => {
   });
 });
 
+describe("links into LGL", () => {
+  it("opens exactly the records behind each figure, by gift ID", () => {
+    const UI = ENV.LGL_UI_BASE_URL;
+    const a = award({ received_amount: 1000 });
+    const other = award({ campaign_id: 841, received_amount: 300 });
+    const paid = payment(a.id, 100);
+    const stray = payment(null, 50);
+    const schedule = installment(other.id, 300);
+    const snapshot = assemble([a, other], read([paid, stray]), read([schedule]));
+    const byId = (id: number) => snapshot.grants.find((g) => g.id === id)!;
+
+    expect(byId(a.id).url).toBe(`${UI}/gifts/${a.id}`);
+    expect(byId(a.id).receivedUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${paid.id}`);
+    expect(byId(other.id).receivedUrl).toBeNull();
+    expect(snapshot.totals.rebuild.awardedUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${a.id}`);
+    expect(snapshot.totals.rebuild.receivedUrl).toBe(`${UI}/fundraising/search/gt/gift/gids/${paid.id}`);
+    expect(snapshot.totals.operating.receivedUrl).toBeNull();
+    expect(snapshot.unlinkedPayments?.url).toBe(`${UI}/fundraising/search/gt/gift/gids/${stray.id}`);
+  });
+});
+
 describe("the list as a whole", () => {
   it("totals rebuild and programs apart", () => {
     const rebuild = award({ received_amount: 1000 });
     const programs = award({ campaign_id: 841, received_amount: 300 });
     const { totals } = assemble([rebuild, programs], read([payment(rebuild.id, 100), payment(programs.id, 30)]));
-    expect(totals.rebuild).toEqual({ count: 1, awarded: 1000, received: 100, stillToArrive: 900 });
-    expect(totals.operating).toEqual({ count: 1, awarded: 300, received: 30, stillToArrive: 270 });
+    expect(totals.rebuild).toMatchObject({ count: 1, awarded: 1000, received: 100, stillToArrive: 900 });
+    expect(totals.operating).toMatchObject({ count: 1, awarded: 300, received: 30, stillToArrive: 270 });
   });
 
   it("lists most still to arrive first, then the newest award", () => {
@@ -144,7 +165,7 @@ describe("the list as a whole", () => {
   it("counts payments linked to no award, and adds them to no grant", () => {
     const a = award();
     const snapshot = assemble([a], read([payment(null, 700), payment(99999, 50)]));
-    expect(snapshot.unlinkedPayments).toEqual({ count: 2, amount: 750 });
+    expect(snapshot.unlinkedPayments).toMatchObject({ count: 2, amount: 750 });
     expect(snapshot.grants[0].received).toBe(0);
   });
 });

@@ -32,6 +32,7 @@ import {
   getAll,
   getRecord,
   giftAmount,
+  giftIdsUrl,
   giftTypeIds,
   giftUrl,
   isFixtureMode,
@@ -56,6 +57,8 @@ const emptyTotals = (received: number | null): GrantTotals => ({
   awarded: 0,
   received,
   stillToArrive: received,
+  awardedUrl: null,
+  receivedUrl: null,
 });
 
 function funderLabel(record: LglConstituent | null | undefined): string | null {
@@ -123,6 +126,7 @@ export function assembleGrantDetails(
       spent: null,
       received: complete ? dollars(receivedCents) : null,
       stillToArrive: complete ? dollars(Math.max(awardedCents - receivedCents, 0)) : null,
+      receivedUrl: complete ? giftIdsUrl(env, paid.map((g) => g.id)) : null,
       overBy: complete && receivedCents > awardedCents ? dollars(receivedCents - awardedCents) : null,
       status,
       terms: terms.status,
@@ -148,6 +152,11 @@ export function assembleGrantDetails(
     if (grant.received !== null) t.received! += grant.received;
     if (grant.stillToArrive !== null) t.stillToArrive! += grant.stillToArrive;
   }
+  for (const scope of ["rebuild", "operating"] as const) {
+    const mine = grants.filter((g) => g.scope === scope);
+    totals[scope].awardedUrl = giftIdsUrl(env, mine.map((g) => g.id));
+    totals[scope].receivedUrl = complete ? giftIdsUrl(env, mine.flatMap((g) => g.payments.map((p) => p.id))) : null;
+  }
 
   const unlinked = readable(payments)
     ? payments.items.filter(
@@ -163,7 +172,11 @@ export function assembleGrantDetails(
     grants,
     totals,
     unlinkedPayments: unlinked
-      ? { count: unlinked.length, amount: dollars(unlinked.reduce((sum, g) => sum + cents(g), 0)) }
+      ? {
+          count: unlinked.length,
+          amount: dollars(unlinked.reduce((sum, g) => sum + cents(g), 0)),
+          url: giftIdsUrl(env, unlinked.map((g) => g.id)),
+        }
       : null,
     ...base,
   };

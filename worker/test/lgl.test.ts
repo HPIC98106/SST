@@ -579,27 +579,30 @@ describe("links back into LGL", () => {
     });
   });
 
-  it("says how the Received search differs from the figure, rather than letting the counts disagree silently", async () => {
-    // Payment 992002 is counted (its award is in scope) but carries no
-    // campaign, so a campaign-filtered search in LGL cannot find it.
+  it("opens exactly the payments behind Received, by ID, including one with no campaign", async () => {
+    // Payment 992002 is counted (its award is in scope) but carries no campaign,
+    // so a campaign-filtered search in LGL could not find it. An ID list can.
     const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
     const received = stage(snapshot, "received");
 
     expect(received.recordCount).toBe(3);
-    expect(received.search?.url).toBe(
-      `${UI}/fundraising/search/in-ocampaign/901/in-ocategory/6102/in-ophase/1/comb/and:and`,
-    );
-    expect(received.search?.note).toBe(
-      "The LGL search returns 2. 1 counted here is missing from it, because it carries no campaign or a different one.",
-    );
+    const ids = received.figureUrl?.split("/gids/")[1]?.split(",");
+    expect(received.figureUrl).toContain(`${UI}/fundraising/search/gt/gift/gids/`);
+    expect(ids).toHaveLength(3);
+    expect(ids).toContain("992002");
+    expect(received.search).toEqual({ url: received.figureUrl, note: null });
   });
 
-  it("says Outstanding's link opens the awards, not a balance", async () => {
+  it("opens only the awards with money still to arrive from Outstanding's amount", async () => {
     const snapshot = await getGrants(grantEnv({ LGL_UI_BASE_URL: UI }));
     const outstanding = stage(snapshot, "outstanding");
+    const reimbursable = snapshot.awardsByReimbursable.find((b) => b.status === "reimbursable")!;
 
+    // The $150,000 award is paid in full, so it is not in the list.
+    expect(outstanding.figureUrl).toContain("/gids/");
+    expect(outstanding.figureUrl).not.toContain("991002");
     expect(outstanding.search?.url).toBe(stage(snapshot, "pledged").search?.url);
-    expect(outstanding.search?.note).toMatch(/cannot subtract payments/);
+    expect(reimbursable.url).toContain("/gids/");
   });
 
   it("builds no search when the URL shape for the scope has never been seen", async () => {
@@ -610,14 +613,18 @@ describe("links back into LGL", () => {
     );
 
     expect(stage(snapshot, "pledged").search).toBeNull();
-    expect(stage(snapshot, "received").search).toBeNull();
   });
 
   it("builds no links at all without a UI base URL", async () => {
     const snapshot = await getGrants(grantEnv());
 
-    for (const s of snapshot.stages) expect(s.search).toBeNull();
+    for (const s of snapshot.stages) {
+      expect(s.search).toBeNull();
+      expect(s.figureUrl ?? null).toBeNull();
+    }
     for (const bucket of snapshot.awardsByReimbursable) {
+      expect(bucket.url).toBeNull();
+      expect(bucket.remainingUrl).toBeNull();
       for (const award of bucket.awards) expect(award.url).toBeNull();
     }
   });

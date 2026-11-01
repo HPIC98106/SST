@@ -30,7 +30,21 @@ function termsLabel(grant: GrantDetail): { text: string; warn: boolean } {
   return { text: "Terms not set", warn: true };
 }
 
-function Meter({ label, value, of, detail, tag }: { label: string; value: number | null; of: number; detail: string; tag?: string }) {
+function Meter({
+  label,
+  value,
+  of,
+  detail,
+  tag,
+  url,
+}: {
+  label: string;
+  value: number | null;
+  of: number;
+  detail: string;
+  tag?: string;
+  url?: string | null;
+}) {
   const share = value !== null && of > 0 ? Math.min(100, (value / of) * 100) : 0;
   return (
     <div className="grant-meter">
@@ -41,7 +55,9 @@ function Meter({ label, value, of, detail, tag }: { label: string; value: number
       <span className="grant-track" role="img" aria-label={`${label}: ${detail}`}>
         <span className="grant-fill" style={{ width: `${share}%` }} />
       </span>
-      <span className={value === null ? "grant-meter-value muted" : "grant-meter-value"}>{detail}</span>
+      <span className={value === null ? "grant-meter-value muted" : "grant-meter-value"}>
+        <LglLink url={url}>{detail}</LglLink>
+      </span>
     </div>
   );
 }
@@ -70,7 +86,9 @@ function GrantCard({ grant }: { grant: GrantDetail }) {
 
       <p className="grant-awarded">
         <span>Awarded</span>
-        <strong>{usd.format(grant.awarded)}</strong>
+        <strong>
+          <LglLink url={grant.url}>{usd.format(grant.awarded)}</LglLink>
+        </strong>
       </p>
       <Meter label="Spent" value={grant.spent} of={grant.awarded} detail={grant.spent === null ? "Not tracked yet" : usd.format(grant.spent)} />
       <Meter
@@ -79,10 +97,13 @@ function GrantCard({ grant }: { grant: GrantDetail }) {
         of={grant.awarded}
         detail={grant.received === null ? "Not shown" : `${usd.format(grant.received)} · ${percent}%`}
         tag="Provisional"
+        url={grant.receivedUrl}
       />
       <p className="grant-awarded grant-remaining">
         <span>Still to arrive</span>
-        <strong>{grant.stillToArrive === null ? "Not shown" : usd.format(grant.stillToArrive)}</strong>
+        <strong>
+          {grant.stillToArrive === null ? "Not shown" : <LglLink url={grant.url}>{usd.format(grant.stillToArrive)}</LglLink>}
+        </strong>
       </p>
       {grant.overBy !== null ? (
         <p className="note warn-text">
@@ -125,7 +146,14 @@ function ScopeLine({ label, totals }: { label: string; totals: GrantTotals }) {
         {label}, {totals.count} {totals.count === 1 ? "grant" : "grants"}
       </span>
       <span className="num">
-        {usd.format(totals.awarded)} awarded · {totals.received === null ? "received not shown" : `${usd.format(totals.received)} received`}
+        <LglLink url={totals.awardedUrl}>{usd.format(totals.awarded)}</LglLink> awarded ·{" "}
+        {totals.received === null ? (
+          "received not shown"
+        ) : (
+          <>
+            <LglLink url={totals.receivedUrl}>{usd.format(totals.received)}</LglLink> received
+          </>
+        )}
       </span>
     </li>
   );
@@ -204,8 +232,11 @@ export function GrantDetailsView({ snapshot }: { snapshot: GrantDetailsSnapshot 
           {unlinkedPayments && unlinkedPayments.count > 0 ? (
             <>
               {" "}
-              {unlinkedPayments.count} grant {unlinkedPayments.count === 1 ? "payment" : "payments"} totalling{" "}
-              {usd.format(unlinkedPayments.amount)} {unlinkedPayments.count === 1 ? "is" : "are"} linked to no award, so{" "}
+              <LglLink url={unlinkedPayments.url}>
+                {unlinkedPayments.count} grant {unlinkedPayments.count === 1 ? "payment" : "payments"} totalling{" "}
+                {usd.format(unlinkedPayments.amount)}
+              </LglLink>{" "}
+              {unlinkedPayments.count === 1 ? "is" : "are"} linked to no award, so{" "}
               {unlinkedPayments.count === 1 ? "it is" : "they are"} on no grant here. See{" "}
               <a href="#housekeeping">Housekeeping</a>.
             </>

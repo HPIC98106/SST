@@ -9,6 +9,7 @@
  */
 
 import { usd } from "./format";
+import { LglLink } from "./LglLink";
 import type { FundsSnapshot, GrantSnapshot } from "./types";
 
 /** "October 22, 2026" from "2026-10-22", read as a calendar date. */
@@ -66,7 +67,8 @@ export function FundingBar({
   const cashPct = share(cash);
   const awardedPct = Math.min(share(awarded), 100 - cashPct);
 
-  const rows: { key: string; label: string; detail: string; value: number | null }[] = [
+  const remainingUrl = grants?.awardsByReimbursable.find((b) => b.status === "reimbursable")?.remainingUrl;
+  const rows: { key: string; label: string; detail: string; value: number | null; url?: string | null }[] = [
     {
       key: "cash",
       label: "In the bank",
@@ -78,6 +80,7 @@ export function FundingBar({
       label: "Awarded, not yet received",
       detail: "Reimbursable: paid only after HPIC spends and invoices. Provisional, from LGL.",
       value: awarded,
+      url: remainingUrl,
     },
     {
       key: "raise",
@@ -116,7 +119,7 @@ export function FundingBar({
               {r.label}
               {compact ? null : <small>{r.detail}</small>}
             </span>
-            <strong>{r.value === null ? "Unavailable" : usd.format(r.value)}</strong>
+            <strong>{r.value === null ? "Unavailable" : <LglLink url={r.url}>{usd.format(r.value)}</LglLink>}</strong>
           </li>
         ))}
       </ul>

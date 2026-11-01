@@ -7,6 +7,7 @@ import { FundsSnapshotView } from "./FundsSnapshot";
 import { GivingView } from "./Giving";
 import { GrantDetailsView } from "./GrantDetails";
 import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
+import { LglLink } from "./LglLink";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
 import { OperationsProblems, OperationsView } from "./Operations";
@@ -144,6 +145,7 @@ export function App() {
     );
   }
 
+  const grantNames = new Map((grantDetails.data?.grants ?? []).map((g) => [g.id, g.name]));
   const exceptions = grants.data?.exceptions ?? [];
   const blocking = exceptions.filter((e) => e.severity === "blocking").length;
   const pending = {
@@ -283,7 +285,7 @@ export function App() {
                 {pending.grants ? (
                   <PanelLoading />
                 ) : grants.data ? (
-                  <GrantFunnelView snapshot={grants.data} showExceptions={false} />
+                  <GrantFunnelView snapshot={grants.data} showExceptions={false} names={grantNames} />
                 ) : (
                   <PanelError title="Grant funnel" detail={grants.error} />
                 )}
@@ -293,7 +295,7 @@ export function App() {
                     <Reading what="operating grants from LGL" slow />
                   </section>
                 ) : (
-                  <OperatingGrants community={community.data} />
+                  <OperatingGrants community={community.data} names={grantNames} />
                 )}
               </>
             )}
@@ -348,15 +350,17 @@ export function App() {
 }
 
 /** Grant awards outside the rebuild, with what is still to arrive on each. */
-function OperatingGrants({ community }: { community: CommunitySnapshot | null }) {
+function OperatingGrants({ community, names }: { community: CommunitySnapshot | null; names: Map<number, string> }) {
   if (community?.status !== "ok" || !community.operatingGrants) return null;
   const grants = community.operatingGrants;
   return (
     <section className="panel">
       <h1>Operating grants</h1>
       <p className="muted">
-        Awards outside the rebuild, for programs and operations. {usd.format(grants.awarded)} awarded,{" "}
-        {usd.format(grants.received)} received. <span className="tag tag-warn">Provisional</span>
+        Awards outside the rebuild, for programs and operations.{" "}
+        <LglLink url={grants.awardedUrl}>{usd.format(grants.awarded)}</LglLink> awarded,{" "}
+        <LglLink url={grants.receivedUrl}>{usd.format(grants.received)}</LglLink> received.{" "}
+        <span className="tag tag-warn">Provisional</span>
       </p>
       {grants.awards.length === 0 ? (
         <p className="note">Nothing is still to arrive on any operating award.</p>
@@ -375,12 +379,18 @@ function OperatingGrants({ community }: { community: CommunitySnapshot | null })
               {grants.awards.map((a) => (
                 <tr key={a.id}>
                   <th scope="row">
-                    {a.url ? <a href={a.url} target="_blank" rel="noreferrer">LGL gift {a.id}</a> : `LGL gift ${a.id}`}
+                    <LglLink url={a.url}>{names.get(a.id) ?? `LGL gift ${a.id}`}</LglLink>
                     {a.date ? <span className="muted small"> · {a.date}</span> : null}
                   </th>
-                  <td className="num">{usd.format(a.amount)}</td>
-                  <td className="num">{usd.format(a.received)}</td>
-                  <td className="num">{usd.format(a.remaining)}</td>
+                  <td className="num">
+                    <LglLink url={a.url}>{usd.format(a.amount)}</LglLink>
+                  </td>
+                  <td className="num">
+                    <LglLink url={a.url}>{usd.format(a.received)}</LglLink>
+                  </td>
+                  <td className="num">
+                    <LglLink url={a.url}>{usd.format(a.remaining)}</LglLink>
+                  </td>
                 </tr>
               ))}
             </tbody>

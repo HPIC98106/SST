@@ -20,6 +20,7 @@
  */
 
 import { formatRetrievedAt, recordCountLabel, usd } from "./format";
+import { LglLink } from "./LglLink";
 import type {
   DataQualityException,
   DataQualityRecord,
@@ -34,7 +35,9 @@ function StageCard({ stage }: { stage: FunnelStage }) {
     <section className={`card status-${stage.status}`}>
       <h2>{stage.label}</h2>
       {hasAmount ? (
-        <p className="amount">{usd.format(stage.amount ?? 0)}</p>
+        <p className="amount">
+          <LglLink url={stage.figureUrl}>{usd.format(stage.amount ?? 0)}</LglLink>
+        </p>
       ) : (
         <p className="amount unavailable">Not shown</p>
       )}
@@ -97,13 +100,8 @@ function StageCard({ stage }: { stage: FunnelStage }) {
   );
 }
 
-/**
- * A bucket's record count, opening to a link per award.
- *
- * Listed individually rather than as one search link: the buckets are split
- * on a custom field, and no LGL search URL that filters on one is known.
- */
-function BucketRecords({ bucket }: { bucket: ReimbursableBucket }) {
+/** A bucket's record count, opening to a link per award, by name when one is known. */
+function BucketRecords({ bucket, names }: { bucket: ReimbursableBucket; names?: Map<number, string> }) {
   const linked = (bucket.awards ?? []).filter((award) => award.url);
   if (bucket.recordCount === 0 || linked.length === 0) {
     return <>{recordCountLabel(bucket.recordCount)}</>;
@@ -115,7 +113,7 @@ function BucketRecords({ bucket }: { bucket: ReimbursableBucket }) {
         {linked.map((award) => (
           <li key={award.id}>
             <a href={award.url ?? undefined} target="_blank" rel="noreferrer">
-              {usd.format(award.amount)} · gift {award.id}
+              {usd.format(award.amount)} · {names?.get(award.id) ?? `gift ${award.id}`}
             </a>
           </li>
         ))}
@@ -124,13 +122,15 @@ function BucketRecords({ bucket }: { bucket: ReimbursableBucket }) {
   );
 }
 
-function ReimbursableRow({ bucket }: { bucket: ReimbursableBucket }) {
+function ReimbursableRow({ bucket, names }: { bucket: ReimbursableBucket; names?: Map<number, string> }) {
   return (
     <tr className={bucket.status === "unknown" ? "row-unknown" : undefined}>
       <th scope="row">{bucket.label}</th>
-      <td className="num">{usd.format(bucket.amount)}</td>
+      <td className="num">
+        <LglLink url={bucket.url}>{usd.format(bucket.amount)}</LglLink>
+      </td>
       <td className="num muted-cell">
-        <BucketRecords bucket={bucket} />
+        <BucketRecords bucket={bucket} names={names} />
       </td>
     </tr>
   );
@@ -236,9 +236,12 @@ export function DataQualityPanel({ exceptions }: { exceptions: DataQualityExcept
 export function GrantFunnelView({
   snapshot,
   showExceptions = true,
+  names,
 }: {
   snapshot: GrantSnapshot;
   showExceptions?: boolean;
+  /** Each award's name, once Grant details has read them. */
+  names?: Map<number, string>;
 }) {
   return (
     <section className="panel">
@@ -320,7 +323,7 @@ export function GrantFunnelView({
               </thead>
               <tbody>
                 {snapshot.awardsByReimbursable.map((bucket) => (
-                  <ReimbursableRow key={bucket.status} bucket={bucket} />
+                  <ReimbursableRow key={bucket.status} bucket={bucket} names={names} />
                 ))}
               </tbody>
             </table>

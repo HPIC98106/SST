@@ -126,8 +126,11 @@ HPIC's QuickBooks and LGL data.
   built from here: a record's name opens that record, and a figure opens the list
   behind it, in LGL or QuickBooks. New panels ship with their links rather than
   gaining them later. Use `LglLink` for LGL, which also keeps names behind LGL's own
-  login. No QuickBooks link exists yet: its URLs need checking in a signed-in session
-  before any ships.
+  login. When search criteria cannot describe a set of records, `gids/<id>,<id>` can:
+  it opens exactly those gifts, and LGL's Pledged tile then shows their remaining
+  balance. LGL's constituent search has no equivalent that matched, so Donors, Not
+  auto-renew and the household counts stay plain. No QuickBooks link exists yet: its
+  URLs need checking in a signed-in session before any ships.
 - **A number links into LGL only if the search lands on the same count.** Each
   pattern was run on 2026-10-31 and is pinned in `test/community.test.ts`.
   Where no search matches, the number stays plain: the closest LGL search for
@@ -712,9 +715,10 @@ future value cannot change what an existing test means.
   and fund are collinear today, so the breakdown's value is catching the first
   award where they disagree. Caveat to state on the panel: a fund records
   where money was *deposited*, not what the funder *restricted*.
-- **Links on the panels built before that rule.** QuickBooks has none: account
-  balances, the Operations lines, the budget. Within LGL, the Summary funnel's
-  headline figures and the operating grants table link by gift ID or count only.
+- **QuickBooks links.** Account balances on the Overview and Rebuild, the Operations
+  lines and the budget are still plain, waiting on a signed-in session to check the
+  URLs. `AccountSnapshot.key` already gives the page each cash account's ID, and an
+  Operations line would need its account ID added.
 - **Grant Name and a spend-by date on Grant details.** The name reader is built
   and waits on the field. A spend-by date needs a field too, and then a read and a
   line on the card.

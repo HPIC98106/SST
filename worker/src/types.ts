@@ -260,6 +260,8 @@ export interface FunnelStage {
    * scope LGL's search URL is not known to express.
    */
   search: LglSearchLink | null;
+  /** The records behind the amount itself, in LGL. */
+  figureUrl?: string | null;
 }
 
 /**
@@ -320,10 +322,13 @@ export interface ReimbursableBucket {
    */
   remaining: number | null;
   /**
-   * The awards in this bucket, each linked to LGL. Listed individually because
-   * no LGL search URL is known that filters on a custom field.
+   * The awards in this bucket, each linked to LGL.
    */
   awards: AwardLink[];
+  /** All these awards in LGL. Null when LGL_UI_BASE_URL is unset or there are none. */
+  url: string | null;
+  /** Those with money still to arrive. Null like `remaining`, and when there are none. */
+  remainingUrl: string | null;
 }
 
 /**
@@ -636,6 +641,8 @@ export interface ExpectedInflow {
   key: "annual_fund" | "memberships" | "other_giving";
   label: string;
   amount: number;
+  /** Those gifts in LGL: the same months a year earlier. */
+  url: string | null;
 }
 
 // --- Grant details: each award on its own ---
@@ -661,6 +668,8 @@ export interface GrantDetail {
   /** Provisional, from LGL payment records. Null when they could not be read completely. */
   received: number | null;
   stillToArrive: number | null;
+  /** The payments behind Received, in LGL. Null with none, or no LGL_UI_BASE_URL. */
+  receivedUrl: string | null;
   /** How far payments linked to this award exceed it, when they do. */
   overBy: number | null;
   status: GrantStatus;
@@ -679,6 +688,9 @@ export interface GrantTotals {
   awarded: number;
   received: number | null;
   stillToArrive: number | null;
+  /** These awards and their payments in LGL. Null when LGL_UI_BASE_URL is unset or there are none. */
+  awardedUrl: string | null;
+  receivedUrl: string | null;
 }
 
 export interface GrantDetailsSnapshot {
@@ -687,7 +699,7 @@ export interface GrantDetailsSnapshot {
   grants: GrantDetail[];
   totals: { rebuild: GrantTotals; operating: GrantTotals };
   /** Grant payments linked to no award, so on no grant. Null when they could not be read. */
-  unlinkedPayments: { count: number; amount: number } | null;
+  unlinkedPayments: { count: number; amount: number; url: string | null } | null;
   retrievedAt: string | null;
   source: string;
   connection: "ok" | "not_configured" | "unavailable" | "fixture";
@@ -758,7 +770,16 @@ export interface CommunitySnapshot {
    * Provisional, like every LGL payment figure: computed from payment records
    * linked to their award, so an unlinked payment makes `remaining` too high.
    */
-  operatingGrants: { awarded: number; received: number; remaining: number; awards: OperatingAward[] } | null;
+  operatingGrants: {
+    awarded: number;
+    received: number;
+    remaining: number;
+    awards: OperatingAward[];
+    /** Those records in LGL, by gift ID. Null when LGL_UI_BASE_URL is unset or there are none. */
+    awardedUrl: string | null;
+    receivedUrl: string | null;
+    remainingUrl: string | null;
+  } | null;
   /** Cash gifts read, beside every figure drawn from them. */
   giftCount: number;
   retrievedAt: string | null;
