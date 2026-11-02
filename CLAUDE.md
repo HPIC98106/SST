@@ -692,8 +692,12 @@ future value cannot change what an existing test means.
     the passphrase is shared, and a linked number opens behind LGL's own login.
   - **Giving** (same module and read, split out 2026-10-31): donors, the giving
     chart and giving by campaign, gifts only.
-  - **Grants**, two views in the hash, `#grants` and `#grants/details`, kept apart
-    for now at Kyle's request (2026-10-31). **Summary**: the funnel, and operating
+  - **Grants**, three views in the hash, `#grants`, `#grants/details` and
+    `#grants/how`, kept apart at Kyle's request (2026-10-31) and shown as large
+    labelled tabs since 2026-11-02, because the small switch went unnoticed above
+    the funnel. **How grants work** is the stage-by-stage explainer of how a grant
+    and its spending move through LGL and QuickBooks, moved from Reconciliation on
+    2026-11-02: it is context, not something to act on. **Summary**: the funnel, and operating
     grants outside the rebuild with what is still to arrive on each (provisional,
     from linked payments). **Grant details** (`worker/src/grant-details.ts`,
     `/api/grant-details`): a card per award across every campaign, with awarded,
@@ -709,7 +713,7 @@ future value cannot change what an existing test means.
     number and level, never by name, each opening at `/constituents/<id>`; the
     Overview's "No dues on record" opens it at `#reconciliation/no-dues`, with the
     members ending in the next 90 days marked), ungrouped
-    QuickBooks accounts, and how a grant moves through the systems. Its tab shows a count of blocking records, so problems are one click away
+    QuickBooks accounts, and a pointer to How grants work. Its tab shows a count of blocking records, so problems are one click away
     and never hidden. Live on 2026-11-01, January to October: both grant lines match to
     the cent, and dues read $17,558.80 in LGL against $16,612.40 in QuickBooks.
 

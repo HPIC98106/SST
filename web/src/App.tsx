@@ -41,11 +41,21 @@ function tabFromHash(): Tab {
   return TABS.some((t) => t.key === hash) ? (hash as Tab) : "overview";
 }
 
-/** Grants has two views, kept in the hash the same way: #grants and #grants/details. */
-type GrantsView = "summary" | "details";
+/**
+ * Grants has three views, kept in the hash the same way: #grants, #grants/details
+ * and #grants/how. The explainer lived on Reconciliation until 2026-11-02; it is
+ * context for grants rather than something to act on.
+ */
+type GrantsView = "summary" | "details" | "how";
+
+const GRANTS_VIEWS: { key: GrantsView; hash: string; label: string; hint: string }[] = [
+  { key: "summary", hash: "#grants", label: "Summary", hint: "The funnel and operating grants" },
+  { key: "details", hash: "#grants/details", label: "Grant details", hint: "A card for each award" },
+  { key: "how", hash: "#grants/how", label: "How grants work", hint: "How a grant moves through LGL and QuickBooks" },
+];
 
 function grantsViewFromHash(): GrantsView {
-  return window.location.hash === "#grants/details" ? "details" : "summary";
+  return GRANTS_VIEWS.find((v) => v.key !== "summary" && window.location.hash === v.hash)?.key ?? "summary";
 }
 
 /**
@@ -268,19 +278,22 @@ export function App() {
           )
         ) : tab === "grants" ? (
           <div className="stack">
-            <nav className="lens grants-views" aria-label="Grants views">
-              {(["summary", "details"] as const).map((view) => (
+            <nav className="view-tabs" aria-label="Grants views">
+              {GRANTS_VIEWS.map((view) => (
                 <a
-                  key={view}
-                  className="lens-option"
-                  href={view === "details" ? "#grants/details" : "#grants"}
-                  aria-current={grantsView === view ? "page" : undefined}
+                  key={view.key}
+                  className="view-tab"
+                  href={view.hash}
+                  aria-current={grantsView === view.key ? "page" : undefined}
                 >
-                  {view === "details" ? "Grant details" : "Summary"}
+                  <span className="view-tab-label">{view.label}</span>
+                  <span className="view-tab-hint">{view.hint}</span>
                 </a>
               ))}
             </nav>
-            {grantsView === "details" ? (
+            {grantsView === "how" ? (
+              <LifecycleView snapshot={grants.data} />
+            ) : grantsView === "details" ? (
               isPending(grantDetails) ? (
                 <PanelLoading />
               ) : grantDetails.data ? (
@@ -334,6 +347,10 @@ export function App() {
               ) : (
                 <p className="banner banner-error">LGL could not be read, so records could not be checked.</p>
               )}
+              <p className="note">
+                How a grant moves through LGL and QuickBooks, stage by stage, is on{" "}
+                <a href="#grants/how">Grants → How grants work</a>.
+              </p>
               <NoDuesMembers community={community.data} />
               {operations.data && (operations.data.ungrouped.length > 0 || operations.data.invalidConfig.length > 0) ? (
                 <div className="subpanel">
@@ -349,7 +366,6 @@ export function App() {
                 </div>
               ) : null}
             </section>
-            <LifecycleView snapshot={grants.data} />
           </div>
         )}
       </main>
