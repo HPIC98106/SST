@@ -17,7 +17,7 @@
 import type { ReactNode } from "react";
 import { formatRetrievedAt, monthAbbrev, usd } from "./format";
 import { LglLink, QboLink } from "./LglLink";
-import { recordsChecked, recordsNeedingAttention } from "./Reconciliation";
+import { NO_DUES_ANCHOR, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
 import { monthsOfCash } from "./YearSoFar";
 import type {
   AccountSnapshot,
@@ -283,7 +283,11 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
             {soon.noDues > 0 ? (
               <li>
                 <span>No dues on record, so how they renew is unknown</span>
-                <span className="num">{soon.noDues.toLocaleString("en-US")}</span>
+                <span className="num">
+                  <a className="lgl-link" href={`#${NO_DUES_ANCHOR}`} title="See who they are on the Reconciliation tab">
+                    {soon.noDues.toLocaleString("en-US")}
+                  </a>
+                </span>
               </li>
             ) : null}
           </ul>

@@ -7,6 +7,7 @@
  * the assurance a board member is after.
  */
 
+import { useEffect } from "react";
 import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
 import { LglLink, QboLink } from "./LglLink";
 import type { CommunitySnapshot, GrantSnapshot, ReconciliationSnapshot } from "./types";
@@ -91,22 +92,40 @@ export function ReconciliationTable({ snapshot, error }: { snapshot: Reconciliat
  * By LGL record number, never by name: the passphrase is shared, and the link opens
  * the record behind LGL's own login.
  */
+/** The Overview's "No dues on record" opens this list: the tab, then the list's id. */
+export const NO_DUES_ANCHOR = "reconciliation/no-dues";
+const NO_DUES_ID = "no-dues";
+
 export function NoDuesMembers({ community }: { community: CommunitySnapshot | null }) {
   const members = community?.status === "ok" ? community.renewals?.noDuesMembers : undefined;
+  const soonThrough = community?.status === "ok" ? community.renewals?.soon.through : undefined;
+  const shown = Boolean(members && members.length > 0);
+  // The list renders once LGL has been read, which can be after the tab opens, so it
+  // scrolls itself into view when the link asked for it.
+  useEffect(() => {
+    if (shown && window.location.hash === `#${NO_DUES_ANCHOR}`) {
+      document.getElementById(NO_DUES_ID)?.scrollIntoView({ block: "start" });
+    }
+  }, [shown]);
   if (!members || members.length === 0) return null;
+  const endingSoon = soonThrough ? members.filter((m) => m.finish <= soonThrough).length : 0;
   return (
-    <div className="subpanel">
+    <div className="subpanel" id={NO_DUES_ID}>
       <h2>Members with no dues payment on record ({members.length.toLocaleString("en-US")})</h2>
       <p className="muted">
         Active in LGL, but no Memberships or Membership-Recurring gift is linked to them, so the dashboard cannot say how
         they renew. Usually a household member whose soft credit on the shared payment was never added, or a membership
         that came with a gift coded to another category. Each opens in LGL.
+        {endingSoon > 0
+          ? ` The first ${endingSoon.toLocaleString("en-US")}, marked below, end in the next 90 days: the count on the Overview.`
+          : ""}
       </p>
       <ul className="ops-list">
         {members.map((m) => (
           <li key={m.id}>
             <LglLink url={m.url}>LGL record {m.id}</LglLink>
             {m.level ? ` · ${m.level}` : ""} · membership ends {formatDate(m.finish)}
+            {soonThrough && m.finish <= soonThrough ? <span className="tag tag-warn">Next 90 days</span> : null}
           </li>
         ))}
       </ul>

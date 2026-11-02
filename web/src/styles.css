@@ -1633,6 +1633,10 @@ a.kpi-external:focus-visible {
   background: var(--warn-bg);
 }
 
+.ops-list .tag {
+  margin-left: 0.5rem;
+}
+
 .warn-text {
   color: var(--warn);
 }

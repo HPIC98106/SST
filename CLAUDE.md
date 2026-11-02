@@ -706,7 +706,9 @@ future value cannot change what an existing test means.
   - **Reconciliation** (named Housekeeping until 2026-11-01; `#housekeeping` still
     opens it): LGL against QuickBooks for dues, operating grants and rebuild grants, the
     data-quality list, active members with no dues payment on record (by LGL record
-    number and level, never by name, each opening at `/constituents/<id>`), ungrouped
+    number and level, never by name, each opening at `/constituents/<id>`; the
+    Overview's "No dues on record" opens it at `#reconciliation/no-dues`, with the
+    members ending in the next 90 days marked), ungrouped
     QuickBooks accounts, and how a grant moves through the systems. Its tab shows a count of blocking records, so problems are one click away
     and never hidden. Live on 2026-11-01, January to October: both grant lines match to
     the cent, and dues read $17,558.80 in LGL against $16,612.40 in QuickBooks.
