@@ -456,7 +456,7 @@ describe("the cached snapshot", () => {
     const stub = env.TOKEN_STORE.get(env.TOKEN_STORE.idFromName("qbo"));
     const snapshot = assemble([dues(1, "2026-05-01")]);
     await runInDurableObject(stub, (_instance, state) =>
-      state.storage.put("community-v4", { snapshot, cachedAt: Date.now() - age }),
+      state.storage.put("community-v5", { snapshot, cachedAt: Date.now() - age }),
     );
     const lgl = vi.fn(async () =>
       new Response(JSON.stringify({ items: [], total_items: 0 }), {
