@@ -743,7 +743,11 @@ future value cannot change what an existing test means.
   read lands, so a cold Membership read never holds up cash, and a figure still
   being read says "Reading…", never "unavailable". **Deploy the Worker before
   pushing the page** when the snapshot's shape changes: the new page crashes on
-  the old Worker's response.
+  the old Worker's response. **And bump the cache key** (`community-vN` in
+  `worker/src/tokens.ts`) whenever `CommunitySnapshot` gains or changes a field: a
+  deploy does not clear the cache, so without it the new Worker serves the old
+  Worker's read for up to two hours. Missed on 2026-11-10, when memberships read
+  "Not shown" after deploying.
 
   **Programming cash is in scope.** Whether the dashboard should answer "how much
   can we spend on programming" and read past campaign 871 was an open decision.
