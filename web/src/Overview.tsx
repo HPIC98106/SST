@@ -179,27 +179,52 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
     <section className="hero">
       <div className="hero-main">
         <span className="hero-label">The club today</span>
-        <p className="hero-value">
-          <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
-          <span className="hero-unit"> members</span>
-        </p>
+        {/*
+          Memberships lead: one per household plus one per member on their own
+          (2026-11-09). If households could not be read, the count of people
+          stands in, labelled as people, rather than a memberships figure that
+          is really a head count.
+        */}
+        {members.memberships != null ? (
+          <p className="hero-value">
+            {members.memberships.toLocaleString("en-US")}
+            <span className="hero-unit"> memberships</span>
+          </p>
+        ) : (
+          <p className="hero-value">
+            <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
+            <span className="hero-unit"> members</span>
+          </p>
+        )}
         <div className="hero-split">
-          <div>
-            <span>New in {community!.year}</span>
-            <strong>
-              {members.newThisYear === null ? "Not shown" : <LglLink url={members.newUrl}>{members.newThisYear.toLocaleString("en-US")}</LglLink>}
-            </strong>
-          </div>
+          {members.memberships != null ? (
+            <div>
+              <span>People</span>
+              <strong>
+                <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
+              </strong>
+            </div>
+          ) : null}
           {members.households !== null ? (
             <div>
               <span>Households</span>
               <strong>{members.households.toLocaleString("en-US")}</strong>
             </div>
           ) : null}
+          <div>
+            <span>New people in {community!.year}</span>
+            <strong>
+              {members.newThisYear === null ? "Not shown" : <LglLink url={members.newUrl}>{members.newThisYear.toLocaleString("en-US")}</LglLink>}
+            </strong>
+          </div>
         </div>
         <p className="hero-note">
-          Active in LGL, {formatRetrievedAt(community!.retrievedAt)}. New means a first membership record that began this
-          year, so someone long-standing who was entered in LGL late can look new.{" "}
+          Active in LGL, {formatRetrievedAt(community!.retrievedAt)}.
+          {members.memberships != null
+            ? " A household counts as one membership, however many people are in it."
+            : ""}{" "}
+          New means a first membership record that began this year, so someone long-standing who was entered in LGL late
+          can look new.{" "}
           <button type="button" className="hero-more" onClick={() => open("membership")}>
             See Membership
           </button>
@@ -212,7 +237,7 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
             <h3>The last 30 days</h3>
             <ul>
               <li>
-                <span>New members</span>
+                <span>New people</span>
                 {recent.newMembers ? (
                   <span className="num">
                     <LglLink url={recent.newMembers.url}>{recent.newMembers.count.toLocaleString("en-US")}</LglLink>

@@ -101,6 +101,8 @@ describe("members", () => {
       member(6, ["Classic", "2026-02-01", "2027-02-01"]),
     ]);
     expect(snapshot.members?.households).toBe(2);
+    // Six people: two households (1-2-3 and 4-5) and one member on their own.
+    expect(snapshot.members?.memberships).toBe(3);
     const classic = snapshot.members?.byLevel.find((l) => l.level === "Classic");
     expect(classic).toMatchObject({ count: 5, inHousehold: 4, individual: 1 });
     expect(snapshot.members?.byLevel.find((l) => l.level === "Champion")).toMatchObject({ inHousehold: 1, individual: 0 });
@@ -121,6 +123,8 @@ describe("members", () => {
     const { relationships: _, ...bare } = member(1, ["Classic", "2026-02-01", "2027-02-01"]);
     const snapshot = assemble([], "2026-10-30", [bare]);
     expect(snapshot.members?.households).toBeNull();
+    // Not a head count in disguise: with households unknown, so are memberships.
+    expect(snapshot.members?.memberships).toBeNull();
     expect(snapshot.members?.byLevel[0]).toMatchObject({ count: 1, inHousehold: null, individual: null });
   });
 

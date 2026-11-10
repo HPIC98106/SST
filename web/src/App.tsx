@@ -7,6 +7,7 @@ import { FundsSnapshotView } from "./FundsSnapshot";
 import { GivingView } from "./Giving";
 import { GrantDetailsView } from "./GrantDetails";
 import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
+import { GrantsSplit, OPERATING_SECTION_ID, REBUILD_SECTION_ID } from "./GrantsSplit";
 import { LglLink } from "./LglLink";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
@@ -49,7 +50,7 @@ function tabFromHash(): Tab {
 type GrantsView = "summary" | "details" | "how";
 
 const GRANTS_VIEWS: { key: GrantsView; hash: string; label: string; hint: string }[] = [
-  { key: "summary", hash: "#grants", label: "Summary", hint: "The funnel and operating grants" },
+  { key: "summary", hash: "#grants", label: "Summary", hint: "Rebuild and program operating, side by side" },
   { key: "details", hash: "#grants/details", label: "Grant details", hint: "A card for each award" },
   { key: "how", hash: "#grants/how", label: "How grants work", hint: "How a grant moves through LGL and QuickBooks" },
 ];
@@ -303,21 +304,33 @@ export function App() {
               )
             ) : (
               <>
-                {pending.grants ? (
-                  <PanelLoading />
-                ) : grants.data ? (
-                  <GrantFunnelView snapshot={grants.data} showExceptions={false} names={grantNames} />
-                ) : (
-                  <PanelError title="Grant funnel" detail={grants.error} />
-                )}
-                {pending.community ? (
+                {isPending(grantDetails) ? (
                   <section className="panel">
-                    <h1>Operating grants</h1>
-                    <Reading what="operating grants from LGL" slow />
+                    <h1>Grants: rebuild and program operating</h1>
+                    <Reading what="grant awards from LGL" />
                   </section>
-                ) : (
-                  <OperatingGrants community={community.data} names={grantNames} />
-                )}
+                ) : grantDetails.data ? (
+                  <GrantsSplit snapshot={grantDetails.data} />
+                ) : null}
+                <div id={REBUILD_SECTION_ID}>
+                  {pending.grants ? (
+                    <PanelLoading />
+                  ) : grants.data ? (
+                    <GrantFunnelView snapshot={grants.data} showExceptions={false} names={grantNames} />
+                  ) : (
+                    <PanelError title="Rebuild grants" detail={grants.error} />
+                  )}
+                </div>
+                <div id={OPERATING_SECTION_ID}>
+                  {pending.community ? (
+                    <section className="panel">
+                      <h1>Program operating grants</h1>
+                      <Reading what="operating grants from LGL" slow />
+                    </section>
+                  ) : (
+                    <OperatingGrants community={community.data} names={grantNames} />
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -387,15 +400,15 @@ function OperatingGrants({ community, names }: { community: CommunitySnapshot | 
   const grants = community.operatingGrants;
   return (
     <section className="panel">
-      <h1>Operating grants</h1>
+      <h1>Program operating grants</h1>
       <p className="muted">
-        Awards outside the rebuild, for programs and operations.{" "}
+        Awards outside the rebuild, for programs and operations, with what is still to come on each.{" "}
         <LglLink url={grants.awardedUrl}>{usd.format(grants.awarded)}</LglLink> awarded,{" "}
         <LglLink url={grants.receivedUrl}>{usd.format(grants.received)}</LglLink> received.{" "}
         <span className="tag tag-warn">Provisional</span>
       </p>
       {grants.awards.length === 0 ? (
-        <p className="note">Nothing is still to arrive on any operating award.</p>
+        <p className="note">Nothing is still to come on any operating award.</p>
       ) : (
         <div className="table-scroll">
           <table className="breakdown">
@@ -404,7 +417,7 @@ function OperatingGrants({ community, names }: { community: CommunitySnapshot | 
                 <th scope="col">Award</th>
                 <th scope="col" className="num">Awarded</th>
                 <th scope="col" className="num">Received</th>
-                <th scope="col" className="num">Still to arrive</th>
+                <th scope="col" className="num">Still to come</th>
               </tr>
             </thead>
             <tbody>
@@ -431,7 +444,7 @@ function OperatingGrants({ community, names }: { community: CommunitySnapshot | 
       )}
       <p className="note">
         Computed from LGL payment records linked to each award; a payment not linked to its award makes "still to
-        arrive" too high. Read from LGL {formatRetrievedAt(community.retrievedAt)}.
+        come" too high. Read from LGL {formatRetrievedAt(community.retrievedAt)}.
       </p>
     </section>
   );

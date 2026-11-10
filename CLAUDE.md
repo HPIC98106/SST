@@ -112,6 +112,13 @@ HPIC's QuickBooks and LGL data.
   the gaps become arguable from HPIC's own records.
 - **Zero exceptions must mean "nothing is wrong", never "nothing was read".**
   `findExceptions` runs only when both reads succeeded.
+- **The headline count is memberships: one per household plus one per member in
+  none** (decided 2026-11-09 with Galen, for the 2026-11-11 board demo). People
+  are shown beside it and keep the LGL link; memberships has none, since no LGL
+  search lists households. When relationships cannot be read, memberships is null
+  and the Overview falls back to people, labelled as people, never a head count
+  passed off as memberships. Level labels stay as they are: Alex explains the
+  tiers.
 - **Members come from LGL's membership records, never from dues gifts.** Gifts
   find about half of them: on 2026-10-31 LGL had 563 active members and 270
   people who had paid dues that year, since one payment can cover a household.
@@ -697,9 +704,12 @@ future value cannot change what an existing test means.
     labelled tabs since 2026-11-02, because the small switch went unnoticed above
     the funnel. **How grants work** is the stage-by-stage explainer of how a grant
     and its spending move through LGL and QuickBooks, moved from Reconciliation on
-    2026-11-02: it is context, not something to act on. **Summary**: the funnel, and operating
-    grants outside the rebuild with what is still to arrive on each (provisional,
-    from linked payments). **Grant details** (`worker/src/grant-details.ts`,
+    2026-11-02: it is context, not something to act on. **Summary** opens with
+    rebuild and program operating side by side (decided 2026-11-09, so a
+    volunteer can take over the operating grants): awarded, received and still to
+    come for each, from Grant details' totals, never added together. Below it the
+    rebuild funnel ("Rebuild grants") and "Program operating grants" with what is
+    still to come on each (provisional, from linked payments). **Grant details** (`worker/src/grant-details.ts`,
     `/api/grant-details`): a card per award across every campaign, with awarded,
     spent, received and still to arrive, its payments and its schedule. Its rebuild
     totals match the funnel, which a test pins. **No notes leave the Worker**: they

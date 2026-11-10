@@ -152,16 +152,26 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
         {snapshot.connection === "fixture" ? " Fixture data." : ""}
       </p>
 
-      <div className="kpis kpis-2">
+      <div className="kpis kpis-3">
         <Kpi
-          label="Total members"
+          label="Memberships"
+          value={members?.memberships != null ? count(members.memberships) : "Not shown"}
+          tone={members?.memberships != null ? undefined : "unavailable"}
+          detail={
+            members?.memberships != null
+              ? `${count(members.households!)} households and ${count(members.memberships - members.households!)} individual members`
+              : undefined
+          }
+        />
+        <Kpi
+          label="People"
           value={members ? count(members.total) : "Not shown"}
           tone={members ? undefined : "unavailable"}
-          detail={members ? "Active in LGL today" : undefined}
+          detail={members ? "Active members in LGL today" : undefined}
           href={members?.url}
         />
         <Kpi
-          label={`New members in ${year}`}
+          label={`New people in ${year}`}
           value={isNew !== null ? count(isNew) : "Not shown"}
           tone={isNew !== null ? undefined : "unavailable"}
           detail={isNew !== null ? "First membership began this year" : undefined}

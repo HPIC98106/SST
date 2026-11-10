@@ -356,6 +356,11 @@ export interface CommunitySnapshot {
     byLevel: MemberLevel[];
     /** Households of two or more active members. Null like `MemberLevel.inHousehold`. */
     households: number | null;
+    /**
+     * Memberships: one per household plus one per member who is in none. Null like
+     * `households`. No LGL search lists these, so the figure has no link.
+     */
+    memberships: number | null;
     /** Who paid dues this year: fewer than `total`, since a household shares one. */
     dues: { payers: number; amount: number; url: string | null } | null;
     url: string | null;

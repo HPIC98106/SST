@@ -878,6 +878,24 @@ a.view-tab[aria-current="page"] .view-tab-hint {
   color: rgba(255, 255, 255, 0.78);
 }
 
+/* --- Grants Summary: rebuild and program operating side by side --- */
+
+.grants-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.8rem;
+}
+
+.grants-split .split-still {
+  font-size: 1.05rem;
+}
+
+.grants-split .split-more {
+  margin-top: 0.6rem;
+  color: var(--navy-2);
+}
+
 /* --- Grant details: one card per award --- */
 
 .grant-totals {

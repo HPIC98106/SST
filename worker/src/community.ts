@@ -214,7 +214,10 @@ function countMembers(
   active: LglMember[],
   year: number,
   config: CommunityConfig,
-): Pick<NonNullable<CommunitySnapshot["members"]>, "total" | "newThisYear" | "byLevel" | "households" | "url" | "newUrl"> {
+): Pick<
+  NonNullable<CommunitySnapshot["members"]>,
+  "total" | "newThisYear" | "byLevel" | "households" | "memberships" | "url" | "newUrl"
+> {
   const households = readHouseholds(active);
   const levels = new Map<string, MemberLevel>();
   let newThisYear: number | null = 0;
@@ -244,11 +247,16 @@ function countMembers(
     levels.set(level, row);
   }
 
+  // One membership per household plus one per member on their own (decided
+  // 2026-11-09 with Galen): what the board means by "how many memberships".
+  const individuals = households ? active.filter((m) => !households.inHousehold(m)).length : null;
+
   return {
     total: active.length,
     newThisYear,
     byLevel: [...levels.values()].sort((a, b) => b.count - a.count),
     households: households?.households ?? null,
+    memberships: households && individuals !== null ? households.households + individuals : null,
     url: memberSearch(config),
     newUrl: memberSearch(config, membershipDates("start", "first", `${year}-01-01`, `${year}-12-31`)),
   };

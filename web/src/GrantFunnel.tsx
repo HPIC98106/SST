@@ -245,7 +245,7 @@ export function GrantFunnelView({
 }) {
   return (
     <section className="panel">
-      <h1>Grant funnel</h1>
+      <h1>Rebuild grants</h1>
 
       {snapshot.connection === "fixture" ? (
         <p className="banner banner-warn">
