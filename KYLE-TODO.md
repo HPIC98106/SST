@@ -18,36 +18,6 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
-- **Add a "Grant Name" field to gifts in LGL and fill it in on each award.** Name
-  it exactly that, under custom fields on Gift. Existing Gift fields are picklists,
-  so if free text isn't offered, use a picklist with one option per grant. Suggested
-  names, from each award's notes (gift ID, name):
-  903691 Commerce: Local Community Projects · 905452 Commerce: Building for the
-  Arts · 905997 City of Seattle: Rebuild · 909194 Neighborhoods: Demolition ·
-  906602 Arts & Culture: Rebuild · 904066 Garneau-Nicon: Rebuild · 904061 4Culture:
-  Sustained Support · 908457 Arts & Culture: First Fridays · 906062 Arts & Culture:
-  CARE · 907007 Neighborhoods: First Friday Canopies.
-  Then ask Claude to check that the names appear, since the code has only been
-  tested against the shape of LGL's other fields. Unblocks: real names on Grant
-  details, which today shows the funder and year, with two pairs reading alike.
-
-- **Set Payment Terms on the three awards without them:** 904061 (4Culture), 906062
-  (CARE), 907007 (Canopies). Unblocks: those cards stop saying "Terms not set".
-
-- **Check whether LGL can hold a spend-by date on a gift, and add it if so.** If it
-  can, ask Claude to read it onto Grant details. Worth doing while you are in those
-  records: a deadline is the health signal nothing here can see yet.
-
-- **Ask Metis to re-price the Dry-in estimate.** The spreadsheet received
-  2026-10-29 is byte-identical to the 9/22/26 estimate already on the
-  dashboard, whose prices held 30 days, to 2026-10-22. When the new one
-  arrives, give it to Claude, who updates the source and price date; then set
-  the grand total including contingency yourself from Git Bash:
-  `cd ~/Desktop/hpic/SST/worker && printf '%s' "<grand total incl. contingency>" | npx wrangler secret put CURRENT_PHASE_TARGET_COST`.
-  While asking, mention that their workbook taxes the 6% contingency at 10.35%
-  on the summary sheet but 10.55% on the budget sheet. Unblocks: a current
-  readiness target; the panel says the old one has lapsed.
-
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
   the approved figures, keeping each amount in the month the money actually
@@ -71,7 +41,9 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 - **Rachel, about tagging grants in QuickBooks.** This is what Spent on Grant
   details is waiting for. Propose one **Project per award**, under its funder,
-  applied at entry time. Claude read QuickBooks on 2026-10-31, so you can start from
+  applied at entry time, and cover invoices to funders as well as expenses. Your
+  iteration 2 doc lists the mechanism as open (class, location or tag): settle it
+  here. Claude read QuickBooks on 2026-10-31, so you can start from
   facts (details in CLAUDE.md): the plan is Plus and Projects are already on; no
   project exists; no rebuild expense says which grant it belongs to, though there
   are only 138 such lines since 2023, so tagging back is feasible. Agree how far back
@@ -87,9 +59,10 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   $2,320), so ask whether October's dues are all booked yet. Unblocks: the first line
   of the board's reconciliation reading "Match", or a known reason it does not.
 
-- **Galen and Alex, about the new Overview.** Show them the live page and ask whether
-  it is what the board wants to open first: it was rebuilt on your view, which you
-  called one perspective. Unblocks: settling the Overview, or changing it.
+- **The board, about iteration 2.** Show the live page and collect what they want
+  changed: the members headline, the single Still to raise figure, Program grants as
+  its own tab, and how much is folded under "How this is calculated". Unblocks: the
+  next iteration.
 
 - **Galen, about the percent-funded denominator.** The spec's 40% / 70%
   thresholds are almost certainly against the whole capital campaign, not
@@ -127,6 +100,17 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   `npx wrangler secret delete <name>`.
 
 ## Waiting on others
+
+- **Alex:** approve the new LGL fields on Gift, then add them. "Grant Name"
+  (exactly that; a picklist with one option per grant if free text isn't offered)
+  and the grant key dates: reporting due, spend-by and grant period end. Then ask
+  Claude to check the names appear and to read the dates onto the Program grants
+  cards. Suggested names (gift ID, name): 903691 Commerce: Local Community Projects
+  · 905452 Commerce: Building for the Arts · 905997 City of Seattle: Rebuild ·
+  909194 Neighborhoods: Demolition · 906602 Arts & Culture: Rebuild · 904066
+  Garneau-Nicon: Rebuild · 904061 4Culture: Sustained Support · 908457 Arts &
+  Culture: First Fridays · 906062 Arts & Culture: CARE · 907007 Neighborhoods:
+  First Friday Canopies.
 
 - **Development committee:** reconcile manually tracked grants into LGL. Until
   then, grant figures cover only what's in LGL, and the UI says so.

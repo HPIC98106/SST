@@ -130,6 +130,7 @@ export function assembleGrantDetails(
       overBy: complete && receivedCents > awardedCents ? dollars(receivedCents - awardedCents) : null,
       status,
       terms: terms.status,
+      termsValue: terms.value,
       termsUnreadable: terms.unrecognizedValue,
       payments: paid
         .map((g) => ({ id: g.id, date: g.received_date!, amount: dollars(cents(g)), url: giftUrl(env, g.id) }))

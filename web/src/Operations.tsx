@@ -19,7 +19,8 @@
 
 import { Fragment, useState } from "react";
 import { CumulativeChart } from "./CumulativeChart";
-import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { How, SourceLine } from "./Disclosure";
+import { formatDate, monthAbbrev, usd } from "./format";
 import { QboLink } from "./LglLink";
 import type { OperationsLine, OperationsSnapshot, PlSide } from "./types";
 
@@ -227,10 +228,8 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
       <h1>Income and spending</h1>
       {period ? (
         <p className="muted">
-          {periodLabel(period)} · accrual basis
-          {period.showingPriorYear
-            ? ". The first month of the new fiscal year has not closed yet, so last year is shown in full."
-            : ". Every column covers the same completed months; the month in progress is left out until it closes."}
+          {periodLabel(period)}
+          {period.showingPriorYear ? ". The new fiscal year's first month has not closed yet, so last year is shown in full." : ""}
         </p>
       ) : null}
 
@@ -276,35 +275,37 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
             </table>
           </div>
 
-          <p className="note">
-            Green is favorable and red is not: income over or spending under, and the reverse. Net operating income is
-            income less spending on day-to-day accounts, with rebuild money left out.
-            {snapshot.budget.name ? (
-              <>
-                {" "}
-                Budget: <QboLink url={snapshot.budget.url}>"{snapshot.budget.name}"</QboLink> in QuickBooks.
-              </>
+          <p className="note">Green is favorable and red is not: income over or spending under.</p>
+
+          <How>
+            <p>
+              <strong>Net operating income</strong> is income less spending on day-to-day accounts, with rebuild money
+              left out. It is the line QuickBooks prints as Net Operating Revenue. Figures are on the accrual basis.
+            </p>
+            <p>
+              <strong>Every column covers the same completed months.</strong> The month in progress is left out until it
+              closes, so a part-month is never set against a full month's budget.
+              {snapshot.budget.name ? (
+                <>
+                  {" "}
+                  The budget is <QboLink url={snapshot.budget.url}>"{snapshot.budget.name}"</QboLink> in QuickBooks.
+                </>
+              ) : null}
+            </p>
+            <p>
+              <strong>Projected year-end</strong> is a projection, not a record: the actual figure so far plus the budget
+              for each month still to come. It changes as each month closes.
+            </p>
+            {manyEven ? (
+              <p>
+                <strong>Read the budget comparison with care.</strong> {even.even} of {even.total} budget lines were
+                entered as the same amount every month, and much of HPIC's money is seasonal. A line such as dues can
+                look far over budget partway through the year for that reason alone, and the projection may miss money
+                that arrives late, such as the December drive.
+              </p>
             ) : null}
-          </p>
-
-          {lens === "fullYear" ? (
-            <p className="note">
-              <strong>Projected year-end</strong> is a projection, not a record: the actual figure so far plus the
-              budget for each month still to come. It changes as each month closes.
-            </p>
-          ) : null}
-
-          {lens !== "lastYear" && manyEven ? (
-            <p className="note">
-              <strong>Read the budget comparison with care.</strong> {even.even} of {even.total} budget lines were
-              entered as the same amount every month, and much of HPIC's money is seasonal. A line such as dues can look
-              far over budget partway through the year for that reason alone, and the projection may miss money that
-              arrives late, such as the December drive.
-            </p>
-          ) : null}
-
           {snapshot.excluded ? (
-            <p className="note">
+            <p>
               <strong>Kept out of these figures:</strong> {snapshot.excluded.accounts.join(", ")}
               {snapshot.excluded.income !== 0 ? (
                 <>
@@ -316,9 +317,11 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
                   , <QboLink url={snapshot.excluded.url}>{usd.format(snapshot.excluded.spending)}</QboLink> of spending
                 </>
               ) : null}{" "}
-              over the same months. Rebuild money is reported on the Overview and Rebuild tabs, not as day-to-day income.
+              over the same months. Rebuild money is reported on the Rebuild tab, not as day-to-day income.
             </p>
           ) : null}
+            <p>Source: {snapshot.source}.</p>
+          </How>
 
           {monthly ? (
             <>
@@ -391,15 +394,7 @@ export function OperationsView({ snapshot }: { snapshot: OperationsSnapshot }) {
         </section>
       ) : null}
 
-      <div className="panel-footer">
-        <p>
-          <strong>Source:</strong> {snapshot.source}.
-        </p>
-        <p>
-          <strong>Data retrieved from QuickBooks:</strong> {formatRetrievedAt(snapshot.retrievedAt)}
-          {snapshot.cached ? " (served from a cached read, refreshed at least every 15 minutes)" : ""}
-        </p>
-      </div>
+      <SourceLine qbo={snapshot.retrievedAt} />
     </section>
   );
 }

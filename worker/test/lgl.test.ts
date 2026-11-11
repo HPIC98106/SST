@@ -110,6 +110,8 @@ const NO_LGL_CONFIG = {
   LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: undefined,
   LGL_ANNUAL_FUND_CAMPAIGN_IDS: undefined,
   LGL_NON_DONATION_CATEGORY_IDS: undefined,
+  LGL_DUES_RATES: undefined,
+  DUES_CHECK_TOLERANCE_PCT: undefined,
 } as const;
 
 /** Live mode with a key. Individual tests narrow this further. */
@@ -476,12 +478,13 @@ describe("reimbursable status", () => {
     // fixes. Collapsing them tells a volunteer that data entry they already
     // did is missing.
     const absent = readPaymentTerms({ custom_fields: [] });
-    expect(absent).toEqual({ status: "unknown", unrecognizedValue: null });
+    expect(absent).toEqual({ status: "unknown", unrecognizedValue: null, value: null });
 
     // A field present but never filled in counts as absent — same job undone.
     expect(readPaymentTerms({ custom_fields: [{ name: "Payment Terms", values: [] }] })).toEqual({
       status: "unknown",
       unrecognizedValue: null,
+      value: null,
     });
 
     // An option added in LGL that nothing here maps. The raw text comes back
@@ -490,7 +493,12 @@ describe("reimbursable status", () => {
       readPaymentTerms({
         custom_fields: [{ name: "Payment Terms", values: [{ name: "Matching funds" }] }],
       }),
-    ).toEqual({ status: "unknown", unrecognizedValue: "Matching funds" });
+    ).toEqual({ status: "unknown", unrecognizedValue: "Matching funds", value: "Matching funds" });
+
+    // A recognized option keeps what LGL holds, so the page can show the funder's own terms.
+    expect(
+      readPaymentTerms({ custom_fields: [{ name: "Payment Terms", values: [{ name: "Payment in full" }] }] }),
+    ).toEqual({ status: "not_reimbursable", unrecognizedValue: null, value: "Payment in full" });
   });
 
   it("names the unreadable value in its own exception, not the missing one", async () => {

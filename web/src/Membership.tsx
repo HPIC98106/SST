@@ -1,6 +1,16 @@
 /**
- * Membership: who is a member today, how the membership is made up, when it comes
- * up for renewal, and what dues have brought in.
+ * Membership: members first, then dues-paying memberships as a separate finance
+ * section (decided 2026-11-10).
+ *
+ * Two words, two meanings, kept apart everywhere on the dashboard:
+ *
+ *   - **Members** are people with an active membership in LGL, minors included.
+ *     This is what the board counts, and the only headline.
+ *   - **Dues-paying memberships** are paid accounts, one per dues payment, each an
+ *     individual or a household. They matter for dues and nothing else.
+ *
+ * A count of people is never labelled memberships, and a count of accounts is
+ * never labelled members.
  *
  * Counts only. Names stay in LGL: the dashboard has one shared passphrase, and
  * who has not renewed is a list for the membership committee, not a figure for
@@ -9,10 +19,12 @@
  */
 
 import { CumulativeChart } from "./CumulativeChart";
-import { formatDate, formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { How, SourceLine } from "./Disclosure";
+import { formatDate, monthAbbrev, usd } from "./format";
 import { LglLink } from "./LglLink";
 import { Kpi } from "./Overview";
-import type { CommunitySnapshot, RenewalRow } from "./types";
+import { DUES_CHECK_ANCHOR, MEMBERSHIP_TYPES_ANCHOR, duesCheckSentence } from "./Reconciliation";
+import type { CommunitySnapshot, Memberships, ReconciliationSnapshot, RenewalRow } from "./types";
 
 const count = (n: number) => n.toLocaleString("en-US");
 
@@ -22,9 +34,6 @@ function renewalLabel(row: RenewalRow): string {
 }
 
 function Levels({ members }: { members: NonNullable<CommunitySnapshot["members"]> }) {
-  const known = members.households !== null;
-  const add = (pick: (l: (typeof members.byLevel)[number]) => number | null) =>
-    members.byLevel.reduce((sum, l) => sum + (pick(l) ?? 0), 0);
   return (
     <section className="card card-pad">
       <div className="card-head">
@@ -36,8 +45,6 @@ function Levels({ members }: { members: NonNullable<CommunitySnapshot["members"]
             <tr>
               <th scope="col">Level</th>
               <th scope="col" className="num">Members</th>
-              <th scope="col" className="num">In a household</th>
-              <th scope="col" className="num">Individual</th>
             </tr>
           </thead>
           <tbody>
@@ -47,8 +54,6 @@ function Levels({ members }: { members: NonNullable<CommunitySnapshot["members"]
                 <td className="num">
                   <LglLink url={l.url}>{count(l.count)}</LglLink>
                 </td>
-                <td className="num">{l.inHousehold === null ? "—" : count(l.inHousehold)}</td>
-                <td className="num">{l.individual === null ? "—" : count(l.individual)}</td>
               </tr>
             ))}
           </tbody>
@@ -58,17 +63,11 @@ function Levels({ members }: { members: NonNullable<CommunitySnapshot["members"]
               <td className="num">
                 <LglLink url={members.url}>{count(members.total)}</LglLink>
               </td>
-              <td className="num">{known ? count(add((l) => l.inHousehold)) : "—"}</td>
-              <td className="num">{known ? count(add((l) => l.individual)) : "—"}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <p className="note">
-        {known
-          ? `${count(members.households!)} households have two or more members. A member is in a household when LGL links them to another active member as household or spouse/partner.`
-          : "LGL's relationships could not be read, so households are not shown."}
-      </p>
+      <p className="note">Counts people, by the level on their current membership record.</p>
     </section>
   );
 }
@@ -78,7 +77,7 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
   return (
     <section className="card card-pad">
       <div className="card-head">
-        <h2>Coming up for renewal</h2>
+        <h2>Members up for renewal by month</h2>
       </div>
       <div className="table-scroll">
         <table className="breakdown">
@@ -88,7 +87,7 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
               <th scope="col" className="num">Members</th>
               <th scope="col" className="num">Auto-renew</th>
               <th scope="col" className="num">Renew by hand</th>
-              <th scope="col" className="num">No dues on record</th>
+              <th scope="col" className="num">Method unknown</th>
             </tr>
           </thead>
           <tbody>
@@ -114,22 +113,152 @@ function Renewals({ renewals }: { renewals: NonNullable<CommunitySnapshot["renew
               <td className="num">{count(total)}</td>
               <td className="num">{count(renewals.autoRenew)}</td>
               <td className="num">{count(renewals.manual)}</td>
-              <td className="num">{count(renewals.noDues)}</td>
+              <td className="num">
+                {renewals.noDues > 0 ? (
+                  <a className="lgl-link" href="#reconciliation/no-dues" title="See who they are on the Reconciliation tab">
+                    {count(renewals.noDues)}
+                  </a>
+                ) : (
+                  "0"
+                )}
+              </td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <p className="note">
-        Counts people, so a household renewing on one payment counts once per member. Auto-renew means their latest dues
-        payment is coded Membership-Recurring in LGL, including a household member credited on someone else's payment. Members
-        with no dues on record are listed on the Reconciliation tab.
-        {renewals.undated > 0 ? ` ${count(renewals.undated)} with no end date in LGL are not in any month.` : ""}
-      </p>
+      <p className="note">Counts people, so a household renewing on one payment counts once per member.</p>
+      <How>
+        <p>
+          <strong>Auto-renew</strong> means the member's latest dues payment is coded Membership-Recurring in LGL,
+          including a household member credited on someone else's payment. <strong>Renew by hand</strong> means it was a
+          one-time payment.
+        </p>
+        <p>
+          <strong>Method unknown</strong> means no dues payment is on record for the member, so nothing says how they
+          renew. They are listed on the Reconciliation tab.
+          {renewals.undated > 0 ? ` ${count(renewals.undated)} with no end date in LGL are not in any month.` : ""}
+        </p>
+      </How>
     </section>
   );
 }
 
-export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
+/** The finance table: accounts, not people. */
+function MembershipTypes({
+  memberships,
+  reconciliation,
+  checking,
+}: {
+  memberships: Memberships;
+  reconciliation: ReconciliationSnapshot | null;
+  checking: boolean;
+}) {
+  const check = reconciliation?.duesCheck ?? null;
+  const findings = memberships.findings.reduce((n, f) => n + f.records.length, 0);
+  return (
+    <section className="card card-pad">
+      <div className="card-head">
+        <h2>Dues-paying memberships</h2>
+        <strong className="card-figure">{count(memberships.total)}</strong>
+      </div>
+      <p className="muted">One per dues payment, covering either an individual or a household.</p>
+      <div className="table-scroll">
+        <table className="breakdown">
+          <thead>
+            <tr>
+              <th scope="col">Level and type</th>
+              <th scope="col" className="num">Annual rate</th>
+              <th scope="col" className="num">Memberships</th>
+              <th scope="col" className="num">Expected annual dues</th>
+            </tr>
+          </thead>
+          <tbody>
+            {memberships.types.map((t) => (
+              <tr key={`${t.level} ${t.type}`}>
+                <th scope="row">
+                  {t.level} {t.type}
+                </th>
+                <td className="num">{usd.format(t.rate)}</td>
+                <td className="num">{count(t.count)}</td>
+                <td className="num">{usd.format(t.expected)}</td>
+              </tr>
+            ))}
+            {memberships.unmatched > 0 ? (
+              <tr>
+                <th scope="row">
+                  <a className="lgl-link" href={`#${MEMBERSHIP_TYPES_ANCHOR}`}>
+                    Paid an amount that matches no rate
+                  </a>
+                </th>
+                <td className="num">—</td>
+                <td className="num">{count(memberships.unmatched)}</td>
+                <td className="num">—</td>
+              </tr>
+            ) : null}
+          </tbody>
+          <tfoot>
+            <tr className="ops-total">
+              <th scope="row">Total</th>
+              <td />
+              <td className="num">{count(memberships.total)}</td>
+              <td className="num">{usd.format(memberships.expectedDues)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* The check's one-line result. Its figures are on Reconciliation. */}
+      <p className={check?.status === "flagged" ? "note warn-text" : "note"}>
+        {checking ? (
+          "Checking expected dues against QuickBooks…"
+        ) : check ? (
+          <a className="lgl-link" href={`#${DUES_CHECK_ANCHOR}`}>
+            {duesCheckSentence(check)}.
+          </a>
+        ) : (
+          "Expected dues could not be checked against QuickBooks."
+        )}
+        {findings > 0 ? (
+          <>
+            {" "}
+            <a className="fix-link" href={`#${MEMBERSHIP_TYPES_ANCHOR}`}>
+              {count(findings)} {findings === 1 ? "record" : "records"} to fix
+            </a>
+          </>
+        ) : null}
+      </p>
+
+      <How>
+        <p>
+          <strong>A membership is one dues payment:</strong> the latest Memberships or Membership-Recurring gift of an
+          active member, together with every active member credited on it. Minors are members, not memberships, and pay
+          no dues.
+        </p>
+        <p>
+          <strong>Individual or household comes from the amount paid</strong>, because LGL's levels (Classic, Champion,
+          Minor) do not say. A payment that also covers the card fee counts at its plain rate. Who is linked to whom in
+          LGL is only a cross-check; where the two disagree, the record is listed on Reconciliation.
+        </p>
+        <p>
+          <strong>Expected annual dues</strong> is the number of memberships times the rate. It is what today's
+          memberships would bring in over a year, not what has been received. Members with no dues payment on record are
+          in no membership.
+        </p>
+      </How>
+    </section>
+  );
+}
+
+export function MembershipView({
+  snapshot,
+  reconciliation,
+  checking,
+}: {
+  snapshot: CommunitySnapshot;
+  reconciliation: ReconciliationSnapshot | null;
+  /** The comparison with QuickBooks is still being read. */
+  checking: boolean;
+}) {
   if (snapshot.status !== "ok") {
     return (
       <section className="panel">
@@ -152,26 +281,16 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
         {snapshot.connection === "fixture" ? " Fixture data." : ""}
       </p>
 
-      <div className="kpis kpis-3">
+      <div className="kpis kpis-2">
         <Kpi
-          label="Memberships"
-          value={members?.memberships != null ? count(members.memberships) : "Not shown"}
-          tone={members?.memberships != null ? undefined : "unavailable"}
-          detail={
-            members?.memberships != null
-              ? `${count(members.households!)} households and ${count(members.memberships - members.households!)} individual members`
-              : undefined
-          }
-        />
-        <Kpi
-          label="People"
+          label="Members"
           value={members ? count(members.total) : "Not shown"}
           tone={members ? undefined : "unavailable"}
-          detail={members ? "Active members in LGL today" : undefined}
+          detail={members ? "People with an active membership, including minors" : undefined}
           href={members?.url}
         />
         <Kpi
-          label={`New people in ${year}`}
+          label={`New members in ${year}`}
           value={isNew !== null ? count(isNew) : "Not shown"}
           tone={isNew !== null ? undefined : "unavailable"}
           detail={isNew !== null ? "First membership began this year" : undefined}
@@ -182,6 +301,18 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
       <div className="stack membership-cards">
         {members ? <Levels members={members} /> : null}
         {snapshot.renewals ? <Renewals renewals={snapshot.renewals} /> : null}
+      </div>
+
+      <h2 className="section-title section-divide">Dues and finance</h2>
+      <div className="stack membership-cards">
+        {members?.memberships ? (
+          <MembershipTypes memberships={members.memberships} reconciliation={reconciliation} checking={checking} />
+        ) : (
+          <section className="card card-pad">
+            <h2>Dues-paying memberships</h2>
+            <p className="unavailable">Not shown. The dues categories or rates are not set on the Worker.</p>
+          </section>
+        )}
       </div>
 
       {monthly && members?.dues ? (
@@ -198,24 +329,25 @@ export function MembershipView({ snapshot }: { snapshot: CommunitySnapshot }) {
           </div>
           <p className="note">
             <LglLink url={members.dues.url}>
-              {count(members.dues.payers)} people paid {usd.format(members.dues.amount)}
-            </LglLink>{" "}
-            in dues this year. Members outnumber them because one payment can cover a household, and some paid before
-            January or through the December drive.
+              {usd.format(members.dues.amount)} in dues this year from {count(members.dues.payments)} dues{" "}
+              {members.dues.payments === 1 ? "payment" : "payments"}
+            </LglLink>
+            , one for each membership that paid this year.
           </p>
         </>
       ) : null}
 
-      <div className="panel-footer">
+      <How label="About this page">
         <p>
-          <strong>Source:</strong> {snapshot.source}. Linked numbers open in LGL, which needs its own login. Names are in
-          LGL, not here.
+          Source: {snapshot.source}. Linked numbers open in LGL, which needs its own login. Names are in LGL, not here.
+          {snapshot.cached ? " LGL is read about once an hour, so a change there can take that long to show." : ""}
         </p>
         <p>
-          <strong>Data retrieved from LGL:</strong> {formatRetrievedAt(snapshot.retrievedAt)}
-          {snapshot.cached ? " (cached, refreshed about once an hour)" : ""}
+          New means a first membership record that began this year, so someone long-standing who was entered
+          in LGL late can look new.
         </p>
-      </div>
+      </How>
+      <SourceLine lgl={snapshot.retrievedAt} qbo={reconciliation?.qboRetrievedAt} />
     </section>
   );
 }

@@ -1,4 +1,5 @@
-import { formatRetrievedAt, usd } from "./format";
+import { How } from "./Disclosure";
+import { usd } from "./format";
 import { QboLink } from "./LglLink";
 import type { AccountSnapshot, FundsSnapshot, PurposeSubtotal } from "./types";
 
@@ -100,18 +101,16 @@ export function FundsSnapshotView({ snapshot }: { snapshot: FundsSnapshot }) {
         {rebuild ? <SubtotalCard subtotal={rebuild} /> : null}
       </div>
 
-      <div className="panel-footer">
+      <How>
         <p>
-          <strong>Source:</strong> {snapshot.source}.{" "}
-          {snapshot.environment === "sandbox"
-            ? "These are test figures. Reading HPIC's real accounts needs QuickBooks production keys, which require Intuit's approval. Nothing else has to change when they are issued."
-            : "Book balance reflects transactions entered in QuickBooks, not the live bank-feed balance, which the QuickBooks API does not expose."}
+          These are QuickBooks book balances: what the books show once transactions are entered, not the live balance at
+          the bank, which QuickBooks does not make available. Source: {snapshot.source}.
         </p>
         <p>
-          <strong>Data retrieved from QuickBooks:</strong> {formatRetrievedAt(snapshot.retrievedAt)}
-          {snapshot.cached ? " (served from a cached read, refreshed at least every 15 minutes)" : ""}
+          The total is shown only when every rebuild account was read, so an account that failed can never make it look
+          smaller than it is. Programming cash is on the Overview.
         </p>
-      </div>
+      </How>
     </section>
   );
 }

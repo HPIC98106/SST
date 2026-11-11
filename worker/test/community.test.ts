@@ -4,8 +4,8 @@
  *
  * Pinned: members are LGL's active list, never counted from dues gifts; "new"
  * means a first membership this year; only cash gift types count; dues, grant
- * payments and purchases do not make a donor or count as giving; households are
- * people linked to another active member; a member's latest dues gift says how
+ * payments and purchases do not make a donor or count as giving; a membership is
+ * one dues payment and its type comes from the amount; a member's latest dues gift says how
  * they renew, and no gift means nothing says so; the next quarter wraps into the
  * new year correctly; operating awards report what is still to arrive; a page walk
  * that stops early reports nothing at all; the cached snapshot outlasts the cron
@@ -84,48 +84,117 @@ describe("members", () => {
     ]);
     expect(snapshot.members?.byLevel.map((l) => [l.level, l.count])).toEqual([["Classic", 2], ["Champion", 1]]);
   });
+});
 
-  const linked = (id: number, to: number, name = "Household"): LglMember => ({
+describe("dues-paying memberships", () => {
+  const RATED = communityConfig({
+    LGL_MEMBERSHIP_CAMPAIGN_IDS: "846",
+    LGL_MEMBERSHIP_CATEGORY_IDS: "6081",
+    LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: "6096",
+    LGL_DUES_RATES: "Classic individual=20,20.60;Classic household=40,41.20;Champion individual=100,103;Champion household=200,206",
+    LGL_UI_BASE_URL: "https://lgl.test",
+  } as Env);
+  const classic = (id: number, relationships: LglMember["relationships"] = []): LglMember => ({
     ...member(id, ["Classic", "2026-02-01", "2027-02-01"]),
-    relationships: [{ name, related_constituent_id: to }],
+    relationships,
+  });
+  const paid = (who: number, amount: number, category = 6096, date = "2026-02-01") =>
+    gift({ constituent_id: who, gift_category_id: category, campaign_id: 846, received_amount: amount, received_date: date });
+  const credited = (who: number, payment: LglGift) =>
+    gift({
+      constituent_id: who,
+      gift_type_name: "Soft Credit",
+      gift_category_id: payment.gift_category_id,
+      parent_gift_id: payment.id,
+      received_amount: payment.received_amount,
+      received_date: payment.received_date,
+    });
+  const memberships = (gifts: LglGift[], active: LglMember[], config = RATED) =>
+    assembleCommunity(gifts, active, "2026-10-30", config, BASE).members!.memberships;
+  const type = (m: NonNullable<ReturnType<typeof memberships>>, level: string, kind: string) =>
+    m.types.find((t) => t.level === level && t.type === kind)!;
+  const finding = (m: NonNullable<ReturnType<typeof memberships>>, key: string) => m.findings.find((f) => f.key === key)!;
+
+  it("counts one membership per dues payment, with everyone credited on it", () => {
+    const household = paid(1, 41.2);
+    const m = memberships(
+      [household, credited(2, household), credited(3, household), paid(4, 20), paid(5, 103)],
+      [classic(1), classic(2), classic(3), classic(4), classic(5)],
+    )!;
+    // Five people on three payments: one household of three and two individuals.
+    expect(m.total).toBe(3);
+    expect(type(m, "Classic", "household")).toMatchObject({ count: 1, rate: 40, expected: 40 });
+    expect(type(m, "Classic", "individual")).toMatchObject({ count: 1, rate: 20, expected: 20 });
+    // The card fee is not dues: $103 is a $100 membership.
+    expect(type(m, "Champion", "individual")).toMatchObject({ count: 1, rate: 100, expected: 100 });
+    expect(m.expectedDues).toBe(160);
   });
 
-  it("makes one household of people linked through each other", () => {
-    const snapshot = assemble([], "2026-10-30", [
-      // 2 is linked to both 1 and 3, who are not linked to each other.
-      linked(1, 2),
-      linked(2, 3),
-      member(3, ["Classic", "2026-02-01", "2027-02-01"]),
-      linked(4, 5, "Spouse/Partner"),
-      member(5, ["Champion", "2026-02-01", "2027-02-01"]),
-      member(6, ["Classic", "2026-02-01", "2027-02-01"]),
+  it("takes the type from what was paid, not from who is linked to whom", () => {
+    // Paid the household rate, but nobody in LGL is linked to them: still a household membership.
+    const unlinked = memberships([paid(1, 40)], [classic(1)])!;
+    expect(type(unlinked, "Classic", "household").count).toBe(1);
+    expect(finding(unlinked, "household_one_member").records).toMatchObject([{ kind: "gift", amount: 40 }]);
+
+    // Linked partners who each paid the individual rate: two memberships, not one household.
+    const link = (to: number) => [{ name: "Spouse/Partner", related_constituent_id: to }];
+    const partners = memberships([paid(1, 20), paid(2, 20)], [classic(1, link(2)), classic(2, link(1))])!;
+    expect(partners.total).toBe(2);
+    expect(type(partners, "Classic", "individual").count).toBe(2);
+    expect(finding(partners, "separate_individual").records.map((r) => [r.kind, r.id])).toEqual([["member", 1], ["member", 2]]);
+  });
+
+  it("uses each member's latest dues payment", () => {
+    // Was an individual last year, a household this year.
+    const m = memberships([paid(1, 20, 6081, "2025-02-01"), paid(1, 40, 6096, "2026-02-01")], [classic(1)])!;
+    expect(m.total).toBe(1);
+    expect(type(m, "Classic", "household").count).toBe(1);
+    expect(type(m, "Classic", "individual").count).toBe(0);
+  });
+
+  it("counts a payment matching no rate, but in no type and not in expected dues", () => {
+    const odd = paid(1, 80);
+    const m = memberships([odd, paid(2, 20)], [classic(1), classic(2)])!;
+    expect(m).toMatchObject({ total: 2, unmatched: 1, expectedDues: 20 });
+    expect(finding(m, "unmatched_amount").records).toEqual([{ id: odd.id, kind: "gift", amount: 80, url: `https://lgl.test/gifts/${odd.id}` }]);
+  });
+
+  it("leaves a member with no dues payment out of every membership", () => {
+    const m = memberships([paid(1, 20)], [classic(1), classic(2)])!;
+    expect(m.total).toBe(1);
+  });
+
+  it("ignores a payment by someone who is not an active member", () => {
+    expect(memberships([paid(9, 40)], [classic(1)])!.total).toBe(0);
+  });
+
+  it("flags an individual-rate payment with several members credited", () => {
+    const single = paid(1, 20);
+    const m = memberships([single, credited(2, single)], [classic(1), classic(2)])!;
+    expect(finding(m, "individual_several_members").records.map((r) => r.id)).toEqual([single.id]);
+  });
+
+  it("reports every check, so an empty one reads as checked", () => {
+    const m = memberships([paid(1, 20)], [classic(1)])!;
+    expect(m.findings.map((f) => [f.key, f.records.length])).toEqual([
+      ["household_one_member", 0],
+      ["individual_several_members", 0],
+      ["separate_individual", 0],
+      ["unmatched_amount", 0],
     ]);
-    expect(snapshot.members?.households).toBe(2);
-    // Six people: two households (1-2-3 and 4-5) and one member on their own.
-    expect(snapshot.members?.memberships).toBe(3);
-    const classic = snapshot.members?.byLevel.find((l) => l.level === "Classic");
-    expect(classic).toMatchObject({ count: 5, inHousehold: 4, individual: 1 });
-    expect(snapshot.members?.byLevel.find((l) => l.level === "Champion")).toMatchObject({ inHousehold: 1, individual: 0 });
   });
 
-  it("does not count a link to someone who is not an active member", () => {
-    const snapshot = assemble([], "2026-10-30", [linked(1, 99)]);
-    expect(snapshot.members?.households).toBe(0);
-    expect(snapshot.members?.byLevel[0]).toMatchObject({ inHousehold: 0, individual: 1 });
+  it("still counts memberships when relationships did not come back", () => {
+    const { relationships: _, ...bare } = classic(1);
+    expect(memberships([paid(1, 20)], [bare])!.total).toBe(1);
   });
 
-  it("does not count a relationship that is not a household", () => {
-    const snapshot = assemble([], "2026-10-30", [linked(1, 2, "Employer"), member(2, ["Classic", "2026-02-01", "2027-02-01"])]);
-    expect(snapshot.members?.households).toBe(0);
-  });
-
-  it("says nothing about households when relationships did not come back", () => {
-    const { relationships: _, ...bare } = member(1, ["Classic", "2026-02-01", "2027-02-01"]);
-    const snapshot = assemble([], "2026-10-30", [bare]);
-    expect(snapshot.members?.households).toBeNull();
-    // Not a head count in disguise: with households unknown, so are memberships.
-    expect(snapshot.members?.memberships).toBeNull();
-    expect(snapshot.members?.byLevel[0]).toMatchObject({ count: 1, inHousehold: null, individual: null });
+  it("shows nothing without rates, or with a rate it cannot read", () => {
+    const gifts = [paid(1, 20)];
+    expect(memberships(gifts, [classic(1)], { ...RATED, duesRates: null })).toBeNull();
+    expect(communityConfig({ LGL_DUES_RATES: "Classic individual=20;Classic family=40" } as Env).duesRates).toBeNull();
+    expect(communityConfig({ LGL_DUES_RATES: "Classic individual=twenty" } as Env).duesRates).toBeNull();
+    expect(communityConfig({} as Env).duesRates).toBeNull();
   });
 
   it("counts dues from cash only, and only up to LGL's own today", () => {
@@ -456,7 +525,7 @@ describe("the cached snapshot", () => {
     const stub = env.TOKEN_STORE.get(env.TOKEN_STORE.idFromName("qbo"));
     const snapshot = assemble([dues(1, "2026-05-01")]);
     await runInDurableObject(stub, (_instance, state) =>
-      state.storage.put("community-v5", { snapshot, cachedAt: Date.now() - age }),
+      state.storage.put("community-v6", { snapshot, cachedAt: Date.now() - age }),
     );
     const lgl = vi.fn(async () =>
       new Response(JSON.stringify({ items: [], total_items: 0 }), {
@@ -521,8 +590,18 @@ describe("the last thirty days", () => {
       gift({ constituent_id: 4, campaign_id: 841, gift_category_id: 6076, received_amount: 7000, received_date: "2026-10-20" }),
     ]);
     expect(window.gifts).toMatchObject({ count: 1, amount: 50 });
-    expect(window.grantPayments).toMatchObject({ count: 1, amount: 7000 });
+    expect(window.programGrantPayments).toMatchObject({ count: 1, amount: 7000 });
     expect(window.dues).toMatchObject({ count: 1, amount: 40 });
+  });
+
+  it("leaves rebuild grant payments out: they are on the Rebuild tab", () => {
+    const rebuildAward = gift({ gift_type_name: "Pledge", gift_category_id: 6031, campaign_id: 871, received_amount: 100000, received_date: "2025-01-01" });
+    const window = recent([
+      rebuildAward,
+      gift({ constituent_id: 4, gift_category_id: 6076, parent_gift_id: rebuildAward.id, received_amount: 38000, received_date: "2026-10-20" }),
+      gift({ constituent_id: 5, campaign_id: 841, gift_category_id: 6076, received_amount: 7000, received_date: "2026-10-20" }),
+    ]);
+    expect(window.programGrantPayments).toMatchObject({ count: 1, amount: 7000 });
   });
 
   it("calls a member new only if their first record began in the window", () => {
@@ -549,7 +628,7 @@ describe("the last thirty days", () => {
     expect(window.gifts?.url).toBe(
       "https://lgl.test/fundraising/search/gt/gift/phase/1,12/ni-campaign/846/ni-category/6076,6134/from/2026-10-03/to/2026-11-01",
     );
-    expect(window.grantPayments?.url).toBe(`https://lgl.test/fundraising/search/gt/gift/gids/${paid.id}`);
+    expect(window.programGrantPayments?.url).toBe(`https://lgl.test/fundraising/search/gt/gift/gids/${paid.id}`);
   });
 });
 

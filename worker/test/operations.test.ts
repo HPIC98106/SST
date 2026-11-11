@@ -155,6 +155,15 @@ describe("the year so far", () => {
     expect(snapshot.trailingTwelveMonthSpending).toBeCloseTo(expected, 2);
   });
 
+  it("gives each line its own last twelve completed months", () => {
+    const snapshot = assemble();
+    const spending = snapshot.groups.filter((g) => g.side === "spending");
+    // The lines' twelve months add up to the total the cash figure uses.
+    expect(spending.reduce((s, g) => s + g.trailing!.amount, 0)).toBeCloseTo(snapshot.trailingTwelveMonthSpending!, 2);
+    // Nine months complete, so the twelve run from last October to this September.
+    expect(spending[0].trailing).toMatchObject({ from: "2025-10-01", through: "2026-09-30" });
+  });
+
   it("charts completed months only, with the full year of budget", () => {
     const { monthly } = assemble();
     expect(monthly!.months[0]).toBe("2026-01");

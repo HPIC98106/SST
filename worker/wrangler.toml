@@ -152,6 +152,19 @@ LGL_NON_DONATION_CATEGORY_IDS = "6134"
 LGL_MEMBERSHIP_CATEGORY_IDS = "6081"
 LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS = "6096"
 
+# What each kind of membership pays a year, and which payment amounts mean that
+# kind. LGL's levels are Classic, Champion and Minor: none says individual or
+# household, so the amount paid tells them apart. The first amount is the annual
+# rate; the second is the same dues with the 3% card fee covered. Minors pay no
+# dues and are members on a household's payment. Checked against live LGL on
+# 2026-11-10: every active member's latest dues payment matched one of these
+# except two (an $80 and a $250), which the Reconciliation tab lists.
+LGL_DUES_RATES = "Classic individual=20,20.60;Classic household=40,41.20;Champion individual=100,103;Champion household=200,206"
+
+# How far expected dues (memberships x rates) may sit from the dues QuickBooks
+# booked over the last twelve months before Reconciliation flags it, in percent.
+DUES_CHECK_TOLERANCE_PCT = "15"
+
 # The construction phase the readiness panel measures against.
 #
 # This is the one figure on the dashboard that no system holds: it arrives from

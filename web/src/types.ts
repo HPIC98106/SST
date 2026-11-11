@@ -184,6 +184,8 @@ export interface OperationsLine {
 export interface OperationsGroup extends OperationsLine {
   side: PlSide;
   accounts: OperationsLine[];
+  /** This line over the last twelve completed months. Null when last year could not be read. */
+  trailing?: { amount: number; from: string; through: string; url: string | null } | null;
 }
 
 export interface MonthlySide {
@@ -249,6 +251,8 @@ export interface GrantDetail {
   overBy: number | null;
   status: GrantStatus;
   terms: ReimbursableStatus;
+  /** The Payment Terms value as LGL holds it, such as "Payment in full". Null when unset. */
+  termsValue: string | null;
   termsUnreadable: string | null;
   payments: { id: number; date: string; amount: number; url: string | null }[];
   /** Undated installments in LGL. Never counted as received. */
@@ -290,10 +294,34 @@ export interface CampaignGiving {
 export interface MemberLevel {
   level: string;
   count: number;
-  /** Null when LGL's relationships did not come back with the members. */
-  inHousehold: number | null;
-  individual: number | null;
   url: string | null;
+}
+
+/** One kind of dues-paying membership: a level, and individual or household. Counts accounts. */
+export interface MembershipType {
+  level: string;
+  type: "individual" | "household";
+  rate: number;
+  count: number;
+  expected: number;
+}
+
+/** Memberships the cross-checks cannot square. Record numbers only, never names. */
+export interface MembershipFinding {
+  key: "household_one_member" | "individual_several_members" | "separate_individual" | "unmatched_amount";
+  label: string;
+  detail: string;
+  records: { id: number; kind: "gift" | "member"; amount: number | null; url: string | null }[];
+}
+
+/** One per dues payment: an active member's latest, with every active member credited on it. */
+export interface Memberships {
+  total: number;
+  types: MembershipType[];
+  /** Payments whose amount matches no rate: in `total`, in no type, not in `expectedDues`. */
+  unmatched: number;
+  expectedDues: number;
+  findings: MembershipFinding[];
 }
 
 /** Members whose membership ends in one month, by how it renews. Counts people. */
@@ -354,15 +382,10 @@ export interface CommunitySnapshot {
     /** First membership began this year. Null if a member has no dated record. */
     newThisYear: number | null;
     byLevel: MemberLevel[];
-    /** Households of two or more active members. Null like `MemberLevel.inHousehold`. */
-    households: number | null;
-    /**
-     * Memberships: one per household plus one per member who is in none. Null like
-     * `households`. No LGL search lists these, so the figure has no link.
-     */
-    memberships: number | null;
-    /** Who paid dues this year: fewer than `total`, since a household shares one. */
-    dues: { payers: number; amount: number; url: string | null } | null;
+    /** Null when dues categories or rates are not configured. No LGL search lists these. */
+    memberships: Memberships | null;
+    /** Dues paid this year: fewer payers than members, since a household shares one payment. */
+    dues: { payers: number; payments: number; amount: number; url: string | null } | null;
     url: string | null;
     newUrl: string | null;
   } | null;
@@ -420,7 +443,8 @@ export interface CommunitySnapshot {
     dues: RecentActivity | null;
     gifts: RecentActivity | null;
     /** Provisional, like every LGL payment figure. */
-    grantPayments: RecentActivity | null;
+    /** Program and operating awards only; rebuild payments are on the Rebuild tab. */
+    programGrantPayments: RecentActivity | null;
   } | null;
   /** Grant payments this year and last, to set against QuickBooks. Null if not configured. */
   grantPayments: GrantPayment[] | null;
@@ -448,6 +472,20 @@ export interface ReconciliationRow {
   note?: string;
 }
 
+/** Expected dues from today's memberships against dues QuickBooks booked over twelve months. */
+export interface DuesCheck {
+  status: "within" | "flagged" | "unavailable";
+  expected: number | null;
+  received: number | null;
+  difference: number | null;
+  percent: number | null;
+  tolerancePct: number;
+  from: string | null;
+  through: string | null;
+  receivedUrl: string | null;
+  note?: string;
+}
+
 export interface ReconciliationSnapshot {
   /** "ok" only when both systems read completely. Otherwise nothing was compared. */
   status: "ok" | "unavailable";
@@ -455,6 +493,7 @@ export interface ReconciliationSnapshot {
   /** Completed months only, the same as Operations. */
   period: { from: string; through: string } | null;
   rows: ReconciliationRow[];
+  duesCheck: DuesCheck;
   lglRetrievedAt: string | null;
   qboRetrievedAt: string | null;
 }

@@ -8,6 +8,12 @@
  * distance to the next phase would be no better: that gap barely moves from one
  * visit to the next. The gap is not hidden, it is on the Rebuild tab, one click away.
  *
+ * Revised 2026-11-10, after talking with board members: the headline is members,
+ * meaning people, and the rebuild card carries the Rebuild tab's own figures
+ * (estimate, still to raise, share covered) so the two pages cannot disagree. It
+ * still does not lead with the gap. Each card keeps one visible sentence at most;
+ * the rest is under "How this is calculated".
+ *
  * No to-do lists and no names: the records that need fixing live on Reconciliation.
  * But "safe to show" never means hiding a problem: a figure that cannot be read
  * still says so here, in place, and whether the two systems agree is always on the
@@ -15,7 +21,9 @@
  */
 
 import type { ReactNode } from "react";
-import { formatRetrievedAt, monthAbbrev, usd } from "./format";
+import { How, SourceLine } from "./Disclosure";
+import { monthAbbrev, usd } from "./format";
+import { fundingFigures } from "./FundingBar";
 import { LglLink, QboLink } from "./LglLink";
 import { NO_DUES_ANCHOR, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
 import { monthsOfCash } from "./YearSoFar";
@@ -23,6 +31,7 @@ import type {
   AccountSnapshot,
   CommunitySnapshot,
   FundsSnapshot,
+  GrantDetailsSnapshot,
   GrantSnapshot,
   OperationsSnapshot,
   ReconciliationSnapshot,
@@ -64,6 +73,7 @@ export interface Pending {
   operations: boolean;
   community: boolean;
   reconciliation: boolean;
+  grantDetails: boolean;
 }
 
 /** In place of a figure whose read is still under way. */
@@ -134,7 +144,8 @@ function RecentLine({ label, activity, noun, provisional }: { label: string; act
     <li>
       <span>
         {label}
-        {activity ? <small>{plural(activity.count, noun)}{provisional ? ". Provisional." : ""}</small> : null}
+        {provisional && activity ? <span className="tag tag-warn">Provisional</span> : null}
+        {activity ? <small>{plural(activity.count, noun)}</small> : null}
       </span>
       {activity ? (
         <span className="num">
@@ -180,55 +191,38 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
       <div className="hero-main">
         <span className="hero-label">The club today</span>
         {/*
-          Memberships lead: one per household plus one per member on their own
-          (2026-11-09). If households could not be read, the count of people
-          stands in, labelled as people, rather than a memberships figure that
-          is really a head count.
+          Members lead, and they are people (2026-11-10): that is what the board
+          counts. Dues-paying memberships are a finance figure and live on the
+          Membership tab, never beside this as a second headline.
         */}
-        {members.memberships != null ? (
-          <p className="hero-value">
-            {members.memberships.toLocaleString("en-US")}
-            <span className="hero-unit"> memberships</span>
-          </p>
-        ) : (
-          <p className="hero-value">
-            <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
-            <span className="hero-unit"> members</span>
-          </p>
-        )}
+        <p className="hero-value">
+          <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
+          <span className="hero-unit"> members</span>
+        </p>
         <div className="hero-split">
-          {members.memberships != null ? (
-            <div>
-              <span>People</span>
-              <strong>
-                <LglLink url={members.url}>{members.total.toLocaleString("en-US")}</LglLink>
-              </strong>
-            </div>
-          ) : null}
-          {members.households !== null ? (
-            <div>
-              <span>Households</span>
-              <strong>{members.households.toLocaleString("en-US")}</strong>
-            </div>
-          ) : null}
           <div>
-            <span>New people in {community!.year}</span>
+            <span>New members in {community!.year}</span>
             <strong>
               {members.newThisYear === null ? "Not shown" : <LglLink url={members.newUrl}>{members.newThisYear.toLocaleString("en-US")}</LglLink>}
             </strong>
           </div>
         </div>
         <p className="hero-note">
-          Active in LGL, {formatRetrievedAt(community!.retrievedAt)}.
-          {members.memberships != null
-            ? " A household counts as one membership, however many people are in it."
-            : ""}{" "}
-          New means a first membership record that began this year, so someone long-standing who was entered in LGL late
-          can look new.{" "}
+          People with an active membership in LGL, including minors.{" "}
           <button type="button" className="hero-more" onClick={() => open("membership")}>
             See Membership
           </button>
         </p>
+        <How>
+          <p>
+            A member is a person whose membership record in LGL has not expired. It is LGL's own list, not a count of
+            dues payments, since one payment can cover a household.
+          </p>
+          <p>
+            New means a first membership record that began this year, so someone long-standing who was entered in LGL
+            late can look new.
+          </p>
+        </How>
       </div>
 
       {recent ? (
@@ -237,7 +231,7 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
             <h3>The last 30 days</h3>
             <ul>
               <li>
-                <span>New people</span>
+                <span>New members</span>
                 {recent.newMembers ? (
                   <span className="num">
                     <LglLink url={recent.newMembers.url}>{recent.newMembers.count.toLocaleString("en-US")}</LglLink>
@@ -248,7 +242,7 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
               </li>
               <RecentLine label="Dues" activity={recent.dues} noun="payment" />
               <RecentLine label="Gifts" activity={recent.gifts} noun="gift" />
-              <RecentLine label="Grant payments" activity={recent.grantPayments} noun="payment" provisional />
+              <RecentLine label="Program grant payments" activity={recent.programGrantPayments} noun="payment" provisional />
             </ul>
           </div>
         </div>
@@ -258,7 +252,17 @@ function ClubToday({ community, reading, open }: { community: CommunitySnapshot 
 }
 
 /** What is on its way: renewals, and what giving usually brings in the coming months. */
-function ComingUp({ community, reading }: { community: CommunitySnapshot | null; reading: boolean }) {
+function ComingUp({
+  community,
+  grantDetails,
+  reading,
+  readingGrants,
+}: {
+  community: CommunitySnapshot | null;
+  grantDetails: GrantDetailsSnapshot | null;
+  reading: boolean;
+  readingGrants: boolean;
+}) {
   if (reading) {
     return (
       <section className="card card-pad">
@@ -278,7 +282,8 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
   const soon = community.renewals?.soon ?? null;
   const quarter = community.nextQuarter;
   const span = quarter ? `${monthAbbrev(quarter.months[0])} to ${monthAbbrev(quarter.months[2])}` : null;
-  const operating = community.operatingGrants;
+  // The Grants tab's own total, so the two pages show the same figure.
+  const program = grantDetails?.status === "ok" ? grantDetails.totals.operating : null;
 
   return (
     <section className="card card-pad">
@@ -287,7 +292,7 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
       {soon ? (
         <>
           <h3 className="card-subhead">
-            <span>Memberships ending in the next 90 days</span>
+            <span>Members up for renewal in the next 90 days</span>
             <strong className="num">
               <LglLink url={soon.url}>{soon.total.toLocaleString("en-US")}</LglLink>
             </strong>
@@ -300,21 +305,23 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
               </span>
             </li>
             <li>
-              <span>Renew by hand</span>
+              <span>Renewing by hand</span>
               <span className="num">
                 <LglLink url={soon.manualUrl}>{soon.manual.toLocaleString("en-US")}</LglLink>
               </span>
             </li>
-            {soon.noDues > 0 ? (
-              <li>
-                <span>No dues on record, so how they renew is unknown</span>
-                <span className="num">
+            <li>
+              <span>Renewal method unknown</span>
+              <span className="num">
+                {soon.noDues > 0 ? (
                   <a className="lgl-link" href={`#${NO_DUES_ANCHOR}`} title="See who they are on the Reconciliation tab">
                     {soon.noDues.toLocaleString("en-US")}
                   </a>
-                </span>
-              </li>
-            ) : null}
+                ) : (
+                  "0"
+                )}
+              </span>
+            </li>
           </ul>
         </>
       ) : null}
@@ -334,30 +341,46 @@ function ComingUp({ community, reading }: { community: CommunitySnapshot | null;
                 </span>
               </li>
             ))}
-            {operating && operating.remaining > 0 ? (
-              <li>
-                <span>
-                  Operating grants awarded, not yet received
-                  <small>
-                    {plural(operating.awards.length, "award")}; timing set by each funder. Provisional, and not part of
-                    the projection.
-                  </small>
-                </span>
-                <span className="num">
-                  <LglLink url={operating.remainingUrl}>{usd.format(operating.remaining)}</LglLink>
-                </span>
-              </li>
-            ) : null}
           </ul>
-          <p className="note">Giving lines are what the same months brought a year earlier, not a forecast of this year.</p>
+          <p className="note">Same months last year, not a forecast.</p>
         </>
       ) : null}
+
+      <h3 className="card-subhead card-subhead-next">
+        <span>
+          Program grants awarded, not yet received <span className="tag tag-warn">Provisional</span>
+        </span>
+        {readingGrants ? (
+          <strong className="num muted">Reading…</strong>
+        ) : program?.stillToArrive != null ? (
+          <strong className="num">
+            <a className="lgl-link" href="#grants" title="See each award on the Grants tab">
+              {usd.format(program.stillToArrive)}
+            </a>
+          </strong>
+        ) : (
+          <strong className="num unavailable">Not shown</strong>
+        )}
+      </h3>
+
+      <How>
+        <p>
+          <strong>Up for renewal</strong> counts members, so a household renewing on one payment counts once per person.
+          Auto-renew means their latest dues payment is coded Membership-Recurring in LGL. Method unknown means no dues
+          payment is on record for them; they are listed on Reconciliation.
+        </p>
+        <p>
+          <strong>Expected from giving</strong> is what the same three months brought in a year earlier. It is a guide to
+          the season, not a pledge or a forecast, and it is never added to cash.
+        </p>
+        <p>
+          <strong>Program grants awarded, not yet received</strong> is each program or operating award less the payments
+          LGL links to it, the same figure as Still to come on the Grants tab. When it arrives is up to each funder.
+        </p>
+      </How>
     </section>
   );
 }
-
-const bookBalanceNote = (funds: FundsSnapshot) =>
-  `${funds.environment === "sandbox" ? "Test company, not HPIC's books. " : ""}${funds.connection === "fixture" ? "Fixture data. " : ""}QuickBooks book balances, ${formatRetrievedAt(funds.retrievedAt)}.`;
 
 /** The day-to-day organization: how the year is going and what it has to run on. */
 function DayToDay({
@@ -417,14 +440,12 @@ function DayToDay({
         </li>
         <li>
           <span>
-            Months of operating cash
-            <small>
-              {pending.operations || pending.funds
-                ? "Reading from QuickBooks…"
-                : cash?.value
-                  ? "Programming cash at the last twelve months' rate of spending"
-                  : "Needs this year's figures"}
-            </small>
+            Months of operating cash at current spending
+            {pending.operations || pending.funds ? (
+              <small>Reading from QuickBooks…</small>
+            ) : cash?.value ? null : (
+              <small>Needs this year's figures</small>
+            )}
           </span>
           {pending.operations || pending.funds ? (
             <span className="num muted">Reading…</span>
@@ -485,7 +506,27 @@ function DayToDay({
             </ul>
           </div>
           {programming?.total == null && programming?.note ? <p className="note">{programming.note}</p> : null}
-          <p className="note">{bookBalanceNote(funds)}</p>
+          {funds.environment === "sandbox" || funds.connection === "fixture" ? (
+            <p className="banner banner-warn">
+              {funds.environment === "sandbox" ? "Test company, not HPIC's books." : "Fixture data, not HPIC's books."}
+            </p>
+          ) : null}
+          <How>
+            <p>
+              <strong>Net operating income</strong> is income less spending on day-to-day accounts, for the completed
+              months of the year, with rebuild money left out.
+            </p>
+            <p>
+              <strong>Months of operating cash</strong> is programming cash divided by average monthly operating spending
+              over the last twelve completed months. {cash?.value ? cash.note : ""} Current spending does not include
+              running a building, so this will fall once the clubhouse reopens.
+            </p>
+            <p>
+              <strong>Programming cash</strong> is the QuickBooks book balance of the programming accounts: what the books
+              show once transactions are entered, not the live bank balance. Rebuild cash is separate, on the Rebuild
+              tab.
+            </p>
+          </How>
         </>
       ) : (
         <p className="muted">Balances could not be read from QuickBooks.</p>
@@ -495,9 +536,9 @@ function DayToDay({
 }
 
 /**
- * The rebuild as plain facts: what funders have awarded, what has arrived, what is in
- * the rebuild accounts. Awards and cash are separate lines and are never added
- * together. How far this goes toward the next phase is on the Rebuild tab.
+ * The rebuild in the Rebuild tab's own three figures, from the same function that
+ * tab uses, so the two pages always agree. Awarded money counts toward "covered"
+ * but is never called money in hand; what that means is on the Rebuild tab.
  */
 function RebuildFacts({
   funds,
@@ -510,65 +551,58 @@ function RebuildFacts({
   pending: Pending;
   open: (tab: Tab) => void;
 }) {
-  const stage = (key: "pledged" | "received") => grants?.stages.find((s) => s.key === key);
-  const pledged = stage("pledged");
-  const received = stage("received");
-  const cash = funds?.subtotals?.find((s) => s.purpose === "rebuild");
+  const { target, toRaise, covered } = fundingFigures(funds, grants);
+  const name = grants?.phaseTarget.name ?? "Next phase";
+  const reading = pending.funds || pending.grants;
+  const figure = (value: string | null) =>
+    reading ? (
+      <span className="num muted">Reading…</span>
+    ) : value !== null ? (
+      <span className="num">{value}</span>
+    ) : (
+      <span className="num unavailable">Not shown</span>
+    );
 
   return (
     <section className="card card-pad">
       <div className="card-head">
         <h2>The rebuild</h2>
         <button type="button" className="link-button" onClick={() => open("rebuild")}>
-          Funding and estimate
+          Rebuild
         </button>
       </div>
       <ul className="line-list">
         <li>
+          <span>{name} estimate</span>
+          {figure(target !== null ? usd.format(target) : null)}
+        </li>
+        <li>
           <span>
-            Awarded by funders
-            {pledged?.recordCount != null ? <small>{plural(pledged.recordCount, "award")}</small> : null}
+            <strong>Still to raise</strong>
           </span>
-          {pending.grants ? (
+          {reading ? (
             <span className="num muted">Reading…</span>
-          ) : pledged?.amount != null ? (
-            <span className="num">
-              <LglLink url={pledged.figureUrl}>{usd.format(pledged.amount)}</LglLink>
-            </span>
+          ) : toRaise !== null ? (
+            <strong className="num">{usd.format(toRaise)}</strong>
           ) : (
             <span className="num unavailable">Not shown</span>
           )}
         </li>
         <li>
-          <span>
-            Received so far
-            {received?.status === "provisional" ? <small>Provisional, from LGL payment records</small> : null}
-          </span>
-          {pending.grants ? (
-            <span className="num muted">Reading…</span>
-          ) : received?.amount != null ? (
-            <span className="num">
-              <LglLink url={received.figureUrl}>{usd.format(received.amount)}</LglLink>
-            </span>
-          ) : (
-            <span className="num unavailable">Not shown</span>
-          )}
-        </li>
-        <li>
-          <span>
-            In the rebuild accounts
-            {funds ? <small>{bookBalanceNote(funds)}</small> : null}
-          </span>
-          {pending.funds ? (
-            <span className="num muted">Reading…</span>
-          ) : cash?.total != null ? (
-            <span className="num">{usd.format(cash.total)}</span>
-          ) : (
-            <span className="num unavailable">Not shown</span>
-          )}
+          <span>Share of estimate covered</span>
+          {figure(covered !== null ? `${covered}%` : null)}
         </li>
       </ul>
-      <p className="note">Reimbursable awards pay only after HPIC spends and invoices, so they are not money in hand.</p>
+      <How>
+        <p>
+          <strong>Still to raise</strong> is the estimate, less cash in the rebuild accounts, less rebuild grants awarded
+          but not yet received. <strong>Covered</strong> is that cash and those grants as a share of the estimate.
+        </p>
+        <p>
+          The estimate is from Metis and entered by hand. The grants are reimbursable, so they count here but cannot pay
+          for work up front. Both points are spelled out on the Rebuild tab.
+        </p>
+      </How>
     </section>
   );
 }
@@ -638,6 +672,7 @@ export function OverviewView({
   operations,
   community,
   reconciliation,
+  grantDetails,
   pending,
   open,
 }: {
@@ -646,6 +681,7 @@ export function OverviewView({
   operations: OperationsSnapshot | null;
   community: CommunitySnapshot | null;
   reconciliation: ReconciliationSnapshot | null;
+  grantDetails: GrantDetailsSnapshot | null;
   pending: Pending;
   open: (tab: Tab) => void;
 }) {
@@ -653,13 +689,14 @@ export function OverviewView({
     <div className="stack">
       <ClubToday community={community} reading={pending.community} open={open} />
       <div className="grid-2">
-        <ComingUp community={community} reading={pending.community} />
+        <ComingUp community={community} grantDetails={grantDetails} reading={pending.community} readingGrants={pending.grantDetails} />
         <DayToDay funds={funds} operations={operations} pending={pending} open={open} />
       </div>
       <div className="grid-2">
         <RebuildFacts funds={funds} grants={grants} pending={pending} open={open} />
         <BooksAgree reconciliation={reconciliation} grants={grants} pending={pending} open={open} />
       </div>
+      <SourceLine qbo={funds?.retrievedAt ?? null} lgl={community?.retrievedAt ?? null} />
     </div>
   );
 }

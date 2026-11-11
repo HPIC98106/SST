@@ -7,7 +7,8 @@
  */
 
 import { CumulativeChart } from "./CumulativeChart";
-import { formatDate, formatRetrievedAt, usd } from "./format";
+import { How, SourceLine } from "./Disclosure";
+import { formatDate, usd } from "./format";
 import { LglLink } from "./LglLink";
 import { Kpi } from "./Overview";
 import type { CommunitySnapshot } from "./types";
@@ -42,7 +43,6 @@ export function GivingView({ snapshot }: { snapshot: CommunitySnapshot }) {
           detail={
             donors ? (
               <>
-                Most come with the December drive.{" "}
                 <LglLink url={donors.giftsUrl}>
                   See their {donors.gifts.toLocaleString("en-US")} {donors.gifts === 1 ? "gift" : "gifts"} in LGL
                 </LglLink>
@@ -92,24 +92,31 @@ export function GivingView({ snapshot }: { snapshot: CommunitySnapshot }) {
         </table>
       </div>
 
-      <p className="note">
-        Gifts only. Dues are on the Membership tab and grant payments on the Grants tab.
-        {snapshot.purchasesThisYear > 0
-          ? ` Sales such as the Pot Auction (${usd.format(snapshot.purchasesThisYear)} this year) are purchases, so they are under Events and programs on the Operations tab.`
-          : ""}{" "}
-        The Annual Fund Drive lands mostly in December, so it reads low until then.
-      </p>
+      <p className="note">Gifts only: dues, grant payments and sales are on their own tabs.</p>
 
-      <div className="panel-footer">
+      <How>
         <p>
-          <strong>Source:</strong> {snapshot.source}, {snapshot.giftCount.toLocaleString("en-US")} cash gifts read. LGL
-          holds only what has been entered in it. Linked numbers open in LGL, which needs its own login.
+          <strong>A gift is money given.</strong> Dues are on the Membership tab and grant payments on the Grants and
+          Rebuild tabs, so neither is counted here, and the donor count and the table describe the same gifts.
+        </p>
+        {snapshot.purchasesThisYear > 0 ? (
+          <p>
+            <strong>Sales are not gifts.</strong> Sales such as the Pot Auction ({usd.format(snapshot.purchasesThisYear)}{" "}
+            this year) are purchases, so they are under Events and programs on the Operations tab, and a buyer is not
+            counted as a donor.
+          </p>
+        ) : null}
+        <p>
+          <strong>The Annual Fund Drive lands mostly in December</strong>, so giving and the donor count read low until
+          then.
         </p>
         <p>
-          <strong>Data retrieved from LGL:</strong> {formatRetrievedAt(snapshot.retrievedAt)}
-          {snapshot.cached ? " (cached, refreshed about once an hour)" : ""}
+          Source: {snapshot.source}, {snapshot.giftCount.toLocaleString("en-US")} cash gifts read. LGL holds only what
+          has been entered in it. Linked numbers open in LGL, which needs its own login.
+          {snapshot.cached ? " LGL is read about once an hour, so a change there can take that long to show." : ""}
         </p>
-      </div>
+      </How>
+      <SourceLine lgl={snapshot.retrievedAt} />
     </section>
   );
 }

@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "worker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix", "worker", "run", "dev", "--",
+        "--port", "8787",
+        "--var", "ACCESS_PASSPHRASE:local-preview-only",
+        "--var", "LGL_MODE:fixture",
+        "--var", "QBO_MODE:fixture"
+      ],
+      "port": 8787
+    },
+    {
+      "name": "worker-live-lgl",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix", "worker", "run", "dev", "--",
+        "--port", "8787",
+        "--var", "ACCESS_PASSPHRASE:local-preview-only",
+        "--var", "LGL_MODE:live",
+        "--var", "QBO_MODE:fixture"
+      ],
+      "port": 8787
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}

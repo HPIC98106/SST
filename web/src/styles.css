@@ -2221,3 +2221,247 @@ button.kpi-link:focus-visible {
 .big-figure {
   font-variant-numeric: lining-nums tabular-nums;
 }
+
+/* --- Fine print, folded away (2026-11-10) ---
+   A panel keeps one visible sentence. How a figure is worked out sits in a
+   closed disclosure under it, and when each system was read is one line at the
+   foot of the tab. */
+
+.how {
+  margin-top: 0.9rem;
+  font-size: 0.84rem;
+}
+
+.how > summary {
+  cursor: pointer;
+  color: var(--navy-2);
+  font-weight: 500;
+  width: fit-content;
+}
+
+.how > summary:hover,
+.how > summary:focus-visible {
+  text-decoration: underline;
+}
+
+.how-body {
+  color: var(--muted);
+  border-left: 2px solid var(--line);
+  margin-top: 0.5rem;
+  padding-left: 0.9rem;
+  max-width: 46rem;
+}
+
+.how-body > p {
+  margin: 0 0 0.55rem;
+}
+
+.how-body > p:last-child {
+  margin-bottom: 0;
+}
+
+.how-body strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.source-line {
+  font-size: 0.78rem;
+  color: var(--faint);
+  margin: 0.4rem 0 0;
+  text-align: right;
+}
+
+.panel > .source-line {
+  margin-top: 1.2rem;
+}
+
+/* The Grants tab's explainer is a closed disclosure and nothing else. */
+.panel-quiet > .how {
+  margin-top: 0;
+  font-size: 0.95rem;
+}
+
+.panel-quiet .how-body {
+  border-left: none;
+  padding-left: 0;
+  max-width: none;
+  color: var(--ink);
+}
+
+.lifecycle > h2 {
+  margin-top: 0.6rem;
+}
+
+/* --- Rebuild headline --- */
+
+.headline-figure {
+  font-size: 3.1rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0.2rem 0 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.headline-figure.unavailable {
+  font-size: 1.6rem;
+  color: var(--unavailable);
+}
+
+.funding-bar .funding-raise {
+  background: transparent;
+}
+
+.funding-share {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.funding-label .tag {
+  margin-left: 0.4rem;
+}
+
+.funding-legend strong.unavailable {
+  color: var(--unavailable);
+  font-weight: 500;
+}
+
+/* --- Pointers to Reconciliation, and its groups --- */
+
+.fix-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fix-link:hover,
+.fix-link:focus-visible {
+  text-decoration: underline;
+}
+
+a.tag-link {
+  text-decoration: underline;
+}
+
+.fix-group > h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fix-group > h2 .tag {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fix-amount {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fix-group .unavailable {
+  color: var(--unavailable);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+}
+
+/* --- Grants: the figure that matters, and rows folded away --- */
+
+.kpi-key {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+}
+
+.kpi-key .kpi-label {
+  color: var(--navy);
+}
+
+.grant-still {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+}
+
+.grant-still strong {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.grant-card .grant-track {
+  margin-bottom: 0.6rem;
+}
+
+.grant-open {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+}
+
+.fold-row th {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.fold-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  color: var(--navy-2);
+  cursor: pointer;
+}
+
+.fold-toggle::before {
+  content: "▸ ";
+}
+
+.fold-toggle[aria-expanded="true"]::before {
+  content: "▾ ";
+}
+
+/* --- Membership: people above, accounts below --- */
+
+.card-figure {
+  font-size: 1.5rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.section-divide {
+  border-top: 1px solid var(--line);
+  padding-top: 1.3rem;
+}
+
+.card-subhead .tag {
+  margin-left: 0.35rem;
+}
+
+/* The hero is navy, so its disclosure takes the hero's own light text. */
+.hero .how > summary {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.hero .how-body {
+  color: inherit;
+  opacity: 0.9;
+  border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.hero .how-body strong {
+  color: inherit;
+}

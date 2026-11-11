@@ -11,6 +11,7 @@
  * rule every total on this dashboard follows.
  */
 
+import { How } from "./Disclosure";
 import { monthAbbrev, usd } from "./format";
 import { QboLink } from "./LglLink";
 import { OperationsProblems, periodLabel } from "./Operations";
@@ -65,7 +66,7 @@ export function YearSoFarView({
   return (
     <section className="panel">
       <h1>This year so far</h1>
-      {period ? <p className="muted">{periodLabel(period)} · accrual basis</p> : null}
+      {period ? <p className="muted">{periodLabel(period)}</p> : null}
 
       <OperationsProblems snapshot={operations} />
 
@@ -78,10 +79,9 @@ export function YearSoFarView({
             </p>
             <p className="note">
               <QboLink url={totals.income.url}>{usd.format(totals.income.actual)}</QboLink> income less{" "}
-              <QboLink url={totals.spending.url}>{usd.format(totals.spending.actual)}</QboLink> spending, with rebuild money
-              left out.{" "}
+              <QboLink url={totals.spending.url}>{usd.format(totals.spending.actual)}</QboLink> spending.{" "}
               {net.budgetToDate !== null
-                ? `The budget for the same months was ${usd.format(net.budgetToDate)}.`
+                ? `Budget for the same months: ${usd.format(net.budgetToDate)}.`
                 : operations.budget.note ?? "No budget comparison is available."}
             </p>
           </section>
@@ -96,19 +96,36 @@ export function YearSoFarView({
             <p className="projection-flag">Projection</p>
             <p className="note">
               {net.projectedYearEnd !== null
-                ? `Actual so far plus the budget for the months still to come${
-                    net.budgetFullYear !== null ? `, against a full-year budget of ${usd.format(net.budgetFullYear)}` : ""
-                  }.`
+                ? net.budgetFullYear !== null
+                  ? `Full-year budget: ${usd.format(net.budgetFullYear)}.`
+                  : ""
                 : "Needs a QuickBooks budget entered by month."}
             </p>
           </section>
 
           <section className="card">
-            <h2>Months of operating cash</h2>
+            <h2>Months of operating cash at current spending</h2>
             {cash.value ? <p className="amount">{cash.value}</p> : <p className="amount unavailable">Not shown</p>}
-            <p className="note">{cash.note}</p>
+            {cash.value ? null : <p className="note">{cash.note}</p>}
           </section>
         </div>
+      ) : null}
+
+      {operations.status === "ok" && net && totals ? (
+        <How>
+          <p>
+            <strong>Net operating income</strong> is income less spending on day-to-day accounts over the completed
+            months, with rebuild money left out, on the accrual basis.
+          </p>
+          <p>
+            <strong>Projected</strong> is a projection, not a record: actual so far plus the budget for the months still
+            to come. It needs a QuickBooks budget entered by month.
+          </p>
+          <p>
+            <strong>Months of operating cash.</strong> {cash.note} Current spending does not include running a building,
+            so this will fall once the clubhouse reopens.
+          </p>
+        </How>
       ) : null}
 
       {onOpen ? (

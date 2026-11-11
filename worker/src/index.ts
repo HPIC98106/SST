@@ -17,7 +17,7 @@ import { getGrantDetails } from "./grant-details";
 import { getGrants } from "./lgl";
 import { handleCallback, handleStart } from "./oauth";
 import { getOperations, parseGroupConfig, readSetup, resolveGroup } from "./operations";
-import { assembleReconciliation } from "./reconcile";
+import { assembleReconciliation, duesTolerance } from "./reconcile";
 import { PURPOSE_LABELS, getFunds, listAssetAccounts, parseAccountConfig } from "./qbo";
 import { TokenStore } from "./tokens";
 import type { CommunitySnapshot, Env, OperationsSnapshot } from "./types";
@@ -482,7 +482,7 @@ async function handleOperations(env: Env): Promise<Response> {
 
 async function handleReconciliation(env: Env): Promise<Response> {
   const [community, operations] = await Promise.all([readCommunity(env), readOperations(env)]);
-  return json(assembleReconciliation(community, operations, communityConfig(env)), env);
+  return json(assembleReconciliation(community, operations, communityConfig(env), duesTolerance(env.DUES_CHECK_TOLERANCE_PCT)), env);
 }
 
 async function handleFunds(env: Env): Promise<Response> {

@@ -441,6 +441,8 @@ export interface PaymentTermsReading {
    * missing, which sends them to look at a record that is already filled in.
    */
   unrecognizedValue: string | null;
+  /** The stored value, recognized or not. Null when the field was absent or empty. */
+  value: string | null;
 }
 
 /**
@@ -456,10 +458,10 @@ export function readPaymentTerms(record: {
   custom_attrs?: LglCustomAttr[] | null;
 }): PaymentTermsReading {
   const raw = readFieldRaw(record, isPaymentTermsField);
-  if (raw === null) return { status: "unknown", unrecognizedValue: null };
+  if (raw === null) return { status: "unknown", unrecognizedValue: null, value: null };
 
   const status = toReimbursableStatus(raw);
-  return { status, unrecognizedValue: status === "unknown" ? raw.trim() : null };
+  return { status, unrecognizedValue: status === "unknown" ? raw.trim() : null, value: raw.trim() };
 }
 
 /** Reimbursable status alone, for the callers that do not care why. */

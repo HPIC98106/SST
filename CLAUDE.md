@@ -112,13 +112,41 @@ HPIC's QuickBooks and LGL data.
   the gaps become arguable from HPIC's own records.
 - **Zero exceptions must mean "nothing is wrong", never "nothing was read".**
   `findExceptions` runs only when both reads succeeded.
-- **The headline count is memberships: one per household plus one per member in
-  none** (decided 2026-11-09 with Galen, for the 2026-11-11 board demo). People
-  are shown beside it and keep the LGL link; memberships has none, since no LGL
-  search lists households. When relationships cannot be read, memberships is null
-  and the Overview falls back to people, labelled as people, never a head count
-  passed off as memberships. Level labels stay as they are: Alex explains the
-  tiers.
+- **Members are people; dues-paying memberships are accounts. The two words are
+  never swapped** (decided 2026-11-10, replacing the 2026-11-09 memberships
+  headline). Members, minors included, are the only membership headline, on the
+  Overview and the Membership tab. Memberships appear only on the Membership tab's
+  finance section and on Reconciliation, never beside members as a second headline.
+  Board-facing labels say "members", not "people".
+- **A membership is one dues payment, and its type comes from the amount paid**
+  (decided 2026-11-10). It is an active member's latest Memberships or
+  Membership-Recurring gift, with every active member credited on it; a soft credit
+  points at its payment through `parent_gift_id`. LGL's levels are only Classic,
+  Champion and Minor, so individual or household is read from the amount, using
+  `LGL_DUES_RATES`, whose second amount per kind is the same dues with the 3% card
+  fee covered. Relationship links decided this before and are now only a
+  cross-check. On 2026-11-10 the change took 307 memberships to 294 (106
+  individual, 186 household, 2 matching no rate) and moved 17 of the 307. An
+  unparseable rate blanks memberships rather than being skipped. A member with no
+  dues gift is in no membership.
+- **Expected dues are checked against dues received, and the check is about the
+  membership logic, not the books.** `checkDues` in `worker/src/reconcile.ts` sets
+  memberships × rates beside QuickBooks' Membership dues line over the last twelve
+  completed months, flagged past `DUES_CHECK_TOLERANCE_PCT` (15). Either half
+  missing means not compared, never a zero. LGL's own dues for Nov 2025 to Oct 2026
+  were $17,969 against $19,000 expected on 2026-11-10. Kyle's operating model had
+  assumed about $35,000 a year.
+- **Fine print is folded, failures are not** (decided 2026-11-10). A panel shows
+  its figure, a plain label and at most one visible sentence. Method, source and
+  caveats go in a closed "How this is calculated" (`How` in
+  `web/src/Disclosure.tsx`), and read times in one `SourceLine` per tab. The
+  Provisional badge stays on the figure as a tag. What never goes in a disclosure:
+  a figure that could not be read, a sandbox or fixture warning, or a count of
+  records to fix. Those stay on the page, in place.
+- **Every data-quality item lives on Reconciliation, and every group is always
+  listed** (decided 2026-11-10). Other tabs carry only a pointer such as "1 record
+  to fix". A group with nothing in it says "Nothing to fix" so it reads as checked,
+  and one that could not be read says so instead.
 - **Members come from LGL's membership records, never from dues gifts.** Gifts
   find about half of them: on 2026-10-31 LGL had 563 active members and 270
   people who had paid dues that year, since one payment can cover a household.
@@ -163,6 +191,11 @@ HPIC's QuickBooks and LGL data.
   and the same search with 6096 returned 33 for 33. The Membership tab's renewals
   table uses the same search month by month, in a column renamed from "Not
   auto-renew" to "Renew by hand" because that is what it always counted.
+- **The Overview's rebuild card shows the Rebuild tab's own figures** (decided
+  2026-11-10, after talking with board members, revising the 2026-11-01 rule
+  below): the estimate, Still to raise and share of estimate covered, all from
+  `fundingFigures` in `web/src/FundingBar.tsx`, which both pages call so they
+  cannot disagree. It is the fourth card. The Overview still does not lead with it.
 - **The Overview does not lead with the funding gap or with "money available".**
   Decided 2026-11-01, Kyle's view and offered as one perspective. "Money available
   now" added rebuild money to programming money and read as if spending were the
@@ -630,7 +663,20 @@ future value cannot change what an existing test means.
   starts at money awarded rather than requested. The detail list shipped
   2026-10-31 as Grant details (see Phase 5). Still to do: the campaign/fund
   restriction breakdown.
-- **Phase 3, phase readiness: shipped, resting on provisional Received.** The
+- **Phase 3, phase readiness: one gap figure since 2026-11-10.** The Rebuild tab
+  answers with Still to raise: estimate less rebuild cash less rebuild grants
+  awarded and not yet received, as one bar of three segments that add to 100%
+  (largest remainder, since separate rounding gave 101). The "Can we afford
+  Dry-in?" table and its second gap, "Still to find" (estimate less cash, awards
+  left out), were removed: the board found two gaps confusing, and bridge financing
+  is a later question. Do not bring "Still to find" back. The reimbursable rule is
+  one sentence under the figure. Awarded money is still drawn apart, labelled
+  "awarded, not yet received" and never called available, and the figure shows
+  only when the estimate, cash and awards were all read. **Metis will not re-price
+  until HPIC has the funds to proceed** (Kyle, 2026-11-10), and the board knows the
+  prices lapsed on 2026-10-22: the estimate stays on the dashboard, and the page
+  says so in a sentence rather than a warning. What follows describes the target
+  itself, which is unchanged. The
   panel measures cash against the Dry-in target: the grand total of the Metis
   control estimate dated 9/22/26, including Metis's 6% contractor contingency
   (the prudent figure, decided 2026-10-30), held only in the
@@ -672,6 +718,41 @@ future value cannot change what an existing test means.
   rebuild money below it, $243,426.21 of Other Revenue and $95,954.11 of Other
   Expenditures, which is what the tab keeps out. The draft budget's spending column
   is the one that differs, not the tab.
+- **Iteration 2, 2026-11-10: built, from Kyle's requirements doc** ("HPIC Board
+  Dashboard: Prototype Iteration 2 Requirements", a Claude doc). Where it differs
+  from the Phase 5 tab descriptions below, this is what is on the page:
+  - **Overview** leads with members. "The last 30 days" counts program grant
+    payments only. Coming up: members up for renewal (auto-renew, renewing by
+    hand, renewal method unknown), expected from giving, and program grants
+    awarded and not yet received, read from Grant details so it equals the Grants
+    tab. The rebuild card is described under Invariants.
+  - **Rebuild** holds the Still to raise headline, a Rebuild grants table (one row
+    per award from `/api/grant-details`, those received in full folded into one
+    line, totals pinned to the funnel by a test) and rebuild cash by account. No
+    per-grant spending here: no rebuild grant money is drawn until the rest is
+    raised. No rebuild giving either: HPIC is not accepting rebuild donations
+    while it plans the capital campaign.
+  - **Program grants** (the tab's label; its key and hash are still `grants`) is
+    one page for whoever owns program and operating grants: a strip of active
+    awards, awarded, received and still to come, a card per active award, awards
+    received in full folded away, and "How grants work" collapsed at the bottom.
+    `#grants/details` and `#grants/how` open the same page. Payment terms show as
+    LGL holds them (`termsValue`). **Spent is not on the page at all until
+    QuickBooks tags expenses to grants**: hidden, never $0.
+  - **Membership** is members first, then "Dues and finance": memberships by
+    level and type with expected annual dues, and the dues check's one-line result.
+  - **Reconciliation**: LGL against QuickBooks, the expected dues check, then
+    records to fix by kind. Anchors: `#reconciliation/no-dues`, `/terms`,
+    `/unlinked`, `/dues-check`, `/memberships`.
+  - `web/src/Grants.tsx` replaced `GrantDetails.tsx`, `GrantsSplit.tsx` and the
+    funnel cards in `GrantFunnel.tsx`; `PhaseReadiness.tsx` is gone.
+    `/api/grants` is still read for the bar, the exceptions and the explainer.
+  - **Phase 2 of that doc is not built**: spent, unspent and spent-not-invoiced per
+    award, and received and spent by grant on Reconciliation. It waits on P3. The
+    doc lists the QuickBooks mechanism as open (class, location or tag); the
+    2026-10-31 read above points to one Project per award, so settle that with
+    Rachel before building. Grant key dates wait on new LGL fields. Volunteer
+    hours, an ideas tab and rebuild giving are out of scope.
 - **Phase 5, board dashboard: built 2026-10-30.** The page was rebuilt for a
   board member who is curious rather than expert, and for a phone as well as
   a projector. Seven tabs, each in the URL hash so a link or reload keeps it:

@@ -1,39 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NotAuthorizedError, fetchCommunity, fetchFunds, fetchGrantDetails, fetchGrants, fetchOperations, fetchReconciliation } from "./api";
 import { LOGO_URL, ORG_NAME } from "./brand";
-import { formatRetrievedAt, usd } from "./format";
-import { FundingBar } from "./FundingBar";
+import { How, SourceLine } from "./Disclosure";
+import { FundingHeadline } from "./FundingBar";
 import { FundsSnapshotView } from "./FundsSnapshot";
 import { GivingView } from "./Giving";
-import { GrantDetailsView } from "./GrantDetails";
-import { DataQualityPanel, GrantFunnelView } from "./GrantFunnel";
-import { GrantsSplit, OPERATING_SECTION_ID, REBUILD_SECTION_ID } from "./GrantsSplit";
-import { LglLink } from "./LglLink";
+import { ProgramGrantsView, RebuildGrants } from "./Grants";
 import { LifecycleView } from "./Lifecycle";
 import { MembershipView } from "./Membership";
-import { OperationsProblems, OperationsView } from "./Operations";
+import { OperationsView } from "./Operations";
 import { OverviewView, Reading, type Tab } from "./Overview";
 import { PassphraseGate } from "./PassphraseGate";
-import { PhaseReadinessView } from "./PhaseReadiness";
-import { NoDuesMembers, ReconciliationTable, recordsChecked, recordsNeedingAttention } from "./Reconciliation";
+import { ReconciliationView, recordsNeedingAttention } from "./Reconciliation";
 import { YearSoFarView } from "./YearSoFar";
 import type { CommunitySnapshot, FundsSnapshot, GrantDetailsSnapshot, GrantSnapshot, OperationsSnapshot, ReconciliationSnapshot } from "./types";
 
 const STORAGE_KEY = "hpic-sst-passphrase";
 
+/**
+ * "Program grants" since 2026-11-10: the tab holds program and operating grants
+ * only, and rebuild grants moved to the Rebuild tab. Its key and hash stay
+ * `grants`, so links sent before the rename still open it.
+ */
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "rebuild", label: "Rebuild" },
   { key: "operations", label: "Operations" },
   { key: "membership", label: "Membership" },
   { key: "giving", label: "Giving" },
-  { key: "grants", label: "Grants" },
+  { key: "grants", label: "Program grants" },
   { key: "reconciliation", label: "Reconciliation" },
 ];
 
 /**
  * The tab lives in the URL hash so a reload, or a link sent to another board
- * member, opens the same view. The passphrase never goes in the URL.
+ * member, opens the same view. The passphrase never goes in the URL. A second
+ * part after a slash names a section: `#reconciliation/no-dues`. The old Grants
+ * sub-views (`#grants/details`, `#grants/how`) open the one Grants page.
  */
 function tabFromHash(): Tab {
   const hash = window.location.hash.replace(/^#/, "").split("/")[0];
@@ -42,22 +45,8 @@ function tabFromHash(): Tab {
   return TABS.some((t) => t.key === hash) ? (hash as Tab) : "overview";
 }
 
-/**
- * Grants has three views, kept in the hash the same way: #grants, #grants/details
- * and #grants/how. The explainer lived on Reconciliation until 2026-11-02; it is
- * context for grants rather than something to act on.
- */
-type GrantsView = "summary" | "details" | "how";
-
-const GRANTS_VIEWS: { key: GrantsView; hash: string; label: string; hint: string }[] = [
-  { key: "summary", hash: "#grants", label: "Summary", hint: "Rebuild and program operating, side by side" },
-  { key: "details", hash: "#grants/details", label: "Grant details", hint: "A card for each award" },
-  { key: "how", hash: "#grants/how", label: "How grants work", hint: "How a grant moves through LGL and QuickBooks" },
-];
-
-function grantsViewFromHash(): GrantsView {
-  return GRANTS_VIEWS.find((v) => v.key !== "summary" && window.location.hash === v.hash)?.key ?? "summary";
-}
+/** Whether the hash names a section within its tab, which then does its own scrolling. */
+const hashHasSection = () => window.location.hash.includes("/");
 
 /**
  * One panel's data. Kept per source rather than page-wide so that a failing
@@ -85,7 +74,6 @@ export function App() {
   const [grantDetails, setGrantDetails] = useState<Panel<GrantDetailsSnapshot>>({ data: null });
   const [reconciliation, setReconciliation] = useState<Panel<ReconciliationSnapshot>>({ data: null });
   const [tab, setTab] = useState<Tab>(tabFromHash);
-  const [grantsView, setGrantsView] = useState<GrantsView>(grantsViewFromHash);
   const [loading, setLoading] = useState(false);
   const [gateError, setGateError] = useState<string | undefined>();
   const latestLoad = useRef(0);
@@ -93,8 +81,7 @@ export function App() {
   useEffect(() => {
     const onHash = () => {
       setTab(tabFromHash());
-      setGrantsView(grantsViewFromHash());
-      window.scrollTo(0, 0);
+      if (!hashHasSection()) window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -162,8 +149,6 @@ export function App() {
     );
   }
 
-  const grantNames = new Map((grantDetails.data?.grants ?? []).map((g) => [g.id, g.name]));
-  const exceptions = grants.data?.exceptions ?? [];
   const blocking = recordsNeedingAttention(grants.data);
   const pending = {
     funds: isPending(funds),
@@ -171,6 +156,7 @@ export function App() {
     operations: isPending(operations),
     community: isPending(community),
     reconciliation: isPending(reconciliation),
+    grantDetails: isPending(grantDetails),
   };
 
   return (
@@ -185,7 +171,6 @@ export function App() {
             </div>
           </div>
           <div className="topbar-meta">
-            {funds.data?.retrievedAt ? <span>Balances as of {formatRetrievedAt(funds.data.retrievedAt)}</span> : null}
             <button type="button" className="link-button" onClick={() => void load(passphrase)} disabled={loading}>
               {loading ? "Refreshing…" : "Refresh"}
             </button>
@@ -220,29 +205,26 @@ export function App() {
             operations={operations.data}
             community={community.data}
             reconciliation={reconciliation.data}
+            grantDetails={grantDetails.data}
             pending={pending}
             open={open}
           />
         ) : tab === "rebuild" ? (
           <div className="stack">
-            {pending.funds || pending.grants ? (
+            {pending.funds || pending.grants ? <PanelLoading /> : <FundingHeadline funds={funds.data} grants={grants.data} />}
+            {pending.grantDetails ? (
               <PanelLoading />
+            ) : grantDetails.data ? (
+              <RebuildGrants snapshot={grantDetails.data} />
             ) : (
-              <>
-                <section className="card card-pad">
-                  <div className="card-head">
-                    <h2>How far {grants.data?.phaseTarget.name ?? "the next phase"} is funded</h2>
-                  </div>
-                  <FundingBar funds={funds.data} grants={grants.data} />
-                </section>
-                <PhaseReadinessView funds={funds.data} grants={grants.data} />
-              </>
+              <PanelError title="Rebuild grants" detail={grantDetails.error} />
             )}
             {pending.funds ? null : funds.data ? (
               <FundsSnapshotView snapshot={funds.data} />
             ) : (
-              <PanelError title="Cash by account" detail={funds.error} />
+              <PanelError title="Rebuild cash by account" detail={funds.error} />
             )}
+            <SourceLine qbo={funds.data?.retrievedAt ?? null} lgl={grants.data?.retrievedAt ?? grantDetails.data?.retrievedAt ?? null} />
           </div>
         ) : tab === "operations" ? (
           pending.operations || pending.funds ? (
@@ -262,7 +244,7 @@ export function App() {
               <Reading what="membership from LGL" slow />
             </section>
           ) : community.data ? (
-            <MembershipView snapshot={community.data} />
+            <MembershipView snapshot={community.data} reconciliation={reconciliation.data} checking={pending.reconciliation} />
           ) : (
             <PanelError title="Membership" detail={community.error} />
           )
@@ -279,107 +261,33 @@ export function App() {
           )
         ) : tab === "grants" ? (
           <div className="stack">
-            <nav className="view-tabs" aria-label="Grants views">
-              {GRANTS_VIEWS.map((view) => (
-                <a
-                  key={view.key}
-                  className="view-tab"
-                  href={view.hash}
-                  aria-current={grantsView === view.key ? "page" : undefined}
-                >
-                  <span className="view-tab-label">{view.label}</span>
-                  <span className="view-tab-hint">{view.hint}</span>
-                </a>
-              ))}
-            </nav>
-            {grantsView === "how" ? (
-              <LifecycleView snapshot={grants.data} />
-            ) : grantsView === "details" ? (
-              isPending(grantDetails) ? (
-                <PanelLoading />
-              ) : grantDetails.data ? (
-                <GrantDetailsView snapshot={grantDetails.data} />
-              ) : (
-                <PanelError title="Grant details" detail={grantDetails.error} />
-              )
+            {pending.grantDetails ? (
+              <section className="panel">
+                <h1>Program grants</h1>
+                <Reading what="grant awards from LGL" />
+              </section>
+            ) : grantDetails.data ? (
+              <ProgramGrantsView snapshot={grantDetails.data} />
             ) : (
-              <>
-                {isPending(grantDetails) ? (
-                  <section className="panel">
-                    <h1>Grants: rebuild and program operating</h1>
-                    <Reading what="grant awards from LGL" />
-                  </section>
-                ) : grantDetails.data ? (
-                  <GrantsSplit snapshot={grantDetails.data} />
-                ) : null}
-                <div id={REBUILD_SECTION_ID}>
-                  {pending.grants ? (
-                    <PanelLoading />
-                  ) : grants.data ? (
-                    <GrantFunnelView snapshot={grants.data} showExceptions={false} names={grantNames} />
-                  ) : (
-                    <PanelError title="Rebuild grants" detail={grants.error} />
-                  )}
-                </div>
-                <div id={OPERATING_SECTION_ID}>
-                  {pending.community ? (
-                    <section className="panel">
-                      <h1>Program operating grants</h1>
-                      <Reading what="operating grants from LGL" slow />
-                    </section>
-                  ) : (
-                    <OperatingGrants community={community.data} names={grantNames} />
-                  )}
-                </div>
-              </>
+              <PanelError title="Program grants" detail={grantDetails.error} />
             )}
+            <section className="panel panel-quiet">
+              <How label="How grants work">
+                <LifecycleView snapshot={grants.data} />
+              </How>
+            </section>
+            <SourceLine lgl={grantDetails.data?.retrievedAt ?? null} />
           </div>
         ) : (
-          <div className="stack">
-            <section className="panel">
-              <h1>Reconciliation</h1>
-              <p className="muted">Whether LGL and QuickBooks hold the same money, one kind at a time.</p>
-              {pending.reconciliation ? (
-                <Reading what="LGL against QuickBooks" />
-              ) : (
-                <ReconciliationTable snapshot={reconciliation.data} error={reconciliation.error} />
-              )}
-            </section>
-            <section className="panel">
-              <h1>Records to fix</h1>
-              <p className="muted">
-                Records that break a rule, and how the systems fit together. Fixing a record here fixes a number
-                elsewhere on the dashboard.
-              </p>
-              {pending.grants ? (
-                <Reading what="LGL's grant records" />
-              ) : exceptions.length > 0 ? (
-                <DataQualityPanel exceptions={exceptions} />
-              ) : recordsChecked(grants.data) ? (
-                <p className="banner banner-live">Every LGL grant record read passes every rule.</p>
-              ) : (
-                <p className="banner banner-error">LGL could not be read, so records could not be checked.</p>
-              )}
-              <p className="note">
-                How a grant moves through LGL and QuickBooks, stage by stage, is on{" "}
-                <a href="#grants/how">Grants → How grants work</a>.
-              </p>
-              <NoDuesMembers community={community.data} />
-              {operations.data && (operations.data.ungrouped.length > 0 || operations.data.invalidConfig.length > 0) ? (
-                <div className="subpanel">
-                  <h2>QuickBooks accounts not yet grouped</h2>
-                  <OperationsProblems snapshot={operations.data} />
-                  <ul className="ops-list">
-                    {operations.data.ungrouped.map((u) => (
-                      <li key={`${u.id}:${u.name}`}>
-                        {u.name} {u.id ? <code>{u.id}</code> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </section>
-          </div>
+          <ReconciliationView
+            reconciliation={reconciliation.data}
+            reconciliationError={reconciliation.error}
+            grants={grants.data}
+            grantDetails={grantDetails.data}
+            community={community.data}
+            operations={operations.data}
+            pending={pending}
+          />
         )}
       </main>
 
@@ -391,62 +299,6 @@ export function App() {
         </p>
       </footer>
     </div>
-  );
-}
-
-/** Grant awards outside the rebuild, with what is still to arrive on each. */
-function OperatingGrants({ community, names }: { community: CommunitySnapshot | null; names: Map<number, string> }) {
-  if (community?.status !== "ok" || !community.operatingGrants) return null;
-  const grants = community.operatingGrants;
-  return (
-    <section className="panel">
-      <h1>Program operating grants</h1>
-      <p className="muted">
-        Awards outside the rebuild, for programs and operations, with what is still to come on each.{" "}
-        <LglLink url={grants.awardedUrl}>{usd.format(grants.awarded)}</LglLink> awarded,{" "}
-        <LglLink url={grants.receivedUrl}>{usd.format(grants.received)}</LglLink> received.{" "}
-        <span className="tag tag-warn">Provisional</span>
-      </p>
-      {grants.awards.length === 0 ? (
-        <p className="note">Nothing is still to come on any operating award.</p>
-      ) : (
-        <div className="table-scroll">
-          <table className="breakdown">
-            <thead>
-              <tr>
-                <th scope="col">Award</th>
-                <th scope="col" className="num">Awarded</th>
-                <th scope="col" className="num">Received</th>
-                <th scope="col" className="num">Still to come</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grants.awards.map((a) => (
-                <tr key={a.id}>
-                  <th scope="row">
-                    <LglLink url={a.url}>{names.get(a.id) ?? `LGL gift ${a.id}`}</LglLink>
-                    {a.date ? <span className="muted small"> · {a.date}</span> : null}
-                  </th>
-                  <td className="num">
-                    <LglLink url={a.url}>{usd.format(a.amount)}</LglLink>
-                  </td>
-                  <td className="num">
-                    <LglLink url={a.url}>{usd.format(a.received)}</LglLink>
-                  </td>
-                  <td className="num">
-                    <LglLink url={a.url}>{usd.format(a.remaining)}</LglLink>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <p className="note">
-        Computed from LGL payment records linked to each award; a payment not linked to its award makes "still to
-        come" too high. Read from LGL {formatRetrievedAt(community.retrievedAt)}.
-      </p>
-    </section>
   );
 }
 

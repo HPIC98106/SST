@@ -713,6 +713,20 @@ export function assembleOperations(
   }
   for (const f of operating) groupSides.set(f.group!, (groupSides.get(f.group!) ?? new Set()).add(f.side));
 
+  // The last twelve completed months of one line: this year's completed months,
+  // and last year's from the same month on.
+  const trailingFrom = completed === 12 ? report.start : shiftDate(period.through, { years: -1, days: 1 });
+  const trailingOf = (rows: AccountFigures[]): OperationsGroup["trailing"] => {
+    if (completed < 12 && !comparison) return null;
+    const cents = sum(rows.map((r) => sum(r.actual, 0, completed) + (completed < 12 ? sum(r.lastYear!, completed) : 0)));
+    return {
+      amount: dollars(cents),
+      from: trailingFrom,
+      through: period.through,
+      url: accountReportUrl(ui, idsOf(rows), trailingFrom, period.through),
+    };
+  };
+
   const groups: OperationsGroup[] = [];
   for (const side of ["income", "spending"] as const) {
     for (const { label } of config.groups) {
@@ -722,7 +736,7 @@ export function assembleOperations(
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((r) => line(r.name, [r]));
-      groups.push({ ...line(label, rows), side, accounts });
+      groups.push({ ...line(label, rows), side, accounts, trailing: trailingOf(rows) });
     }
   }
 

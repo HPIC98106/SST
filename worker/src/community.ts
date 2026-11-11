@@ -23,7 +23,7 @@
 
 import { getAll, isFixtureMode, parseIds, type LglGift } from "./lgl";
 import { communityFixtureGifts, communityFixtureMembers, COMMUNITY_FIXTURE_DATE } from "./community-fixtures";
-import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, GrantPayment, MemberLevel, NoDuesMember, OperatingAward, RenewalRow } from "./types";
+import type { CampaignGiving, CommunitySnapshot, Env, ExpectedInflow, GrantPayment, MemberLevel, Memberships, NoDuesMember, OperatingAward, RenewalRow } from "./types";
 
 export const COMMUNITY_SOURCE = "LGL membership and gift records";
 
@@ -70,7 +70,37 @@ export interface CommunityConfig {
   nonDonationCategories: number[];
   membershipCategories: number[];
   recurringMembershipCategories: number[];
+  /** Null when `LGL_DUES_RATES` is unset or any entry in it cannot be read. */
+  duesRates: DuesRate[] | null;
   uiBaseUrl: string | null;
+}
+
+/** One kind of membership, its annual rate in cents, and every amount that means it. */
+export interface DuesRate {
+  level: string;
+  type: "individual" | "household";
+  rate: number;
+  amounts: number[];
+}
+
+/**
+ * `Classic individual=20,20.60;Classic household=40,41.20`. The first amount is
+ * the annual rate and the rest are the same dues with the card fee covered. An
+ * entry that cannot be read blanks the lot rather than being skipped: a kind
+ * silently missing would turn its payments into "matches no rate".
+ */
+export function parseDuesRates(raw: string | undefined): DuesRate[] | null {
+  const entries = (raw ?? "").split(";").map((e) => e.trim()).filter(Boolean);
+  if (entries.length === 0) return null;
+  const rates: DuesRate[] = [];
+  for (const entry of entries) {
+    const match = /^(.+)\s+(individual|household)\s*=\s*(.+)$/i.exec(entry);
+    if (!match) return null;
+    const amounts = match[3].split(",").map((a) => Math.round(Number(a.trim()) * 100));
+    if (amounts.length === 0 || amounts.some((a) => !Number.isFinite(a) || a <= 0)) return null;
+    rates.push({ level: match[1].trim(), type: match[2].toLowerCase() as DuesRate["type"], rate: amounts[0], amounts });
+  }
+  return rates;
 }
 
 export function communityConfig(env: Env): CommunityConfig {
@@ -83,6 +113,7 @@ export function communityConfig(env: Env): CommunityConfig {
     nonDonationCategories: parseIds(env.LGL_NON_DONATION_CATEGORY_IDS),
     membershipCategories: parseIds(env.LGL_MEMBERSHIP_CATEGORY_IDS),
     recurringMembershipCategories: parseIds(env.LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS),
+    duesRates: parseDuesRates(env.LGL_DUES_RATES),
     uiBaseUrl: env.LGL_UI_BASE_URL?.replace(/\/+$/, "") || null,
   };
 }
@@ -168,12 +199,159 @@ function firstStart(member: LglMember): string | undefined {
 const HOUSEHOLD_RELATIONSHIPS = new Set(["household", "spouse/partner"]);
 
 /**
- * Who shares a household with another active member. Relationships are followed
- * through people, so a parent linked to each of two children makes all three one
- * household. A link to someone who is not an active member does not count: this
- * is about how the membership is made up. Decided 2026-10-31; the dues tiers
- * ($20 or $40, $100 or $200) agreed for all but 16 of the 555 members with a dues
- * gift on record that day.
+ * Each active member's latest dues gift, their own or a soft credit on someone
+ * else's. Dues gifts are found by category rather than campaign, because the
+ * Annual Fund Drive issues memberships too. Latest wins; on the same day an
+ * automatic payment says more than a manual one.
+ */
+function latestDuesGifts(gifts: LglGift[], config: CommunityConfig): Map<number, LglGift> {
+  const recurring = config.recurringMembershipCategories;
+  const dues = [...config.membershipCategories, ...recurring];
+  const latest = new Map<number, LglGift>();
+  for (const g of gifts) {
+    if (g.constituent_id == null || !g.received_date || !dues.includes(g.gift_category_id ?? -1)) continue;
+    const held = latest.get(g.constituent_id);
+    const newer =
+      !held ||
+      g.received_date > held.received_date! ||
+      (g.received_date === held.received_date && recurring.includes(g.gift_category_id ?? -1));
+    if (newer) latest.set(g.constituent_id, g);
+  }
+  return latest;
+}
+
+/**
+ * Dues-paying memberships, counted from what was paid (decided 2026-11-10).
+ *
+ * A membership is one dues payment: an active member's latest dues gift, and every
+ * active member credited on it. A household member's latest dues gift is a soft
+ * credit, which points at the payment through `parent_gift_id`. Individual or
+ * household comes from the amount, since LGL's levels (Classic, Champion, Minor)
+ * do not say. Relationship links decided this until then and got two things wrong:
+ * a household-rate payer whose household was never linked counted as an
+ * individual, and linked partners each paying the individual rate counted as one
+ * household. On 2026-11-10 the change moved 17 of 307 memberships, to 294.
+ *
+ * Relationships are now only a cross-check. What the two cannot square is returned
+ * as findings for the Reconciliation tab, by record number and never by name.
+ * A member with no dues gift is in no membership, and is listed there too.
+ *
+ * Null without the dues categories and rates: nothing would say what a payment is.
+ */
+function countMemberships(active: LglMember[], gifts: LglGift[], config: CommunityConfig): Memberships | null {
+  const rates = config.duesRates;
+  if (!rates || config.membershipCategories.length === 0 || config.recurringMembershipCategories.length === 0) return null;
+
+  const byId = new Map(gifts.map((g) => [g.id, g]));
+  const latest = latestDuesGifts(gifts, config);
+  const payments = new Map<number, { gift: LglGift; members: LglMember[] }>();
+  const paymentOf = new Map<number, number>();
+  for (const member of active) {
+    const gift = latest.get(member.id);
+    if (!gift) continue;
+    // A soft credit whose payment was not read stands for itself, so the member still counts.
+    const payment = (gift.gift_type_name === "Soft Credit" && gift.parent_gift_id != null && byId.get(gift.parent_gift_id)) || gift;
+    const entry = payments.get(payment.id) ?? { gift: payment, members: [] };
+    entry.members.push(member);
+    payments.set(payment.id, entry);
+    paymentOf.set(member.id, payment.id);
+  }
+
+  const rateOf = (gift: LglGift) => rates.find((r) => r.amounts.includes(amountOf(gift)));
+  const giftRecord = (g: LglGift) => ({
+    id: g.id,
+    kind: "gift" as const,
+    amount: dollars(amountOf(g)),
+    url: config.uiBaseUrl ? `${config.uiBaseUrl}/gifts/${g.id}` : null,
+  });
+
+  const counts = new Map<DuesRate, number>(rates.map((r) => [r, 0]));
+  const unmatched: LglGift[] = [];
+  const householdOne: LglGift[] = [];
+  const individualSeveral: LglGift[] = [];
+  for (const { gift, members } of payments.values()) {
+    const rate = rateOf(gift);
+    if (!rate) {
+      unmatched.push(gift);
+      continue;
+    }
+    counts.set(rate, counts.get(rate)! + 1);
+    if (rate.type === "household" && members.length === 1) householdOne.push(gift);
+    if (rate.type === "individual" && members.length > 1) individualSeveral.push(gift);
+  }
+
+  // Linked as one household, yet on separate payments that are each an individual's.
+  const separate: LglMember[] = [];
+  const households = readHouseholds(active);
+  if (households) {
+    for (const group of households.groups) {
+      const paying = group.filter((m) => paymentOf.has(m.id));
+      const distinct = new Set(paying.map((m) => paymentOf.get(m.id)));
+      if (distinct.size > 1 && paying.every((m) => rateOf(payments.get(paymentOf.get(m.id)!)!.gift)?.type === "individual")) {
+        separate.push(...paying);
+      }
+    }
+  }
+
+  const types = rates.map((r) => ({
+    level: r.level,
+    type: r.type,
+    rate: dollars(r.rate),
+    count: counts.get(r)!,
+    expected: dollars(counts.get(r)! * r.rate),
+  }));
+  const byId2 = (a: { id: number }, b: { id: number }) => a.id - b.id;
+
+  return {
+    total: payments.size,
+    types,
+    unmatched: unmatched.length,
+    expectedDues: dollars(rates.reduce((sum, r) => sum + counts.get(r)! * r.rate, 0)),
+    findings: [
+      {
+        key: "household_one_member",
+        label: "Household-rate payment with one member credited",
+        detail:
+          "The payment is at a household rate, but only one active member is credited on it. Usually the rest of the household was never soft-credited, so they are missing from the member count or listed with no dues on record.",
+        records: householdOne.map(giftRecord).sort(byId2),
+      },
+      {
+        key: "individual_several_members",
+        label: "Individual-rate payment with several members credited",
+        detail: "The payment is at an individual rate, but more than one active member is credited on it.",
+        records: individualSeveral.map(giftRecord).sort(byId2),
+      },
+      {
+        key: "separate_individual",
+        label: "Linked as a household, paying separately as individuals",
+        detail:
+          "LGL links these members as one household, but each is on their own individual-rate payment. They count as separate individual memberships.",
+        records: separate
+          .map((m) => ({
+            id: m.id,
+            kind: "member" as const,
+            amount: null,
+            url: config.uiBaseUrl ? `${config.uiBaseUrl}/constituents/${m.id}` : null,
+          }))
+          .sort(byId2),
+      },
+      {
+        key: "unmatched_amount",
+        label: "Dues payment that matches no rate",
+        detail:
+          "The amount is not one of the dues rates, with or without the card fee, so nothing says whether it is an individual or a household. It counts as a membership but is in no type and not in expected dues.",
+        records: unmatched.map(giftRecord).sort(byId2),
+      },
+    ],
+  };
+}
+
+/**
+ * Who shares a household with another active member, by LGL's relationship links.
+ * Followed through people, so a parent linked to each of two children makes all
+ * three one household. A link to someone who is not an active member does not
+ * count. Since 2026-11-10 this is only a cross-check on memberships, which are
+ * counted from dues payments.
  *
  * Null if relationships did not come back, rather than calling everyone single.
  */
@@ -195,12 +373,9 @@ function readHouseholds(active: LglMember[]) {
     }
   }
 
-  const sizes = new Map<number, number>();
-  for (const member of active) sizes.set(root(member.id), (sizes.get(root(member.id)) ?? 0) + 1);
-  return {
-    inHousehold: (member: LglMember) => sizes.get(root(member.id))! > 1,
-    households: [...sizes.values()].filter((size) => size > 1).length,
-  };
+  const groups = new Map<number, LglMember[]>();
+  for (const member of active) groups.set(root(member.id), [...(groups.get(root(member.id)) ?? []), member]);
+  return { groups: [...groups.values()].filter((group) => group.length > 1) };
 }
 
 /**
@@ -216,9 +391,8 @@ function countMembers(
   config: CommunityConfig,
 ): Pick<
   NonNullable<CommunitySnapshot["members"]>,
-  "total" | "newThisYear" | "byLevel" | "households" | "memberships" | "url" | "newUrl"
+  "total" | "newThisYear" | "byLevel" | "url" | "newUrl"
 > {
-  const households = readHouseholds(active);
   const levels = new Map<string, MemberLevel>();
   let newThisYear: number | null = 0;
 
@@ -235,28 +409,16 @@ function countMembers(
       ({
         level,
         count: 0,
-        inHousehold: households ? 0 : null,
-        individual: households ? 0 : null,
         url: levelId != null ? memberSearch(config, `member_type/${levelId}`) : null,
       } satisfies MemberLevel);
     row.count += 1;
-    if (households) {
-      if (households.inHousehold(member)) row.inHousehold! += 1;
-      else row.individual! += 1;
-    }
     levels.set(level, row);
   }
-
-  // One membership per household plus one per member on their own (decided
-  // 2026-11-09 with Galen): what the board means by "how many memberships".
-  const individuals = households ? active.filter((m) => !households.inHousehold(m)).length : null;
 
   return {
     total: active.length,
     newThisYear,
     byLevel: [...levels.values()].sort((a, b) => b.count - a.count),
-    households: households?.households ?? null,
-    memberships: households && individuals !== null ? households.households + individuals : null,
     url: memberSearch(config),
     newUrl: memberSearch(config, membershipDates("start", "first", `${year}-01-01`, `${year}-12-31`)),
   };
@@ -283,20 +445,9 @@ function countRenewals(
   config: CommunityConfig,
 ): CommunitySnapshot["renewals"] {
   const recurring = config.recurringMembershipCategories;
-  const dues = [...config.membershipCategories, ...recurring];
   if (config.membershipCategories.length === 0 || recurring.length === 0) return null;
 
-  // Latest wins; on the same day an automatic payment says more than a manual one.
-  const latest = new Map<number, LglGift>();
-  for (const g of gifts) {
-    if (g.constituent_id == null || !g.received_date || !dues.includes(g.gift_category_id ?? -1)) continue;
-    const held = latest.get(g.constituent_id);
-    const newer =
-      !held ||
-      g.received_date > held.received_date! ||
-      (g.received_date === held.received_date && recurring.includes(g.gift_category_id ?? -1));
-    if (newer) latest.set(g.constituent_id, g);
-  }
+  const latest = latestDuesGifts(gifts, config);
 
   const year = Number(today.slice(0, 4));
   const thisMonth = monthIndex(today);
@@ -461,9 +612,11 @@ export function assembleCommunity(
   const duesThisYear = giving.filter((g) => isDuesGift(g) && inYear(year)(g));
   const members: CommunitySnapshot["members"] = {
     ...countMembers(activeMembers, year, config),
+    memberships: countMemberships(activeMembers, gifts, config),
     dues: haveDues
       ? {
           payers: people(duesThisYear).size,
+          payments: duesThisYear.length,
           amount: dollars(sum(duesThisYear)),
           url: giftSearch(config, `campaign/${config.membershipCampaigns.join(",")}`, `${year}-01-01`, today),
         }
@@ -493,7 +646,8 @@ export function assembleCommunity(
   const inRecent = (g: LglGift) => g.received_date! >= recentFrom;
   const recentDues = haveDues ? giving.filter((g) => isDuesGift(g) && inRecent(g)) : null;
   const recentGifts = haveDues ? donations.filter(inRecent) : null;
-  const recentPayments = grantPayments?.filter((p) => p.date >= recentFrom) ?? null;
+  // Program and operating awards only: rebuild payments are reported on the Rebuild tab.
+  const recentPayments = grantPayments?.filter((p) => p.date >= recentFrom && p.scope === "operating") ?? null;
   const firsts = activeMembers.map(firstStart);
   const recent: CommunitySnapshot["recent"] = {
     from: recentFrom,
@@ -519,7 +673,7 @@ export function assembleCommunity(
         today,
       ),
     },
-    grantPayments: recentPayments && {
+    programGrantPayments: recentPayments && {
       count: recentPayments.length,
       amount: recentPayments.reduce((s, p) => s + p.amount, 0),
       url: giftIds(config, recentPayments.map((p) => p.id)),

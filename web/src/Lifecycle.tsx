@@ -231,8 +231,8 @@ function StageRow({ stage }: { stage: Stage }) {
 export function LifecycleView({ snapshot }: { snapshot: GrantSnapshot | null }) {
   const scope = snapshot?.scope;
   return (
-    <section className="panel">
-      <h1>How a grant moves through our systems</h1>
+    <section className="lifecycle">
+      <h2>How a grant moves through our systems</h2>
       <p className="note">
        Every figure on the dashboard is one of the stages below. This is for reviewing
        against what is actually typed into LGL to ensure the dashboard is accurate.

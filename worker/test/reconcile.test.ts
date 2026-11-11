@@ -5,12 +5,14 @@
  * side means nothing was compared, never an empty list that looks like agreement;
  * only the completed months count, on both sides; a payment takes its award's scope,
  * and one with no award says so; a renamed QuickBooks line reports "not compared"
- * rather than comparing against nothing.
+ * rather than comparing against nothing; and expected dues are checked against
+ * the last twelve months received, flagged past the tolerance, and never compared
+ * when either half is missing.
  */
 
 import { describe, expect, it } from "vitest";
 import { assembleCommunity, communityConfig } from "../src/community";
-import { assembleReconciliation } from "../src/reconcile";
+import { assembleReconciliation, duesTolerance } from "../src/reconcile";
 import type { LglGift } from "../src/lgl";
 import type { CommunitySnapshot, Env, OperationsSnapshot } from "../src/types";
 
@@ -138,5 +140,91 @@ describe("refusing to compare", () => {
     const period = { fiscalYearStart: "2024-01-01", fiscalYearEnd: "2024-12-31", through: "2024-12-31", completedMonths: 12, showingPriorYear: true };
     const snapshot = assembleReconciliation(community([]), operations({ period }), CONFIG);
     expect(snapshot.status).toBe("unavailable");
+  });
+});
+
+describe("expected dues against dues received", () => {
+  const RATED = communityConfig({
+    LGL_MEMBERSHIP_CAMPAIGN_IDS: "846",
+    LGL_MEMBERSHIP_CATEGORY_IDS: "6081",
+    LGL_RECURRING_MEMBERSHIP_CATEGORY_IDS: "6096",
+    LGL_DUES_RATES: "Classic individual=20,20.60;Classic household=40,41.20",
+  } as Env);
+  const active = (id: number) => ({ id, relationships: [], memberships: [{ membership_level_name: "Classic", date_start: "2026-02-01", finish_date: "2027-02-01" }] });
+  // Three memberships: two households and an individual, so $100 expected.
+  const members = (extra: LglGift[] = [], ids = [1, 2, 3]) =>
+    assembleCommunity(
+      [
+        gift({ constituent_id: 1, gift_category_id: 6096, received_amount: 40, received_date: "2026-02-01" }),
+        gift({ constituent_id: 2, gift_category_id: 6096, received_amount: 41.2, received_date: "2026-02-01" }),
+        gift({ constituent_id: 3, gift_category_id: 6081, received_amount: 20, received_date: "2026-02-01" }),
+        ...extra,
+      ],
+      ids.map(active),
+      "2026-11-01",
+      RATED,
+      { retrievedAt: "Sun, 01 Nov 2026 08:00:00 GMT", connection: "ok" },
+    );
+  const received = (amount: number | null) =>
+    operations({
+      groups: [
+        {
+          side: "income",
+          label: "Membership dues",
+          actual: 0,
+          url: null,
+          accounts: [],
+          trailing: amount === null ? null : { amount, from: "2025-11-01", through: "2026-10-31", url: "https://qbo.test/dues-12" },
+        },
+      ],
+    } as unknown as Partial<OperationsSnapshot>);
+  const check = (ops: OperationsSnapshot, tolerance?: number, lgl = members()) =>
+    assembleReconciliation(lgl, ops, RATED, tolerance).duesCheck;
+
+  it("shows expected, received, the difference and the percentage", () => {
+    expect(check(received(94))).toMatchObject({
+      status: "within",
+      expected: 100,
+      received: 94,
+      difference: 6,
+      from: "2025-11-01",
+      through: "2026-10-31",
+      receivedUrl: "https://qbo.test/dues-12",
+    });
+    expect(check(received(94)).percent).toBeCloseTo(6.38, 2);
+  });
+
+  it("flags a difference past the tolerance, in either direction", () => {
+    expect(check(received(80)).status).toBe("flagged"); // 25% above
+    expect(check(received(125)).status).toBe("flagged"); // 20% below
+    expect(check(received(88)).status).toBe("within"); // 13.6% above
+    expect(check(received(94), 5).status).toBe("flagged");
+  });
+
+  it("takes the tolerance from config, and 15 when it is unset or unreadable", () => {
+    expect(duesTolerance("20")).toBe(20);
+    expect(duesTolerance(undefined)).toBe(15);
+    expect(duesTolerance("")).toBe(15);
+    expect(duesTolerance("lots")).toBe(15);
+  });
+
+  it("will not compare when either half is missing", () => {
+    expect(check(received(null))).toMatchObject({ status: "unavailable", expected: 100, received: null, difference: null });
+    expect(check(received(94), 15, community([]))).toMatchObject({ status: "unavailable", expected: null, received: 94 });
+    expect(check(operations({ groups: [] }))).toMatchObject({ status: "unavailable" });
+    expect(check(received(0)).status).toBe("unavailable");
+  });
+
+  it("says when a payment matched no rate and so is not in expected", () => {
+    const odd = gift({ constituent_id: 4, gift_category_id: 6081, received_amount: 80, received_date: "2026-02-01" });
+    const result = check(received(94), 15, members([odd], [1, 2, 3, 4]));
+    expect(result.expected).toBe(100);
+    expect(result.note).toContain("1 dues payment matches no rate");
+  });
+
+  it("is still reported when the main comparison was not made", () => {
+    const snapshot = assembleReconciliation(members(), { ...received(94), period: null }, RATED);
+    expect(snapshot.status).toBe("unavailable");
+    expect(snapshot.duesCheck.status).toBe("within");
   });
 });
