@@ -382,7 +382,13 @@ Two operating awards use it. An installment carries an amount and a parent but n
 `received_date` or category, and LGL does not mark one when a payment arrives:
 4Culture's $7,936 payment is a separate Gift beside two undated $7,936
 installments. So only a dated child counts as received, and an undated one is
-reported as scheduled.
+reported as scheduled. **An installment's due date is in LGL's interface but not in
+its API** (checked 2026-11-11, at Kyle's request to show them): `gifts/search` and
+`gifts/{id}` return an installment with `received_date` and `deposit_date` null and
+no other date but `created_at`; the API docs never mention a due date; there is no
+installments or pledges endpoint; and `expand` on a gift returns 403. So the card
+lists the amounts and points to the award in LGL. Do not try these routes again
+without a change on LGL's side.
 
 Choosing QuickBooks instead needs a **bookkeeping practice**: QuickBooks must
 carry a dimension that ties a deposit or expense to a specific grant, applied

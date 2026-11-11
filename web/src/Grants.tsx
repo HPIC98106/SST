@@ -249,9 +249,10 @@ function AwardCard({ grant }: { grant: GrantDetail }) {
         )}
         {grant.scheduled.length > 0 ? (
           <p className="note">
-            <strong>Scheduled in LGL:</strong> {grant.scheduled.map((n) => usd.format(n)).join(", ")}. LGL holds these with
-            no date and does not mark one when a payment arrives, so this can include one already paid. None is counted as
-            received.
+            <strong>Installments scheduled in LGL:</strong> {grant.scheduled.map((n) => usd.format(n)).join(", ")}. Each
+            has a due date in LGL, but LGL does not pass due dates to the dashboard, so <LglLink url={grant.url}>open the
+            award</LglLink> to see them. The dashboard cannot tell which have been paid either, so this can include one
+            already paid, and none is counted as received.
           </p>
         ) : null}
       </details>
