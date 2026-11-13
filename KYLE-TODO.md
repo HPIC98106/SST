@@ -18,6 +18,21 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 ## Now
 
+- **Point Intuit at the HPIC98106 pages.** All five app URLs in Intuit's
+  production settings (launch, connect, disconnect, terms, privacy) still say
+  `kyhuber.github.io`, which has returned 404 since the repository moved in
+  September. Change them to `hpic98106.github.io` and leave the redirect URI
+  alone. Unblocks: a compliant Intuit app, and the sign-in move, which keeps those
+  pages where they are. Runbook §11.
+
+- **Set up Cloudflare Access with Google sign-in, without switching it on.**
+  Create the Zero Trust team, the Google sign-in client and the "HPIC board"
+  policy with the board's hpic1919.org addresses. None of it touches the live
+  dashboard. Then tell Claude the team name and the address you sign in with,
+  and pick an hour for the cutover sitting, when Claude deploys and you switch
+  Access on. Unblocks: replacing the shared passphrase with per-person sign-in
+  and the new address for the board. Runbook §12.
+
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
   the approved figures, keeping each amount in the month the money actually
@@ -58,11 +73,6 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   $17,558.80 in LGL and $16,612.40 in QuickBooks. Most of the $946.40 is October (LGL
   $2,320), so ask whether October's dues are all booked yet. Unblocks: the first line
   of the board's reconciliation reading "Match", or a known reason it does not.
-
-- **The board, about iteration 2.** Show the live page and collect what they want
-  changed: the members headline, the single Still to raise figure, Program grants as
-  its own tab, and how much is folded under "How this is calculated". Unblocks: the
-  next iteration.
 
 - **Galen, about the percent-funded denominator.** The spec's 40% / 70%
   thresholds are almost certainly against the whole capital campaign, not

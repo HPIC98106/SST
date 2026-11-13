@@ -854,6 +854,25 @@ future value cannot change what an existing test means.
 
 ### Build backlog (Claude)
 
+- **Board suggestions from the 2026-11-11 demo, after the sign-in move.** Shaped
+  with Kyle on 2026-11-12; no written requirements yet.
+  - **Volunteer counts by interest.** Answers "how many have signed up", and shows
+    the pool growing. Counts only, each linking to the LGL search behind it,
+    because most of the board can't build that search themselves. The link has to
+    land on the same count, and the card says how many of them can be emailed under
+    LGL's opt-out flags. It fits the counts-only rule, so it need not wait for
+    sign-in. Still to find: which constituent fields hold it, and whether anything
+    dates a sign-up, since a growth figure needs one.
+  - **A heat map of where members live.** For interest and encouragement, not for
+    finding anyone: zoomable, nothing clickable. The Worker geocodes addresses
+    (sending them to a geocoder is a decision to make first; the US Census one is
+    the candidate) and sends the page only counts per area. Households, not
+    members, since members include minors; small areas blank; and a count of those
+    living outside the map rather than dropping them. Kyle would like a layer by
+    length of membership, but only 157 people's first record predates 2025, so it
+    would show long-standing members as new. Say so on the layer, or find older
+    records first.
+
 - **N4b, restricted / unrestricted breakdown.** No data entry needed. Every
   grant pledge already carries a fund (checked 2026-09-09: Rebuild Checking 6
   pledges / $1,471,000, Program Budget 5 / $57,422). **Do not add a
@@ -893,7 +912,28 @@ Decisions recorded so they are not re-argued from memory:
 - **No custom domain.** `sst.hpic1919.org` was planned and decided against on
   2026-09-06: the only real gain was a URL surviving a move off GitHub Pages,
   which is worth little for a board of ten who can be told. Reversible for one
-  CNAME, one Pages setting and one `ALLOWED_ORIGIN` change.
+  CNAME, one Pages setting and one `ALLOWED_ORIGIN` change. Reconsidered and
+  declined again on 2026-11-12. hpic1919.org's DNS is at Porkbun, not Squarespace,
+  and its mail is Google's.
+- **The dashboard is moving behind per-person Google sign-in** (decided
+  2026-11-12, not built yet). The Worker serves the page itself at its
+  `workers.dev` address, Cloudflare Access with HPIC's Google Workspace stands in
+  front of every path, and the shared passphrase is deleted rather than kept as a
+  fallback. The board only, each by hpic1919.org address, kept in Access and never
+  in this repository. Requirements, with the cutover plan and the board's login
+  instructions: the Claude doc "Board dashboard: Cloudflare hosting and Google
+  sign-in", https://claude.ai/artifact/DJTbaxN5BwGkM7QTXwoUGw. Checked that day in
+  Cloudflare's docs: Access can protect a `workers.dev` hostname, described only as
+  a whole with no way to exempt a path, and the runtime hands the Worker the verified identity as `ctx.access`. On
+  cutover the "page is public, the data is not" section above changes, and
+  `ALLOWED_ORIGIN` and the GitHub Actions deploy go away.
+- **Intuit's production app points at GitHub Pages, and those pages must stay
+  public.** Launch, connect, disconnect, terms and privacy. They are why GitHub
+  Pages outlives the move to Access: Cloudflare documents no way to leave paths on
+  a `workers.dev` hostname public.
+  Until KYLE-TODO's fix they still name `kyhuber.github.io`, which has returned
+  404 since the September transfer, so check Intuit's settings whenever the Pages
+  address changes.
 - **`ALLOWED_ORIGIN` must track the Pages origin, and its failure is silent.**
   After the transfer the page rendered perfectly while every API call was
   blocked by the browser, with nothing failing server-side. If the dashboard
