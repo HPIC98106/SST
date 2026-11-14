@@ -25,13 +25,14 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   alone. Unblocks: a compliant Intuit app, and the sign-in move, which keeps those
   pages where they are. Runbook §11.
 
-- **Set up Cloudflare Access with Google sign-in, without switching it on.**
-  Create the Zero Trust team, the Google sign-in client and the "HPIC board"
-  policy with the board's hpic1919.org addresses. None of it touches the live
-  dashboard. Then tell Claude the team name and the address you sign in with,
-  and pick an hour for the cutover sitting, when Claude deploys and you switch
-  Access on. Unblocks: replacing the shared passphrase with per-person sign-in
-  and the new address for the board. Runbook §12.
+- **Set up Cloudflare Access with emailed sign-in codes, without switching it on.**
+  Create the Zero Trust team, turn on the one-time code login, create the "HPIC
+  board" policy with the 11 board addresses and a one-week session, then sign in
+  once to see whether the code lands in spam. None of it touches the live
+  dashboard. Then tell Claude the team name, and pick an hour for the cutover
+  sitting, when Claude deploys and you switch Access on. Unblocks: replacing the
+  shared passphrase with per-person sign-in and the new address for the board.
+  Runbook §12.
 
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to

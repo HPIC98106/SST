@@ -917,10 +917,14 @@ Decisions recorded so they are not re-argued from memory:
   and its mail is Google's.
 - **The dashboard is moving behind per-person Google sign-in** (decided
   2026-11-12, not built yet). The Worker serves the page itself at its
-  `workers.dev` address, Cloudflare Access with HPIC's Google Workspace stands in
-  front of every path, and the shared passphrase is deleted rather than kept as a
-  fallback. The board only, each by hpic1919.org address, kept in Access and never
-  in this repository. Requirements, with the cutover plan and the board's login
+  `workers.dev` address, Cloudflare Access stands in front of every path, and the
+  shared passphrase is deleted rather than kept as a fallback. The board only, 11
+  hpic1919.org addresses listed one by one (never a domain rule, which would admit
+  every group and alias), kept in Access and the local runbook and never in this
+  repository. Sign-in is Access's emailed one-time code with a one-week session
+  (decided 2026-11-13): Google Workspace login needs super admin rights Kyle does
+  not have yet, and can replace the code later as a Cloudflare setting, with no
+  code change. Requirements, with the cutover plan and the board's login
   instructions: the Claude doc "Board dashboard: Cloudflare hosting and Google
   sign-in", https://claude.ai/artifact/DJTbaxN5BwGkM7QTXwoUGw. Checked that day in
   Cloudflare's docs: Access can protect a `workers.dev` hostname, described only as
