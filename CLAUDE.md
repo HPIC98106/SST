@@ -8,7 +8,11 @@ development**: a login, a credential, a decision, a conversation. Read it at
 the start of a session. When an item is done, **delete it**: don't tick it or
 annotate it. Code work goes under "Phase status" below, and lasting facts or
 decisions go in this file, never in KYLE-TODO. Step-by-step procedures live in
-`docs/runbook-migration.md` (local only, not committed).
+`docs/runbook.md`, a project in progress gets its own guide beside it (now
+`docs/move-to-hpic-cloudflare.md`), and finished procedures go to `docs/archive/`.
+All of `docs/` is local only, never committed, because it holds HPIC's account IDs
+and board addresses (split up on 2026-11-13: one long runbook mixing finished and
+open work was too hard for Kyle to follow).
 
 ## What this is
 
@@ -41,7 +45,7 @@ web/      React + Vite static build → GitHub Pages. Holds nothing sensitive.
 | Account mapping tool | `/admin/accounts?k=<passphrase>` |
 | P&L grouping tool | `/admin/pl-accounts?k=<passphrase>` (income and expense account IDs, each account's group, and the budgets QuickBooks holds) |
 | Concept sheet | https://hpic98106.github.io/SST/concept-sheet-2026-09-10.html (unlisted, `noindex`, source in `web/public`) |
-| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. `QBO_ACCOUNTS` set the same day (runbook §9 step 6 has the mapping). All six balances matched the Balance Sheet to the cent on 2026-10-30. |
+| QuickBooks | HPIC's production company, `QBO_ENV = "production"`, connected 2026-10-29. `QBO_ACCOUNTS` set the same day (the runbook's "Worker settings" section has the mapping). All six balances matched the Balance Sheet to the cent on 2026-10-30. |
 
 Frontend deploys via GitHub Actions on pushes to `web/**`. The Worker deploys
 only via `npx wrangler deploy`: deliberately manual, since it holds the
@@ -915,7 +919,7 @@ Decisions recorded so they are not re-argued from memory:
   CNAME, one Pages setting and one `ALLOWED_ORIGIN` change. Reconsidered and
   declined again on 2026-11-12. hpic1919.org's DNS is at Porkbun, not Squarespace,
   and its mail is Google's.
-- **The dashboard is moving behind per-person Google sign-in** (decided
+- **The dashboard is moving behind per-person sign-in** (decided
   2026-11-12, not built yet). The Worker serves the page itself at its
   `workers.dev` address, Cloudflare Access stands in front of every path, and the
   shared passphrase is deleted rather than kept as a fallback. The board only, 11
@@ -942,9 +946,18 @@ Decisions recorded so they are not re-argued from memory:
   After the transfer the page rendered perfectly while every API call was
   blocked by the browser, with nothing failing server-side. If the dashboard
   ever shows no data at all following a hosting change, check this first.
-- **Cloudflare stays on the personal account for now** and transfers when Kyle
-  steps back. The Worker URL is the Intuit OAuth redirect URI, so leaving it
-  alone keeps the QuickBooks connection untouched by any of the above.
+- **The Worker moves to HPIC's own Cloudflare account, with the sign-in change**
+  (decided 2026-11-13, reversing "stays on the personal account until Kyle steps
+  back"). Kyle made the account under kyle.huber@hpic1919.org on 2026-11-12. Doing
+  it with the sign-in change means the board learns one new address, not two, and
+  Zero Trust is set up once. Cloudflare cannot move a Worker between accounts, so
+  it is a fresh deploy: secrets re-entered from their sources (Intuit, a new LGL
+  key, the Metis estimate, the runbook's Worker settings), the QuickBooks
+  connection made again, and the new callback added to Intuit beside the old one.
+  The suggested address is `dashboard.<subdomain>.workers.dev`. **Never press the
+  old Worker's Disconnect button**: revoking its QuickBooks grant at Intuit may
+  revoke the new one too. Delete the old Worker instead. The steps are in
+  `docs/move-to-hpic-cloudflare.md`.
 - **No D1 database.** The hourly cron plus the Durable Object snapshot cache
   already serve pages without querying QuickBooks each time: that architecture
   is already built and running. D1 earns its place when historical trends come

@@ -12,27 +12,21 @@ Rules for keeping it that way:
 - If an item produces a lasting fact or decision, put that fact in CLAUDE.md,
   not here.
 
-Step-by-step procedures are in `docs/runbook-migration.md` (local only).
+How to do each item is in `docs/runbook.md`, and the current project has its own
+guide, `docs/move-to-hpic-cloudflare.md`. Both are local only. The runbook starts
+with a table of which file is for what.
 
 ---
 
 ## Now
 
-- **Point Intuit at the HPIC98106 pages.** All five app URLs in Intuit's
-  production settings (launch, connect, disconnect, terms, privacy) still say
-  `kyhuber.github.io`, which has returned 404 since the repository moved in
-  September. Change them to `hpic98106.github.io` and leave the redirect URI
-  alone. Unblocks: a compliant Intuit app, and the sign-in move, which keeps those
-  pages where they are. Runbook §11.
-
-- **Set up Cloudflare Access with emailed sign-in codes, without switching it on.**
-  Create the Zero Trust team, turn on the one-time code login, create the "HPIC
-  board" policy with the 11 board addresses and a one-week session, then sign in
-  once to see whether the code lands in spam. None of it touches the live
-  dashboard. Then tell Claude the team name, and pick an hour for the cutover
-  sitting, when Claude deploys and you switch Access on. Unblocks: replacing the
-  shared passphrase with per-person sign-in and the new address for the board.
-  Runbook §12.
+- **Move the dashboard to HPIC's Cloudflare account, behind per-person sign-in.**
+  Follow `docs/move-to-hpic-cloudflare.md`. Part 1 is yours, about an hour, in any
+  order: pick the address, set up the emailed-code sign-in, fix Intuit's app
+  settings (its links have been broken since September), and gather four values.
+  Then send Claude the subdomain and team name, and pick an hour for part 3 together.
+  Unblocks: the board signing in individually, the shared passphrase going away,
+  and the dashboard living on HPIC's account rather than yours.
 
 - **Enter the 2027 budget in QuickBooks, by month.** Budgets → create a 2027
   Profit and Loss budget, pre-filled from 2026 actuals by month, then adjust to
@@ -50,7 +44,7 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
 
 - **Confirm the Intuit developer account is recoverable without you.** It's
   registered to `kyle.huber@hpic1919.org`. Check that a Workspace admin can
-  recover that mailbox, or move the login to a role address. Runbook §6. Production
+  recover that mailbox, or move the login to a role address. Runbook, "Confirm the Intuit developer account". Production
   depends on it now, so a lost mailbox would strand the QuickBooks connection.
 
 ## Conversations
@@ -90,25 +84,13 @@ Step-by-step procedures are in `docs/runbook-migration.md` (local only).
   LGL: which one stays decides whether the money counts toward the rebuild. If it
   was two payments after all, no 2025 CARE award exists in LGL to link them to, so
   one needs creating. Unblocks: two of the four unlinked payments on Reconciliation
-  and Grant details. Runbook §8.
+  and Grant details. Runbook, "Fix the LGL records".
 
 - **Whether to define `contract_signed` in LGL.** Only if someone commits to
   keeping it current. 905452 (BFA, $388,000) and 905997 (City of Seattle,
   $500,000) are exactly the state it would capture: Grant details can only say
   "Awaiting first payment", and whether a contract is signed lives in freetext
-  notes the page does not show. Runbook §5.
-
-## Credentials and access
-
-- **Put `ACCESS_PASSPHRASE` somewhere the board can reach it**: a shared
-  password manager or the org's Google Workspace. Today it exists only in your
-  head and in `worker/.dev.vars` on this machine, and Cloudflare secrets can't be
-  read back. If you're unavailable, the board loses its dashboard. Runbook §7.
-
-- **Delete the stray Worker secret whose name looks like a passphrase.** Still
-  there on 2026-10-31. It shows in `npx wrangler secret list`, does nothing, and if
-  it's a real password it shouldn't be sitting in a name field:
-  `npx wrangler secret delete <name>`.
+  notes the page does not show. Runbook, "Define `contract_signed`".
 
 ## Waiting on others
 
